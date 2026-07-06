@@ -101,6 +101,10 @@ export const api = {
   getPhotos: (taskId: string) => request<any[]>(`/tasks/${taskId}/photos`),
   deletePhoto: (photoId: string) => request<any>(`/photos/${photoId}`, { method: 'DELETE' }),
   getPhotoUrl: (photoId: string) => `${API_BASE}/photos/${photoId}/file`,
+  getPhotoBlobUrl: async (photoId: string): Promise<string> => {
+    const blob = await api.downloadFile(`${API_BASE}/photos/${photoId}/file`);
+    return URL.createObjectURL(blob);
+  },
 
   // Reports
   generateReport: (visitId: string) =>

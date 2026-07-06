@@ -145,18 +145,20 @@ router.get('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
 });
 
 router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
+  // Build update data - only include fields that are explicitly provided
+  const data: Record<string, any> = {};
+  if (req.body.equipmentTypeId !== undefined) data.equipmentTypeId = req.body.equipmentTypeId;
+  if (req.body.roomTypeId !== undefined) data.roomTypeId = req.body.roomTypeId || null;
+  if (req.body.location !== undefined) data.location = req.body.location;
+  if (req.body.status !== undefined) data.status = req.body.status;
+  if (req.body.parameters !== undefined) data.parameters = req.body.parameters;
+  if (req.body.selectedRecommendationIds !== undefined) data.selectedRecommendationIds = req.body.selectedRecommendationIds;
+  if (req.body.additionalRecommendations !== undefined) data.additionalRecommendations = req.body.additionalRecommendations;
+  if (req.body.conclusion !== undefined) data.conclusion = req.body.conclusion;
+
   const task = await prisma.task.update({
     where: { id: req.params.id as string },
-    data: {
-      equipmentTypeId: req.body.equipmentTypeId,
-      roomTypeId: req.body.roomTypeId || null,
-      location: req.body.location,
-      status: req.body.status,
-      parameters: req.body.parameters,
-      selectedRecommendationIds: req.body.selectedRecommendationIds || [],
-      additionalRecommendations: req.body.additionalRecommendations,
-      conclusion: req.body.conclusion,
-    },
+    data,
     include: { equipmentType: true, roomType: true, photos: true },
   });
   await logAudit({ userId: req.userId, action: 'update', entityType: 'task', entityId: task.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });

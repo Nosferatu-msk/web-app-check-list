@@ -66,6 +66,11 @@ export default function ReportPage() {
 
       // 2. Fetch visit with tasks and photos
       const fullVisit = await api.getVisit(id);
+      if (!fullVisit || !fullVisit.tasks || fullVisit.tasks.length === 0) {
+        message.error('Визит не содержит задач. Невозможно сформировать отчёт.');
+        setDownloading(false);
+        return;
+      }
       const tasks = fullVisit.tasks || [];
       const photosFolder = zip.folder('Photos')!;
 
@@ -92,7 +97,13 @@ export default function ReportPage() {
 
       message.success('ZIP-архив скачан');
     } catch (err: any) {
-      message.error(err.message || 'Ошибка формирования архива');
+      if (err.status === 404) {
+        message.error('Визит не найден. Возможно, он был удалён.');
+      } else if (err.status === 401) {
+        message.error('Сессия истекла. Войдите в систему повторно.');
+      } else {
+        message.error(`Ошибка формирования отчёта: ${err.message || 'Неизвестная ошибка'}`);
+      }
     } finally {
       setDownloading(false);
     }

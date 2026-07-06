@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
@@ -144,28 +144,30 @@ export default function TaskPage() {
   const [conclusion, setConclusion] = useState<string>('ok');
   const [saving, setSaving] = useState(false);
   const [photoCount, setPhotoCount] = useState(0);
+  const [formInitialValues, setFormInitialValues] = useState<Record<string, any> | null>(null);
+  const [formKey, setFormKey] = useState(0);
+  const loadedParamsRef = useRef<Record<string, any>>({});
+  const location = useLocation();
 
   useEffect(() => {
     if (!visitId || !taskId) return;
+    setFormInitialValues(null);
+    setLoading(true);
+
     api.getTask(visitId, taskId).then(async t => {
       setTask(t);
       const params = (t.parameters || {}) as Record<string, any>;
       const { conclusion: c, ...rest } = params;
       const eqCode = t.equipmentType?.code || '';
       const config = PARAM_CONFIG[eqCode] || [];
-      // Build defaults from PARAM_CONFIG
       const defaults: Record<string, any> = {};
       for (const p of config) {
         if (p.defaultValue !== undefined) defaults[p.key] = p.defaultValue;
       }
-      // Merge: saved params override defaults; if no saved params at all, use defaults
-      const mergedParams = Object.keys(rest).length > 0 ? rest : defaults;
-      form.setFieldsValue(mergedParams);
-      // Always sync conclusion state
+      const mergedParams = { ...defaults, ...rest };
+      loadedParamsRef.current = mergedParams;
       const conclusionValue = c || 'ok';
       setConclusion(conclusionValue);
-      form.setFieldValue('conclusion', conclusionValue);
-      form.setFieldValue('additionalRecommendations', t.additionalRecommendations || '');
       setSelectedRecs(t.selectedRecommendationIds || []);
       if (t.equipmentType) {
         const recs = await api.getRecommendations(t.equipmentType.id);
@@ -173,25 +175,47 @@ export default function TaskPage() {
       }
       const photos = await api.getPhotos(taskId);
       setPhotoCount(photos.length);
+
+      const initVals = {
+        ...mergedParams,
+        conclusion: conclusionValue,
+        additionalRecommendations: t.additionalRecommendations || '',
+      };
+
+      setFormKey(k => k + 1);
+      setFormInitialValues(initVals);
       setLoading(false);
     });
-  }, [visitId, taskId]);
+  }, [visitId, taskId, location.key]);
+
+  // Set form values after form renders with new key
+  useEffect(() => {
+    if (!loading && formInitialValues && Object.keys(formInitialValues).length > 0) {
+      const fields = Object.entries(formInitialValues).map(([name, value]) => ({
+        name,
+        value,
+        touched: true,
+      }));
+      const timer = setTimeout(() => {
+        form.setFields(fields);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [formKey]);
 
   const handleSave = async () => {
     if (!visitId || !taskId || !task) return;
     try {
-      const values = await form.validateFields();
+      await form.validateFields();
       setSaving(true);
 
-      const { conclusion: formConclusion, additionalRecommendations, ...paramValues } = values;
+      const allValues = form.getFieldsValue(true);
+      const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
       const finalConclusion = formConclusion || conclusion;
-      const parameters = { ...paramValues, conclusion: finalConclusion };
+      const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
 
-      // Check photo completeness
       const photosRequired = task.equipmentType?.photosRequired || 1;
       const hasAllPhotos = photoCount >= photosRequired;
-
-      // Determine status
       const status = hasAllPhotos ? 'completed' : 'in_progress';
 
       await api.updateTask(visitId, taskId, {
@@ -204,11 +228,35 @@ export default function TaskPage() {
       message.success(hasAllPhotos ? 'Сохранено' : 'Параметры сохранены. Загрузите фотографии для завершения');
       navigate(`/visit/${visitId}`);
     } catch (err: any) {
-      if (err.errorFields) return; // Form validation error, don't show message
+      if (err.errorFields) return;
       message.error(err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleGoToPhotos = async () => {
+    // Save parameters before going to photos
+    if (!visitId || !taskId || !task) {
+      navigate(`/visit/${visitId}/task/${taskId}/photos`);
+      return;
+    }
+    try {
+      const allValues = form.getFieldsValue(true);
+      const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
+      const finalConclusion = formConclusion || conclusion;
+      const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
+
+      await api.updateTask(visitId, taskId, {
+        parameters,
+        selectedRecommendationIds: selectedRecs,
+        additionalRecommendations: additionalRecommendations || '',
+        conclusion: finalConclusion,
+      });
+    } catch {
+      // Silent save - don't block navigation
+    }
+    navigate(`/visit/${visitId}/task/${taskId}/photos`);
   };
 
   const handleReset = async () => {
@@ -221,7 +269,7 @@ export default function TaskPage() {
   const equipmentCode = task?.equipmentType?.code || '';
   const paramConfig = PARAM_CONFIG[equipmentCode] || [];
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>;
+  if (loading || formInitialValues === null) return <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>;
 
   return (
     <div className="page-container">
@@ -231,7 +279,7 @@ export default function TaskPage() {
       </div>
 
       <Card>
-        <Form form={form} layout="vertical">
+        <Form form={form} key={formKey} initialValues={formInitialValues} layout="vertical">
           {paramConfig.map(p => (
             <Form.Item key={p.key} label={p.label} name={p.key} rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}>
               {p.type === 'select' ? (
@@ -283,7 +331,7 @@ export default function TaskPage() {
           </Button>
           <Space>
             <Button onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
-            <Button icon={<CameraOutlined />} onClick={() => navigate(`/visit/${visitId}/task/${taskId}/photos`)}>Фото</Button>
+            <Button icon={<CameraOutlined />} onClick={handleGoToPhotos}>Фото</Button>
             <Popconfirm title="Сбросить задачу? Все данные будут удалены." onConfirm={handleReset} okText="Да" cancelText="Нет">
               <Button danger>Сбросить задачу</Button>
             </Popconfirm>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
+import { useAuthStore } from '../store/authStore';
 import dayjs from 'dayjs';
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
@@ -20,6 +21,7 @@ export default function VisitPage() {
   const { message } = App.useApp();
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const isNew = !id || id === 'new';
   const [form] = Form.useForm();
   const [visit, setVisit] = useState<any>(null);
@@ -56,7 +58,7 @@ export default function VisitPage() {
         dateStart: now,
         timeStart: now,
         season: determineSeason(now),
-        engineerName: localStorage.getItem('lastEngineerName') || '',
+        engineerName: localStorage.getItem('lastEngineerName') || user?.fullName || '',
       });
       setLoading(false);
     }

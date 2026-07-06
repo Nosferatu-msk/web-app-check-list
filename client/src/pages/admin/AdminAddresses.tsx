@@ -14,6 +14,21 @@ export default function AdminAddresses() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
+  const generateFullAddress = () => {
+    const city = form.getFieldValue('city');
+    const street = form.getFieldValue('street');
+    const house = form.getFieldValue('house');
+    const building = form.getFieldValue('building');
+
+    const parts: string[] = [];
+    if (city) parts.push(`г. ${city}`);
+    if (street) parts.push(`ул. ${street}`);
+    if (house) parts.push(`д.${house}`);
+    if (building) parts.push(`к.${building}`);
+
+    form.setFieldValue('fullAddress', parts.join(', '));
+  };
+
   const load = async (p = page, q = search) => {
     setLoading(true);
     const params: any = { page: String(p), pageSize: '20' };
@@ -75,10 +90,10 @@ export default function AdminAddresses() {
       <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={{ current: page, total, pageSize: 20, onChange: setPage }} />
       <Modal title={editing ? 'Редактировать адрес' : 'Новый адрес'} open={modalOpen} onOk={handleSave} onCancel={() => { setModalOpen(false); setEditing(null); form.resetFields(); }} okText="Сохранить">
         <Form form={form} layout="vertical">
-          <Form.Item name="city" label="Город" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="street" label="Улица" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="house" label="Дом" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="building" label="Строение/корпус"><Input /></Form.Item>
+          <Form.Item name="city" label="Город" rules={[{ required: true }]}><Input onChange={generateFullAddress} /></Form.Item>
+          <Form.Item name="street" label="Улица" rules={[{ required: true }]}><Input onChange={generateFullAddress} /></Form.Item>
+          <Form.Item name="house" label="Дом" rules={[{ required: true }]}><Input onChange={generateFullAddress} /></Form.Item>
+          <Form.Item name="building" label="Строение/корпус"><Input onChange={generateFullAddress} /></Form.Item>
           <Form.Item name="fullAddress" label="Полный адрес" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="customerEmail" label="Email заказчика"><Input /></Form.Item>
         </Form>

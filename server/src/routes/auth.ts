@@ -27,7 +27,7 @@ const resetPasswordSchema = z.object({
 // POST /api/auth/login
 router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user || !user.isActive) {
     res.status(401).json({ error: 'Неверный email или пароль' });
     return;
@@ -86,11 +86,15 @@ router.post('/forgot-password', validate(forgotPasswordSchema), async (req: Requ
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
   await prisma.passwordResetToken.create({ data: { userId: user.id, token, expiresAt } });
   const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
-  await sendMail({
-    to: user.email,
-    subject: 'Сброс пароля — Чек-лист инженера',
-    text: `Для сброса пароля перейдите по ссылке:\n${resetUrl}\n\nСсылка действительна 1 час.`,
-  });
+  try {
+    await sendMail({
+      to: user.email,
+      subject: 'Сброс пароля — Чек-лист инженера',
+      text: `Для сброса пароля перейдите по ссылке:\n${resetUrl}\n\nСсылка действительна 1 час.`,
+    });
+  } catch (err) {
+    console.error('Email send error:', err);
+  }
   res.json({ message: 'Если email зарегистрирован, письмо будет отправлено' });
 });
 
