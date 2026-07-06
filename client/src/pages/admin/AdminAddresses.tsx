@@ -80,9 +80,9 @@ export default function AdminAddresses() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h2>Справочник адресов</h2>
-        <Space>
+        <Space wrap>
           <Input.Search placeholder="Поиск..." onSearch={(v) => { setSearch(v); load(1, v); }} allowClear style={{ width: 250 }} />
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
         </Space>

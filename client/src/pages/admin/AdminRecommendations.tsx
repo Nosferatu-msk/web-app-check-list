@@ -35,9 +35,9 @@ export default function AdminRecommendations() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h2>Типовые рекомендации</h2>
-        <Space>
+        <Space wrap>
           <Select placeholder="Фильтр по оборудованию" allowClear style={{ width: 250 }} onChange={setFilterEq}
             options={equipmentTypes.map(e => ({ label: e.name, value: e.id }))} />
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>

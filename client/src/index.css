@@ -20,3 +20,45 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .login-card { background: #fff; border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
 .login-title { text-align: center; font-size: 24px; font-weight: 700; color: #1677ff; margin-bottom: 8px; }
 .login-subtitle { text-align: center; color: #666; margin-bottom: 24px; font-size: 14px; }
+
+/* ─── Responsive admin layout ────────────────── */
+
+/* Mobile: show mobile header, hide desktop sider */
+@media (max-width: 767px) {
+  .admin-mobile-header { display: flex !important; }
+  .ant-layout-sider { display: none !important; }
+  .admin-content { margin: 8px !important; padding: 12px !important; border-radius: 8px !important; }
+
+  /* Tables scroll horizontally */
+  .ant-table { overflow-x: auto; }
+  .ant-table-container { min-width: 500px; }
+
+  /* Stack header controls */
+  .admin-page-header { flex-direction: column !important; gap: 8px !important; align-items: stretch !important; }
+  .admin-page-header h2 { font-size: 18px !important; margin-bottom: 0 !important; }
+
+  /* Modals full width on mobile */
+  .ant-modal { max-width: calc(100vw - 16px) !important; margin: 8px auto !important; }
+  .ant-modal-body { padding: 12px !important; }
+
+  /* Form inputs full width */
+  .ant-form-item-control-input-content { width: 100%; }
+  .ant-input, .ant-select, .ant-input-number { width: 100% !important; }
+
+  /* Search input */
+  .ant-input-search { width: 100% !important; }
+
+  /* Space components stack */
+  .ant-space { flex-wrap: wrap; }
+}
+
+/* Tablet and desktop */
+@media (min-width: 768px) {
+  .admin-mobile-header { display: none !important; }
+  .admin-content { margin: 16px !important; padding: 20px !important; }
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+  .admin-content { margin: 24px !important; padding: 24px !important; max-width: 1200px; }
+}
