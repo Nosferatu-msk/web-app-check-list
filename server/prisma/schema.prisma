@@ -132,7 +132,7 @@ model Visit {
   timeStart        String      @map("time_start")
   timeEnd          String?     @map("time_end")
   season           Season
-  status           VisitStatus @default(not_started)
+  status           VisitStatus @default(in_progress)
   assignedById     String?     @map("assigned_by_id")
   assignedAt       DateTime?   @map("assigned_at")
   sentByEngineerAt DateTime?   @map("sent_by_engineer_at")

@@ -15,9 +15,6 @@ ALTER TYPE "VisitStatus" ADD VALUE 'sent_by_engineer';
 ALTER TYPE "VisitStatus" ADD VALUE 'sent_by_tm';
 ALTER TYPE "VisitStatus" ADD VALUE 'corrected_by_tm';
 
-COMMIT;
-BEGIN;
-
 -- AlterTable
 ALTER TABLE "users" ADD COLUMN     "must_change_password" BOOLEAN NOT NULL DEFAULT false;
 
@@ -29,8 +26,7 @@ ADD COLUMN     "deleted_by_id" TEXT,
 ADD COLUMN     "is_deleted" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "sent_by_engineer_at" TIMESTAMP(3),
 ADD COLUMN     "sent_by_tm_at" TIMESTAMP(3),
-ADD COLUMN     "tm_corrected" BOOLEAN NOT NULL DEFAULT false,
-ALTER COLUMN "status" SET DEFAULT 'not_started';
+ADD COLUMN     "tm_corrected" BOOLEAN NOT NULL DEFAULT false;
 
 -- CreateTable
 CREATE TABLE "tm_objects" (
