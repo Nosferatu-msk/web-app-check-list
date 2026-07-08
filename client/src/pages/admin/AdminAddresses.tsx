@@ -63,6 +63,7 @@ export default function AdminAddresses() {
   };
 
   const columns = [
+    { title: 'Код объекта', dataIndex: 'objectCode', key: 'objectCode', width: 120, render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '—' },
     { title: 'Адрес', dataIndex: 'fullAddress', key: 'fullAddress' },
     { title: 'Email заказчика', dataIndex: 'customerEmail', key: 'customerEmail', render: (v: string) => v || '—' },
     {
@@ -95,6 +96,7 @@ export default function AdminAddresses() {
           <Form.Item name="house" label="Дом" rules={[{ required: true }]}><Input onChange={generateFullAddress} /></Form.Item>
           <Form.Item name="building" label="Строение/корпус"><Input onChange={generateFullAddress} /></Form.Item>
           <Form.Item name="fullAddress" label="Полный адрес" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="objectCode" label="Аналитический код объекта" tooltip="Формат: RU/77/001"><Input placeholder="RU/77/001" /></Form.Item>
           <Form.Item name="customerEmail" label="Email заказчика"><Input /></Form.Item>
         </Form>
       </Modal>

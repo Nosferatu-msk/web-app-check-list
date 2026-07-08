@@ -16,6 +16,7 @@ const addressSchema = z.object({
   building: z.string().optional(),
   fullAddress: z.string().min(1),
   customerEmail: z.string().email().optional().or(z.literal('')),
+  objectCode: z.string().optional().or(z.literal('')),
 });
 
 router.get('/addresses', async (req: AuthRequest, res: Response) => {
