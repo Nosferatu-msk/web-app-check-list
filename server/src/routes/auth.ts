@@ -91,6 +91,18 @@ router.post('/forgot-password', validate(forgotPasswordSchema), async (req: Requ
       to: user.email,
       subject: 'Сброс пароля — Чек-лист инженера',
       text: `Для сброса пароля перейдите по ссылке:\n${resetUrl}\n\nСсылка действительна 1 час.`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;">
+          <h2 style="margin:0 0 16px;color:#1677ff;">Чек-лист инженера</h2>
+          <p>Вы запросили сброс пароля. Нажмите кнопку ниже, чтобы установить новый пароль:</p>
+          <a href="${resetUrl}"
+             style="display:inline-block;padding:12px 24px;margin:16px 0;background:#1677ff;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">
+            Сбросить пароль
+          </a>
+          <p style="color:#888;font-size:13px;">Или скопируйте ссылку в браузер:<br/><span style="word-break:break-all;color:#555;">${resetUrl}</span></p>
+          <p style="color:#888;font-size:13px;">Ссылка действительна 1 час. Если вы не запрашивали сброс — проигнорируйте это письмо.</p>
+        </div>
+      `,
     });
   } catch (err) {
     console.error('Email send error:', err);
