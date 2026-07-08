@@ -37,4 +37,15 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   res.json(data);
 });
 
+// GET /api/refs/object-equipment?address_id=...
+router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
+  const addressId = req.query.address_id as string;
+  if (!addressId) { res.json([]); return; }
+  const data = await prisma.objectEquipment.findMany({
+    where: { addressId, isActive: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  res.json(data);
+});
+
 export default router;

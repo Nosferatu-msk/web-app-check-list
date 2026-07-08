@@ -63,6 +63,7 @@ export const api = {
   getRecommendations: (equipmentTypeId: string) =>
     request<any[]>(`/refs/recommendations?equipment_type_id=${equipmentTypeId}`),
   searchAddresses: (q: string) => request<any[]>(`/refs/addresses/search?q=${encodeURIComponent(q)}`),
+  getObjectEquipment: (addressId: string) => request<any[]>(`/refs/object-equipment?address_id=${addressId}`),
 
   // Visits
   createVisit: (data: any) =>

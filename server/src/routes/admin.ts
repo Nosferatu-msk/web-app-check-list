@@ -297,6 +297,46 @@ router.get('/import-logs', async (req: AuthRequest, res: Response) => {
   res.json({ data, total, page, pageSize });
 });
 
+// ─── OBJECT EQUIPMENT ────────────────────────────────────────
+const objectEquipmentSchema = z.object({
+  addressId: z.string().uuid(),
+  equipmentTypeCode: z.string().min(1),
+  roomTypeCode: z.string().min(1),
+  brand: z.string().optional(),
+  model: z.string().optional(),
+  serialNumber: z.string().optional(),
+  locationDescription: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
+  const addressId = req.query.address_id as string;
+  const where = addressId ? { addressId } : {};
+  const data = await prisma.objectEquipment.findMany({
+    where,
+    orderBy: { createdAt: 'asc' },
+  });
+  res.json(data);
+});
+
+router.post('/object-equipment', validate(objectEquipmentSchema), async (req: AuthRequest, res: Response) => {
+  const item = await prisma.objectEquipment.create({ data: req.body });
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'object_equipment', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(item);
+});
+
+router.put('/object-equipment/:id', validate(objectEquipmentSchema), async (req: AuthRequest, res: Response) => {
+  const item = await prisma.objectEquipment.update({ where: { id: req.params.id as string }, data: req.body });
+  await logAudit({ userId: req.userId, action: 'update', entityType: 'object_equipment', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json(item);
+});
+
+router.delete('/object-equipment/:id', async (req: AuthRequest, res: Response) => {
+  await prisma.objectEquipment.delete({ where: { id: req.params.id as string } });
+  await logAudit({ userId: req.userId, action: 'delete', entityType: 'object_equipment', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json({ message: 'Удалено' });
+});
+
 // ─── AUDIT LOG ───────────────────────────────────────────────
 router.get('/audit-log', async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;

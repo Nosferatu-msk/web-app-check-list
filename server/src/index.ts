@@ -9,6 +9,7 @@ import visitRoutes from './routes/visits.js';
 import photoRoutes from './routes/photos.js';
 import refRoutes from './routes/refs.js';
 import reportRoutes from './routes/reports.js';
+import importRoutes from './routes/import.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -28,6 +29,7 @@ app.use('/api/tasks', photoRoutes);
 app.use('/api/photos', photoRoutes);
 app.use('/api/refs', refRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/admin/import', importRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

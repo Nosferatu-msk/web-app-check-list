@@ -17,6 +17,8 @@ import AdminRoomTypes from './pages/admin/AdminRoomTypes';
 import AdminRecommendations from './pages/admin/AdminRecommendations';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminTmAssignments from './pages/admin/AdminTmAssignments';
+import AdminImport from './pages/admin/AdminImport';
+import AdminObjectEquipment from './pages/admin/AdminObjectEquipment';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -57,6 +59,8 @@ export default function App() {
         <Route path="recommendations" element={<AdminRecommendations />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="tm-assignments" element={<AdminTmAssignments />} />
+        <Route path="import" element={<AdminImport />} />
+        <Route path="object-equipment" element={<AdminObjectEquipment />} />
         <Route path="audit" element={<AdminAuditLog />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />

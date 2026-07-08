@@ -77,11 +77,13 @@ model Address {
   building      String?
   fullAddress   String   @map("full_address")
   customerEmail String?  @map("customer_email")
+  objectCode    String?  @unique @map("object_code")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  visits    Visit[]
-  tmObjects TmObject[]
+  visits          Visit[]
+  tmObjects       TmObject[]
+  objectEquipment ObjectEquipment[]
 
   @@index([city, street])
   @@map("addresses")
@@ -278,4 +280,24 @@ model ImportLog {
   @@index([userId, createdAt])
   @@index([entityType])
   @@map("import_logs")
+}
+
+model ObjectEquipment {
+  id                  String   @id @default(uuid())
+  addressId           String   @map("address_id")
+  equipmentTypeCode   String   @map("equipment_type_code")
+  roomTypeCode        String   @map("room_type_code")
+  brand               String?
+  model               String?
+  serialNumber        String?  @map("serial_number")
+  locationDescription String?  @map("location_description")
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  address Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@index([addressId])
+  @@index([equipmentTypeCode])
+  @@map("object_equipment")
 }

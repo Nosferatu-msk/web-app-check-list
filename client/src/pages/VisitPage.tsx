@@ -32,11 +32,17 @@ export default function VisitPage() {
   const [roomTypes, setRoomTypes] = useState<any[]>([]);
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [objectEquipment, setObjectEquipment] = useState<any[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
+  const [eqTypeMap, setEqTypeMap] = useState<Map<string, any>>(new Map());
+  const [rmTypeMap, setRmTypeMap] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
     Promise.all([api.getEquipmentTypes(), api.getRoomTypes()]).then(([eq, rt]) => {
       setEquipmentTypes(eq);
       setRoomTypes(rt);
+      setEqTypeMap(new Map(eq.map((e: any) => [e.code, e])));
+      setRmTypeMap(new Map(rt.map((r: any) => [r.code, r])));
     });
     if (!isNew && id) {
       api.getVisit(id).then(v => {
@@ -212,7 +218,18 @@ export default function VisitPage() {
               filterOption={false}
               onSearch={searchAddresses}
               placeholder="Начните вводить адрес..."
-              onChange={(_v: any, option: any) => form.setFieldValue('addressId', option?.dataId)}
+              onChange={async (v: string) => {
+                form.setFieldValue('addressId', v);
+                setSelectedEquipment([]);
+                setObjectEquipment([]);
+                if (v) {
+                  try {
+                    const eq = await api.getObjectEquipment(v);
+                    setObjectEquipment(eq);
+                    setSelectedEquipment(eq.map((e: any) => e.id));
+                  } catch { /* ignore */ }
+                }
+              }}
               options={addressOptions.map((a: any) => ({ label: a.fullAddress, value: a.id, dataId: a.id }))}
               notFoundContent="Адрес не найден"
             />
@@ -242,6 +259,56 @@ export default function VisitPage() {
 
       {visit && (
         <>
+          {objectEquipment.length > 0 && tasks.length === 0 && (
+            <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Оборудование объекта ({objectEquipment.length} ед.)</div>
+              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                {objectEquipment.map((eq: any) => {
+                  const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+                  const rmType = rmTypeMap.get(eq.roomTypeCode);
+                  return (
+                    <div key={eq.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedEquipment.includes(eq.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedEquipment([...selectedEquipment, eq.id]);
+                          else setSelectedEquipment(selectedEquipment.filter(id => id !== eq.id));
+                        }}
+                      />
+                      <span>{eqType?.name || eq.equipmentTypeCode}</span>
+                      {eq.brand && <span style={{ color: '#666' }}>({eq.brand} {eq.model || ''})</span>}
+                      {eq.serialNumber && <span style={{ color: '#999', fontSize: 12 }}>SN: {eq.serialNumber}</span>}
+                      <span style={{ color: '#888', fontSize: 12 }}>{rmType?.name || eq.roomTypeCode}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedEquipment.length > 0 && (
+                <Button type="primary" size="small" style={{ marginTop: 8 }} onClick={async () => {
+                  for (const eqId of selectedEquipment) {
+                    const eq = objectEquipment.find(e => e.id === eqId);
+                    if (!eq) continue;
+                    const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+                    const rmType = rmTypeMap.get(eq.roomTypeCode);
+                    await api.createTask(visit.id, {
+                      equipmentTypeId: eqType?.id || '',
+                      roomTypeId: rmType?.id || '',
+                      location: eq.locationDescription || '',
+                    });
+                  }
+                  const v = await api.getVisit(visit.id);
+                  setTasks(v.tasks || []);
+                  setObjectEquipment([]);
+                  setSelectedEquipment([]);
+                  message.success(`Добавлено задач: ${selectedEquipment.length}`);
+                }}>
+                  Добавить выбранное ({selectedEquipment.length})
+                </Button>
+              )}
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <div style={{ fontWeight: 600, fontSize: 16 }}>Проведённые работы</div>
             <Button type="dashed" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Добавить оборудование</Button>
