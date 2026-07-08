@@ -78,6 +78,8 @@ export const api = {
     request<any>(`/visits/${id}`, { method: 'DELETE' }),
   completeVisit: (id: string) =>
     request<any>(`/visits/${id}/complete`, { method: 'POST' }),
+  reassignVisit: (id: string, newUserId: string) =>
+    request<any>(`/visits/${id}/reassign`, { method: 'POST', body: JSON.stringify({ newUserId }) }),
 
   // Tasks
   createTask: (visitId: string, data: any) =>

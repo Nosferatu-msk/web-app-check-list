@@ -91,8 +91,19 @@ router.post('/:id/report/send', async (req: AuthRequest, res: Response) => {
       text,
       attachments: [{ filename: `${baseName}.pdf`, path: pdfPath }],
     });
-    await prisma.visit.update({ where: { id: req.params.id as string }, data: { status: 'sent' } });
-    await logAudit({ userId: req.userId, action: 'send_report', entityType: 'visit', entityId: req.params.id as string, newValue: { email }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+
+    const isEngineerSending = req.userRole === 'engineer';
+    const updateData: any = {
+      status: isEngineerSending ? 'sent_by_engineer' : 'sent_by_tm',
+    };
+    if (isEngineerSending) {
+      updateData.sentByEngineerAt = new Date();
+    } else {
+      updateData.sentByTmAt = new Date();
+    }
+    await prisma.visit.update({ where: { id: req.params.id as string }, data: updateData });
+
+    await logAudit({ userId: req.userId, action: 'send_report', entityType: 'visit', entityId: req.params.id as string, newValue: { email, sentBy: req.userRole }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
     res.json({ message: 'Отчёт отправлен' });
   } catch (err: any) {
     res.status(500).json({ error: 'Ошибка отправки email', details: err.message });

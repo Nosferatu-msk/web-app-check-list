@@ -33,6 +33,14 @@ export function adminOnly(req: AuthRequest, res: Response, next: NextFunction) {
   next();
 }
 
+export function tmOrAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (req.userRole !== 'admin' && req.userRole !== 'tm') {
+    res.status(403).json({ error: 'Доступ запрещён' });
+    return;
+  }
+  next();
+}
+
 export function generateAccessToken(userId: string, role: string) {
   return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: process.env.JWT_ACCESS_EXPIRES || '15m' } as jwt.SignOptions);
 }

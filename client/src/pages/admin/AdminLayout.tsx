@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 
 const { Content } = Layout;
@@ -12,6 +12,7 @@ const menuItems = [
   { key: '/admin/rooms', icon: <HomeOutlined />, label: 'Помещения' },
   { key: '/admin/recommendations', icon: <FileTextOutlined />, label: 'Рекомендации' },
   { key: '/admin/users', icon: <UserOutlined />, label: 'Пользователи' },
+  { key: '/admin/tm-assignments', icon: <TeamOutlined />, label: 'Привязки ТМ' },
   { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
 ];
 

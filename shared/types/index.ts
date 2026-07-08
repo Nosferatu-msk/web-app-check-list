@@ -1,6 +1,6 @@
-export type UserRole = 'engineer' | 'admin';
+export type UserRole = 'engineer' | 'tm' | 'admin';
 export type Season = 'summer' | 'winter';
-export type VisitStatus = 'in_progress' | 'completed' | 'sent';
+export type VisitStatus = 'planned' | 'not_started' | 'in_progress' | 'completed' | 'sent' | 'sent_by_engineer' | 'sent_by_tm' | 'corrected_by_tm';
 export type TaskStatus = 'not_started' | 'in_progress' | 'completed';
 export type Conclusion = 'ok' | 'ok_with_notes' | 'faulty';
 export type PhotoMoment = 'before' | 'after';
@@ -55,8 +55,18 @@ export interface Visit {
   timeEnd?: string;
   season: Season;
   status: VisitStatus;
+  assignedById?: string;
+  assignedAt?: string;
+  sentByEngineerAt?: string;
+  sentByTmAt?: string;
+  tmCorrected: boolean;
+  isDeleted: boolean;
+  deletedById?: string;
+  deletedAt?: string;
   address?: Address;
   tasks?: Task[];
+  user?: { id: string; fullName: string; email: string };
+  assignedBy?: { id: string; fullName: string; email: string };
 }
 
 export interface Task {
@@ -129,6 +139,55 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   in_progress: 'В работе',
   completed: 'Выполнено',
 };
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  engineer: 'Инженер',
+  tm: 'Территориальный менеджер',
+  admin: 'Администратор',
+};
+
+export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
+  planned: 'Запланировано',
+  not_started: 'Не начато',
+  in_progress: 'В работе',
+  completed: 'Завершён',
+  sent: 'Отправлен',
+  sent_by_engineer: 'Отправлен инженером',
+  sent_by_tm: 'Отправлен ТМ',
+  corrected_by_tm: 'Откорректирован ТМ',
+};
+
+export interface TmAssignment {
+  id: string;
+  tmId: string;
+  addressId: string;
+  createdAt: string;
+  tm?: { id: string; fullName: string; email: string };
+  address?: Address;
+}
+
+export interface TmEngineerAssignment {
+  id: string;
+  tmId: string;
+  engineerId: string;
+  createdAt: string;
+  tm?: { id: string; fullName: string; email: string };
+  engineer?: { id: string; fullName: string; email: string };
+}
+
+export interface ImportLogEntry {
+  id: string;
+  userId: string;
+  entityType: string;
+  fileName: string;
+  totalRows: number;
+  successRows: number;
+  duplicateRows: number;
+  errorRows: number;
+  errors?: Record<string, unknown>;
+  status: string;
+  createdAt: string;
+}
 
 export function determineSeason(date: Date): Season {
   const month = date.getMonth() + 1;

@@ -170,8 +170,9 @@ const userSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6).optional(),
-  role: z.enum(['engineer', 'admin']),
+  role: z.enum(['engineer', 'tm', 'admin']),
   isActive: z.boolean().optional(),
+  mustChangePassword: z.boolean().optional(),
 });
 
 router.get('/users', async (_req: AuthRequest, res: Response) => {
@@ -200,6 +201,100 @@ router.delete('/users/:id', async (req: AuthRequest, res: Response) => {
   await prisma.user.update({ where: { id: req.params.id as string }, data: { isActive: false } });
   await logAudit({ userId: req.userId, action: 'delete', entityType: 'user', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json({ message: 'Деактивирован' });
+});
+
+// ─── TM OBJECTS ──────────────────────────────────────────────
+const tmObjectSchema = z.object({
+  tmId: z.string().uuid(),
+  addressId: z.string().uuid(),
+});
+
+router.get('/tm-objects', async (req: AuthRequest, res: Response) => {
+  const tmId = req.query.tm_id as string;
+  const where = tmId ? { tmId } : {};
+  const data = await prisma.tmObject.findMany({
+    where,
+    include: {
+      tm: { select: { id: true, fullName: true, email: true } },
+      address: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(data);
+});
+
+router.post('/tm-objects', validate(tmObjectSchema), async (req: AuthRequest, res: Response) => {
+  const item = await prisma.tmObject.upsert({
+    where: { tmId_addressId: { tmId: req.body.tmId, addressId: req.body.addressId } },
+    update: {},
+    create: req.body,
+    include: {
+      tm: { select: { id: true, fullName: true, email: true } },
+      address: true,
+    },
+  });
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'tm_object', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(item);
+});
+
+router.delete('/tm-objects/:id', async (req: AuthRequest, res: Response) => {
+  await prisma.tmObject.delete({ where: { id: req.params.id as string } });
+  await logAudit({ userId: req.userId, action: 'delete', entityType: 'tm_object', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json({ message: 'Удалено' });
+});
+
+// ─── TM ENGINEERS ────────────────────────────────────────────
+const tmEngineerSchema = z.object({
+  tmId: z.string().uuid(),
+  engineerId: z.string().uuid(),
+});
+
+router.get('/tm-engineers', async (req: AuthRequest, res: Response) => {
+  const tmId = req.query.tm_id as string;
+  const where = tmId ? { tmId } : {};
+  const data = await prisma.tmEngineer.findMany({
+    where,
+    include: {
+      tm: { select: { id: true, fullName: true, email: true } },
+      engineer: { select: { id: true, fullName: true, email: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(data);
+});
+
+router.post('/tm-engineers', validate(tmEngineerSchema), async (req: AuthRequest, res: Response) => {
+  const item = await prisma.tmEngineer.upsert({
+    where: { engineerId: req.body.engineerId },
+    update: { tmId: req.body.tmId },
+    create: req.body,
+    include: {
+      tm: { select: { id: true, fullName: true, email: true } },
+      engineer: { select: { id: true, fullName: true, email: true } },
+    },
+  });
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'tm_engineer', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(item);
+});
+
+router.delete('/tm-engineers/:id', async (req: AuthRequest, res: Response) => {
+  await prisma.tmEngineer.delete({ where: { id: req.params.id as string } });
+  await logAudit({ userId: req.userId, action: 'delete', entityType: 'tm_engineer', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json({ message: 'Удалено' });
+});
+
+// ─── IMPORT LOGS ─────────────────────────────────────────────
+router.get('/import-logs', async (req: AuthRequest, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const pageSize = parseInt(req.query.pageSize as string) || 20;
+  const [data, total] = await Promise.all([
+    prisma.importLog.findMany({
+      skip: (page - 1) * pageSize, take: pageSize,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.importLog.count(),
+  ]);
+  res.json({ data, total, page, pageSize });
 });
 
 // ─── AUDIT LOG ───────────────────────────────────────────────

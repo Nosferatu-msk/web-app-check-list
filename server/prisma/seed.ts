@@ -8,6 +8,7 @@ async function main() {
 
   // ─── USERS ───────────────────────────────────────────────
   const adminHash = await bcrypt.hash('admin123', 12);
+  const tmHash = await bcrypt.hash('tm12345', 12);
   const engineerHash = await bcrypt.hash('engineer123', 12);
 
   await prisma.user.upsert({
@@ -15,12 +16,33 @@ async function main() {
     update: {},
     create: { fullName: 'Администратор Системы', email: 'admin@example.com', passwordHash: adminHash, role: 'admin' },
   });
-  await prisma.user.upsert({
+  const tm = await prisma.user.upsert({
+    where: { email: 'tm@example.com' },
+    update: {},
+    create: { fullName: 'Петрова А.В.', email: 'tm@example.com', passwordHash: tmHash, role: 'tm' },
+  });
+  const engineer = await prisma.user.upsert({
     where: { email: 'engineer@example.com' },
     update: {},
     create: { fullName: 'Иванов П.С.', email: 'engineer@example.com', passwordHash: engineerHash, role: 'engineer' },
   });
   console.log('Users created');
+
+  // ─── TM ASSIGNMENTS ──────────────────────────────────────
+  const allAddresses = await prisma.address.findMany();
+  for (const addr of allAddresses) {
+    await prisma.tmObject.upsert({
+      where: { tmId_addressId: { tmId: tm.id, addressId: addr.id } },
+      update: {},
+      create: { tmId: tm.id, addressId: addr.id },
+    });
+  }
+  await prisma.tmEngineer.upsert({
+    where: { engineerId: engineer.id },
+    update: {},
+    create: { tmId: tm.id, engineerId: engineer.id },
+  });
+  console.log('TM assignments created');
 
   // ─── EQUIPMENT TYPES ─────────────────────────────────────
   const equipmentTypes = [

@@ -32,7 +32,11 @@ export default function AdminUsers() {
       <Table dataSource={data} rowKey="id" loading={loading} pagination={false} columns={[
         { title: 'ФИО', dataIndex: 'fullName' },
         { title: 'Email', dataIndex: 'email' },
-        { title: 'Роль', dataIndex: 'role', render: (v: string) => <Tag color={v === 'admin' ? 'red' : 'blue'}>{v === 'admin' ? 'Администратор' : 'Инженер'}</Tag> },
+        { title: 'Роль', dataIndex: 'role', render: (v: string) => {
+          const colors: Record<string, string> = { admin: 'red', tm: 'orange', engineer: 'blue' };
+          const labels: Record<string, string> = { admin: 'Администратор', tm: 'ТМ', engineer: 'Инженер' };
+          return <Tag color={colors[v] || 'default'}>{labels[v] || v}</Tag>;
+        }},
         { title: 'Активен', dataIndex: 'isActive', render: (v: boolean) => v ? '✅' : '❌' },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (
           <Space>
@@ -47,7 +51,7 @@ export default function AdminUsers() {
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>
           <Form.Item name="password" label={editing ? 'Новый пароль (оставьте пустым)' : 'Пароль'} rules={editing ? [] : [{ required: true, min: 6 }]}><Input.Password /></Form.Item>
           <Form.Item name="role" label="Роль" rules={[{ required: true }]}>
-            <Select options={[{ label: 'Инженер', value: 'engineer' }, { label: 'Администратор', value: 'admin' }]} />
+            <Select options={[{ label: 'Инженер', value: 'engineer' }, { label: 'Территориальный менеджер', value: 'tm' }, { label: 'Администратор', value: 'admin' }]} />
           </Form.Item>
           <Form.Item name="isActive" label="Активен" valuePropName="checked"><Switch /></Form.Item>
         </Form>
