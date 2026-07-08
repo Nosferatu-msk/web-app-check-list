@@ -76,7 +76,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     where.userId = req.userId;
   } else if (req.userRole === 'tm') {
     const engineerIds = await getTmEngineerIds(req.userId!);
-    where.userId = { in: engineerIds };
+    if (req.query.user_id && engineerIds.includes(req.query.user_id as string)) {
+      where.userId = req.query.user_id;
+    } else {
+      where.userId = { in: engineerIds };
+    }
   } else if (req.userRole === 'admin') {
     if (req.query.user_id) where.userId = req.query.user_id;
   }
