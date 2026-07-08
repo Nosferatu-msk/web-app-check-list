@@ -15,6 +15,9 @@ ALTER TYPE "VisitStatus" ADD VALUE 'sent_by_engineer';
 ALTER TYPE "VisitStatus" ADD VALUE 'sent_by_tm';
 ALTER TYPE "VisitStatus" ADD VALUE 'corrected_by_tm';
 
+COMMIT;
+BEGIN;
+
 -- AlterTable
 ALTER TABLE "users" ADD COLUMN     "must_change_password" BOOLEAN NOT NULL DEFAULT false;
 
