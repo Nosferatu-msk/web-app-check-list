@@ -33,6 +33,15 @@ export default defineConfig({
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'api-refs', expiration: { maxEntries: 50, maxAgeSeconds: 24 * 60 * 60 } },
           },
+          {
+            urlPattern: /^https:\/\/.*\/api\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-data',
+              expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              networkTimeoutSeconds: 3,
+            },
+          },
         ],
       },
     }),

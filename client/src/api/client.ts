@@ -8,6 +8,10 @@ class ApiError extends Error {
   }
 }
 
+export function isOffline(): boolean {
+  return !navigator.onLine;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('accessToken');
   const headers: Record<string, string> = {
@@ -133,4 +137,105 @@ export const api = {
     request<any>(`/admin/${entity}/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDelete: (entity: string, id: string) =>
     request<any>(`/admin/${entity}/${id}`, { method: 'DELETE' }),
+
+  // ─── OFFLINE-AWARE METHODS ────────────────────────────────────
+  // These methods work both online and offline.
+  // When offline, data is saved to IndexedDB and queued for sync.
+
+  createVisitOffline: async (data: any) => {
+    if (!isOffline()) return api.createVisit(data);
+    const { db, localId, enqueueSync } = await import('../db/index');
+    const id = localId();
+    const now = new Date().toISOString();
+    const userId = JSON.parse(atob(localStorage.getItem('accessToken')!.split('.')[1])).userId;
+    await db.visits.add({
+      id, userId, addressId: data.addressId, engineerName: data.engineerName,
+      dateStart: data.dateStart, timeStart: data.timeStart, season: data.season,
+      status: 'in_progress', isDeleted: false, createdAt: now, updatedAt: now, dirty: true,
+    });
+    await enqueueSync({ operation: 'create', entityType: 'visit', entityId: id });
+    return { id, ...data, status: 'in_progress', _offline: true };
+  },
+
+  createTaskOffline: async (visitId: string, data: any) => {
+    if (!isOffline()) return api.createTask(visitId, data);
+    const { db, localId, enqueueSync } = await import('../db/index');
+    const id = localId();
+    const now = new Date().toISOString();
+    const visit = await db.visits.get(visitId);
+    await db.tasks.add({
+      id, visitLocalId: visitId, visitServerId: visit?.serverId,
+      equipmentTypeId: data.equipmentTypeId, roomTypeId: data.roomTypeId,
+      location: data.location, sortOrder: data.sortOrder || 0,
+      status: 'not_started', selectedRecommendationIds: [],
+      createdAt: now, updatedAt: now, dirty: true,
+    });
+    await enqueueSync({ operation: 'create', entityType: 'task', entityId: id });
+    return { id, visitId, ...data, status: 'not_started', _offline: true };
+  },
+
+  updateTaskOffline: async (visitId: string, taskId: string, data: any) => {
+    if (!isOffline()) return api.updateTask(visitId, taskId, data);
+    const { db, enqueueSync } = await import('../db/index');
+    const task = await db.tasks.get(taskId);
+    if (task) {
+      await db.tasks.update(taskId, { ...data, dirty: true, updatedAt: new Date().toISOString() });
+      await enqueueSync({ operation: 'update', entityType: 'task', entityId: taskId });
+    }
+    return { id: taskId, ...data, _offline: true };
+  },
+
+  uploadPhotoOffline: async (taskId: string, file: File, moment: 'before' | 'after') => {
+    if (!isOffline()) return api.uploadPhoto(taskId, file, moment);
+    const { db, localId, enqueueSync } = await import('../db/index');
+    const id = localId();
+    const task = await db.tasks.get(taskId);
+    await db.photos.add({
+      id, taskLocalId: taskId, taskServerId: task?.serverId,
+      blob: file, fileName: file.name, moment,
+      fileSize: file.size, mimeType: file.type,
+      createdAt: new Date().toISOString(), dirty: true,
+    });
+    await enqueueSync({ operation: 'upload_photo', entityType: 'photo', entityId: id });
+    return { id, taskId, moment, fileName: file.name, _offline: true };
+  },
+
+  completeVisitOffline: async (visitId: string) => {
+    if (!isOffline()) return api.completeVisit(visitId);
+    const { db, enqueueSync } = await import('../db/index');
+    await db.visits.update(visitId, { status: 'completed', dirty: true, updatedAt: new Date().toISOString() });
+    await enqueueSync({ operation: 'complete', entityType: 'visit', entityId: visitId });
+    return { id: visitId, status: 'completed', _offline: true };
+  },
+
+  deleteVisitOffline: async (visitId: string) => {
+    if (!isOffline()) return api.deleteVisit(visitId);
+    const { db, enqueueSync } = await import('../db/index');
+    await db.visits.update(visitId, { isDeleted: true, dirty: true });
+    await enqueueSync({ operation: 'delete', entityType: 'visit', entityId: visitId });
+    return { message: 'Визит помечен на удаление', _offline: true };
+  },
+
+  // Get local visits (merge of server-synced and local-only)
+  getLocalVisits: async () => {
+    const { db } = await import('../db/index');
+    return db.visits.where('isDeleted').equals(0).reverse().sortBy('dateStart');
+  },
+
+  getLocalTasks: async (visitLocalId: string) => {
+    const { db } = await import('../db/index');
+    return db.tasks.where('visitLocalId').equals(visitLocalId).toArray();
+  },
+
+  getLocalPhotos: async (taskLocalId: string) => {
+    const { db } = await import('../db/index');
+    return db.photos.where('taskLocalId').equals(taskLocalId).toArray();
+  },
+
+  getLocalPhotoUrl: async (photoLocalId: string): Promise<string> => {
+    const { db } = await import('../db/index');
+    const photo = await db.photos.get(photoLocalId);
+    if (!photo) throw new Error('Photo not found');
+    return URL.createObjectURL(photo.blob);
+  },
 };

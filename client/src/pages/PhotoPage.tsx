@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Space, App, Spin, Modal, Alert } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PictureOutlined } from '@ant-design/icons';
-import { api } from '../api/client';
+import { api, isOffline } from '../api/client';
 
 const CLIENT_ZONES = ['kassovaya', 'zona_samoobsl', 'kassa', 'sanitarnyj_uzel', 'kryltso'];
 
@@ -104,7 +104,11 @@ export default function PhotoPage() {
     setUploading(true);
     try {
       const compressed = await compressImage(file);
-      await api.uploadPhoto(taskId, compressed, moment);
+      if (isOffline()) {
+        await api.uploadPhotoOffline(taskId, compressed, moment);
+      } else {
+        await api.uploadPhoto(taskId, compressed, moment);
+      }
       const p = await api.getPhotos(taskId);
       setPhotos(p);
       // Refresh blob URLs
@@ -125,7 +129,7 @@ export default function PhotoPage() {
         }
       }
 
-      message.success('Фото загружено');
+      message.success(isOffline() ? 'Фото сохранено локально' : 'Фото загружено');
     } catch (err: any) {
       message.error(err.message);
     } finally {

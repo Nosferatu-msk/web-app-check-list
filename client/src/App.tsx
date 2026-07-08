@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Spin } from 'antd';
+import SyncBanner from './components/SyncBanner';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -25,7 +26,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
-  return <>{children}</>;
+  return <><SyncBanner />{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {

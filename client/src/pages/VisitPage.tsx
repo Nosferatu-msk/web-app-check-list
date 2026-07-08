@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons';
-import { api } from '../api/client';
+import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import dayjs from 'dayjs';
 
@@ -97,9 +97,9 @@ export default function VisitPage() {
       localStorage.setItem('lastEngineerName', values.engineerName);
 
       if (isNew) {
-        const v = await api.createVisit(data);
+        const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
         navigate(`/visit/${v.id}`, { replace: true });
-        message.success('Визит создан');
+        message.success(isOffline() ? 'Визит сохранён локально' : 'Визит создан');
       } else {
         const v = await api.updateVisit(id!, data);
         setVisit(v);
@@ -119,11 +119,19 @@ export default function VisitPage() {
       message.warning('Укажите тип помещения или местоположение');
       return;
     }
-    await api.createTask(visit.id, {
-      equipmentTypeId: values.equipmentTypeId,
-      roomTypeId: values.roomTypeId || '',
-      location: values.location || '',
-    });
+    if (isOffline()) {
+      await api.createTaskOffline(visit.id, {
+        equipmentTypeId: values.equipmentTypeId,
+        roomTypeId: values.roomTypeId || '',
+        location: values.location || '',
+      });
+    } else {
+      await api.createTask(visit.id, {
+        equipmentTypeId: values.equipmentTypeId,
+        roomTypeId: values.roomTypeId || '',
+        location: values.location || '',
+      });
+    }
     const v = await api.getVisit(visit.id);
     setTasks(v.tasks || []);
     setModalOpen(false);
@@ -141,13 +149,21 @@ export default function VisitPage() {
     if (!visit?.id) return;
     const completedTasks = tasks.filter(t => t.status === 'completed');
     if (completedTasks.length === 0) { message.warning('Должна быть хотя бы 1 выполненная задача'); return; }
-    await api.completeVisit(visit.id);
+    if (isOffline()) {
+      await api.completeVisitOffline(visit.id);
+    } else {
+      await api.completeVisit(visit.id);
+    }
     navigate(`/visit/${visit.id}/report`);
   };
 
   const handleDeleteVisit = async () => {
     if (!visit?.id) return;
-    await api.deleteVisit(visit.id);
+    if (isOffline()) {
+      await api.deleteVisitOffline(visit.id);
+    } else {
+      await api.deleteVisit(visit.id);
+    }
     navigate('/');
   };
 
