@@ -6,13 +6,14 @@ import type { UploadFile } from 'antd/es/upload/interface';
 const API_BASE = '/api/admin/import';
 
 const IMPORT_TYPES = [
-  { key: 'addresses', label: 'Адреса объектов', icon: '📋', description: 'CSV: city, street, house, building, full_address, customer_email' },
+  { key: 'addresses', label: 'Адреса объектов', icon: '📋', description: 'CSV: city, street, house, building, full_address, customer_email, object_code' },
   { key: 'equipment-types', label: 'Виды оборудования', icon: '🔧', description: 'CSV: name, code, photos_required, is_active' },
   { key: 'room-types', label: 'Типы помещений', icon: '🏠', description: 'CSV: name, code' },
   { key: 'recommendations', label: 'Типовые рекомендации', icon: '📝', description: 'CSV: equipment_code, text, sort_order, is_active' },
   { key: 'users', label: 'Пользователи', icon: '👥', description: 'CSV: full_name, email, role, password, tm_email' },
   { key: 'tm-objects', label: 'Привязка объектов к ТМ', icon: '🔗', description: 'CSV: object_code, tm_email' },
   { key: 'tm-engineers', label: 'Привязка инженеров к ТМ', icon: '🔗', description: 'CSV: engineer_email, tm_email' },
+  { key: 'object-equipment', label: 'Оборудование объектов', icon: '⚙️', description: 'CSV: object_code, equipment_type, room_type, brand, model, serial_number, location_description' },
 ];
 
 interface ImportResult {

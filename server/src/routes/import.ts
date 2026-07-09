@@ -92,6 +92,7 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
           building: r.building || r['строение'] || null,
           fullAddress,
           customerEmail,
+          objectCode: r.object_code || r.objectCode || r['код объекта'] || null,
         },
       });
       result.success++;
@@ -310,6 +311,82 @@ router.post('/tm-engineers', upload.single('file'), async (req: AuthRequest, res
 
     await prisma.importLog.create({
       data: { userId: req.userId!, entityType: 'tm_engineers', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
+    });
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── OBJECT EQUIPMENT ────────────────────────────────────────
+router.post('/object-equipment', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { rows, fileName } = await parseUploadedCsv(req);
+    const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const objectCode = r.object_code || r.objectCode || r['код объекта'];
+      const equipmentType = r.equipment_type || r.equipmentType || r['тип оборудования'];
+      const roomType = r.room_type || r.roomType || r['тип помещения'];
+
+      if (!objectCode || !equipmentType || !roomType) {
+        result.errors.push({ row: i + 2, message: 'Не заполнены object_code, equipment_type или room_type' });
+        continue;
+      }
+
+      // Find address by object_code
+      const address = await prisma.address.findFirst({ where: { objectCode } });
+      if (!address) {
+        result.errors.push({ row: i + 2, message: `Адрес с object_code "${objectCode}" не найден` });
+        continue;
+      }
+
+      // Check if equipment type exists
+      const eqType = await prisma.equipmentType.findFirst({ where: { code: equipmentType } });
+      if (!eqType) {
+        result.errors.push({ row: i + 2, message: `Тип оборудования "${equipmentType}" не найден` });
+        continue;
+      }
+
+      // Check if room type exists
+      const rmType = await prisma.roomType.findFirst({ where: { code: roomType } });
+      if (!rmType) {
+        result.errors.push({ row: i + 2, message: `Тип помещения "${roomType}" не найден` });
+        continue;
+      }
+
+      const serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
+      const locationDescription = r.location_description || r.locationDescription || r['местоположение'] || null;
+
+      // Check for duplicate: same address + equipment type + serial number (or location if no SN)
+      const duplicateWhere: any = {
+        addressId: address.id,
+        equipmentTypeCode: equipmentType,
+      };
+      if (serialNumber) {
+        duplicateWhere.serialNumber = serialNumber;
+      } else if (locationDescription) {
+        duplicateWhere.locationDescription = locationDescription;
+      }
+
+      const existing = await prisma.objectEquipment.findFirst({ where: duplicateWhere });
+      if (existing) { result.duplicates++; continue; }
+
+      await prisma.objectEquipment.create({
+        data: {
+          addressId: address.id,
+          equipmentTypeCode: equipmentType,
+          roomTypeCode: roomType,
+          brand: r.brand || r['марка'] || null,
+          model: r.model || r['модель'] || null,
+          serialNumber,
+          locationDescription,
+        },
+      });
+      result.success++;
+    }
+
+    await prisma.importLog.create({
+      data: { userId: req.userId!, entityType: 'object_equipment', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
     });
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
