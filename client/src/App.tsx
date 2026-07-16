@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Spin } from 'antd';
 import SyncBanner from './components/SyncBanner';
+import SpecializationGate from './components/SpecializationGate';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -12,6 +13,7 @@ import TaskPage from './pages/TaskPage';
 import PhotoPage from './pages/PhotoPage';
 import ReportPage from './pages/ReportPage';
 import SummaryReportPage from './pages/SummaryReportPage';
+import ProfilePage from './pages/ProfilePage';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminAddresses from './pages/admin/AdminAddresses';
 import AdminEquipment from './pages/admin/AdminEquipment';
@@ -45,6 +47,13 @@ function TmAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function EngineerRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuthStore();
+  if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  if (user?.role !== 'engineer') return <>{children}</>;
+  return <SpecializationGate>{children}</SpecializationGate>;
+}
+
 export default function App() {
   const { checkAuth } = useAuthStore();
 
@@ -55,12 +64,13 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/" element={<ProtectedRoute><VisitListPage /></ProtectedRoute>} />
-      <Route path="/visit/new" element={<ProtectedRoute><VisitPage /></ProtectedRoute>} />
-      <Route path="/visit/:id" element={<ProtectedRoute><VisitPage /></ProtectedRoute>} />
-      <Route path="/visit/:visitId/task/:taskId" element={<ProtectedRoute><TaskPage /></ProtectedRoute>} />
-      <Route path="/visit/:visitId/task/:taskId/photos" element={<ProtectedRoute><PhotoPage /></ProtectedRoute>} />
-      <Route path="/visit/:id/report" element={<ProtectedRoute><ReportPage /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><EngineerRoute><VisitListPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+      <Route path="/visit/new" element={<ProtectedRoute><EngineerRoute><VisitPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/visit/:id" element={<ProtectedRoute><EngineerRoute><VisitPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/visit/:visitId/task/:taskId" element={<ProtectedRoute><EngineerRoute><TaskPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/visit/:visitId/task/:taskId/photos" element={<ProtectedRoute><EngineerRoute><PhotoPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/visit/:id/report" element={<ProtectedRoute><EngineerRoute><ReportPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/reports/summary" element={<TmAdminRoute><ProtectedRoute><SummaryReportPage /></ProtectedRoute></TmAdminRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
         <Route index element={<Navigate to="/admin/addresses" />} />

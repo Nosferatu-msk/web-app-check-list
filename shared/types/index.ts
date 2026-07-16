@@ -11,6 +11,8 @@ export interface User {
   email: string;
   role: UserRole;
   isActive: boolean;
+  specializationVik?: boolean;
+  specializationIszh?: boolean;
 }
 
 export interface Address {

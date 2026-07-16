@@ -6,6 +6,8 @@ interface User {
   fullName: string;
   email: string;
   role: 'engineer' | 'tm' | 'admin';
+  specializationVik?: boolean;
+  specializationIszh?: boolean;
 }
 
 interface AuthState {
@@ -15,9 +17,10 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean }) => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
@@ -48,6 +51,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       set({ isLoading: false, isAuthenticated: false });
+    }
+  },
+
+  updateSpecialization: async (data: { specializationVik: boolean; specializationIszh: boolean }) => {
+    const updated = await api.updateSpecialization(data);
+    const currentUser = get().user;
+    if (currentUser) {
+      set({ user: { ...currentUser, specializationVik: data.specializationVik, specializationIszh: data.specializationIszh } });
     }
   },
 }));

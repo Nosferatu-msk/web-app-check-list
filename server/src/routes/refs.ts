@@ -56,14 +56,50 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   res.json(data);
 });
 
-// GET /api/refs/object-equipment?address_id=...
+// GET /api/refs/object-equipment?address_id=...&specialization=vik|iszh
 router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   const addressId = req.query.address_id as string;
   if (!addressId) { res.json([]); return; }
+
+  const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar'];
+  const ISZH_CODES = ['rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc', 'seti_vodosnab', 'teplovye_seti'];
+
+  // Determine which codes to filter by
+  let allowedCodes: string[] | null = null;
+  const specParam = req.query.specialization as string;
+
+  if (specParam === 'vik') {
+    allowedCodes = VIK_CODES;
+  } else if (specParam === 'iszh') {
+    allowedCodes = ISZH_CODES;
+  } else if (req.userRole === 'engineer') {
+    // Auto-detect from engineer's specialization
+    const engineer = await prisma.user.findUnique({
+      where: { id: req.userId as string },
+      select: { specializationVik: true, specializationIszh: true },
+    });
+    if (engineer) {
+      const hasVik = engineer.specializationVik;
+      const hasIszh = engineer.specializationIszh;
+      if (hasVik && !hasIszh) {
+        allowedCodes = VIK_CODES;
+      } else if (hasIszh && !hasVik) {
+        allowedCodes = ISZH_CODES;
+      }
+      // Both or neither — no filtering
+    }
+  }
+
+  const where: any = { addressId, isActive: true };
+  if (allowedCodes) {
+    where.equipmentTypeCode = { in: allowedCodes };
+  }
+
   const data = await prisma.objectEquipment.findMany({
-    where: { addressId, isActive: true },
+    where,
     orderBy: { createdAt: 'asc' },
   });
+
   res.json(data);
 });
 

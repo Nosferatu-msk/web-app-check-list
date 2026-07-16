@@ -320,8 +320,10 @@ router.post('/users', upload.single('file'), async (req: AuthRequest, res: Respo
       if (isValidateMode(req)) continue;
 
       const mustChange = !r.password;
+      const specVik = r.specialization_vik !== undefined ? r.specialization_vik.toLowerCase() === 'true' : false;
+      const specIszh = r.specialization_iszh !== undefined ? r.specialization_iszh.toLowerCase() === 'true' : true;
       await prisma.user.create({
-        data: { fullName, email, passwordHash, role: role as any, mustChangePassword: mustChange },
+        data: { fullName, email, passwordHash, role: role as any, mustChangePassword: mustChange, specializationVik: specVik, specializationIszh: specIszh },
       });
       result.success++;
 

@@ -198,7 +198,25 @@ router.get('/summary', tmOrAdmin, async (req: AuthRequest, res: Response) => {
     const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
     const recMap = new Map(recommendations.map(r => [r.id, r.text]));
 
-    const html = generateSummaryReportHtml(visits, period, label, recMap);
+    // Fetch engineer specialization if report is filtered by a specific engineer
+    let engineerSpecialization: string | undefined;
+    if (engineerId) {
+      const engineer = await prisma.user.findUnique({
+        where: { id: engineerId },
+        select: { specializationVik: true, specializationIszh: true },
+      });
+      if (engineer) {
+        if (engineer.specializationVik && engineer.specializationIszh) {
+          engineerSpecialization = 'ВиК + ИСЖ';
+        } else if (engineer.specializationVik) {
+          engineerSpecialization = 'ВиК';
+        } else if (engineer.specializationIszh) {
+          engineerSpecialization = 'ИСЖ';
+        }
+      }
+    }
+
+    const html = generateSummaryReportHtml(visits, period, label, recMap, engineerSpecialization);
 
     const pdfPath = path.join(reportsDir, `summary_${period}_${from.toISOString().slice(0, 10)}.pdf`);
     await generatePdf(html, pdfPath);

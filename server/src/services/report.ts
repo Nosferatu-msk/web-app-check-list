@@ -100,6 +100,22 @@ export async function generateReportHtml(visitId: string): Promise<string> {
   const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
   const recMap = new Map(recommendations.map(r => [r.id, r.text]));
 
+  // Fetch engineer's specialization
+  const visitUser = await prisma.user.findUnique({
+    where: { id: visit.userId },
+    select: { specializationVik: true, specializationIszh: true },
+  });
+  let specializationLabel = '';
+  if (visitUser) {
+    if (visitUser.specializationVik && visitUser.specializationIszh) {
+      specializationLabel = 'ВиК + ИСЖ';
+    } else if (visitUser.specializationVik) {
+      specializationLabel = 'ВиК';
+    } else if (visitUser.specializationIszh) {
+      specializationLabel = 'ИСЖ';
+    }
+  }
+
   let tasksHtml = '';
   for (let i = 0; i < visit.tasks.length; i++) {
     const task = visit.tasks[i];
@@ -168,6 +184,7 @@ export async function generateReportHtml(visitId: string): Promise<string> {
     <p><strong>Время окончания:</strong> ${visit.timeEnd || '—'}</p>
     <p><strong>Сезон:</strong> ${SEASON_MAP[visit.season] || visit.season}</p>
     <p><strong>Инженер:</strong> ${visit.engineerName}</p>
+    ${specializationLabel ? `<p><strong>Специализация:</strong> ${specializationLabel}</p>` : ''}
     <hr/>
   </div>
   ${tasksHtml}
@@ -235,6 +252,7 @@ export function generateSummaryReportHtml(
   period: string,
   dateRange: string,
   recMap?: Map<string, string>,
+  engineerSpecialization?: string,
 ): string {
   const totalVisits = visits.length;
   const totalTasks = visits.reduce((s, v) => s + v.tasks.length, 0);
@@ -304,6 +322,7 @@ export function generateSummaryReportHtml(
 <body>
   <h1>СВОДНЫЙ ОТЧЁТ</h1>
   <p style="text-align:center;color:#666;">Период: ${periodLabel(period)} — ${dateRange}</p>
+  ${engineerSpecialization ? `<p style="text-align:center;color:#666;">Специализация: ${engineerSpecialization}</p>` : ''}
   <hr/>
 
   <div class="stats">

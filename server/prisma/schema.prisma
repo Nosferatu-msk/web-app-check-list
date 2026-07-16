@@ -54,6 +54,8 @@ model User {
   role               UserRole @default(engineer)
   isActive           Boolean  @default(true) @map("is_active")
   mustChangePassword Boolean  @default(false) @map("must_change_password")
+  specializationVik  Boolean  @default(false) @map("specialization_vik")
+  specializationIszh Boolean  @default(true)  @map("specialization_iszh")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -67,6 +69,7 @@ model User {
   deletedVisits        Visit[]              @relation("DeletedBy")
   equipmentProposals   EquipmentProposal[]  @relation("proposedBy")
   reviewedProposals    EquipmentProposal[]  @relation("reviewedBy")
+  favoriteObjects      UserFavoriteObject[]
 
   @@map("users")
 }
@@ -87,6 +90,7 @@ model Address {
   tmObjects           TmObject[]
   objectEquipment     ObjectEquipment[]
   equipmentProposals  EquipmentProposal[]
+  favoriteObjects     UserFavoriteObject[]
 
   @@index([city, street])
   @@map("addresses")
@@ -332,4 +336,18 @@ model EquipmentProposal {
   @@index([addressId])
   @@index([status])
   @@map("equipment_proposals")
+}
+
+model UserFavoriteObject {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  objectCode String   @map("object_code")
+  addedAt    DateTime @default(now()) @map("added_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address Address @relation(fields: [objectCode], references: [objectCode], onDelete: Cascade)
+
+  @@unique([userId, objectCode])
+  @@index([userId])
+  @@map("user_favorite_objects")
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch } from 'antd';
-import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined } from '@ant-design/icons';
+import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -95,9 +95,12 @@ export default function VisitListPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          <div className="page-title">{pageTitle}</div>
-          <div style={{ color: '#666', fontSize: 14 }}>{user?.fullName} ({roleLabel})</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/profile')}>
+          <UserOutlined style={{ fontSize: 24, color: '#1677ff' }} />
+          <div>
+            <div className="page-title" style={{ margin: 0, fontSize: 16 }}>{pageTitle}</div>
+            <div style={{ color: '#666', fontSize: 14 }}>{user?.fullName} ({roleLabel})</div>
+          </div>
         </div>
         <Space>
           {isManager && (

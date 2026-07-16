@@ -196,6 +196,17 @@ export const api = {
   rejectProposal: (id: string) =>
     request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT' }),
 
+  // Profile
+  getProfile: () => request<any>('/profile'),
+  updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean }) =>
+    request<any>('/profile/specialization', { method: 'PATCH', body: JSON.stringify(data) }),
+  getFavorites: () => request<any[]>('/profile/favorites'),
+  addFavorite: (objectCode: string) =>
+    request<any>('/profile/favorites', { method: 'POST', body: JSON.stringify({ objectCode }) }),
+  removeFavorite: (objectCode: string) =>
+    request<any>(`/profile/favorites/${objectCode}`, { method: 'DELETE' }),
+  getProfileStats: () => request<any>('/profile/stats'),
+
   // ─── OFFLINE-AWARE METHODS ────────────────────────────────────
   // These methods work both online and offline.
   // When offline, data is saved to IndexedDB and queued for sync.
@@ -295,5 +306,28 @@ export const api = {
     const photo = await db.photos.get(photoLocalId);
     if (!photo) throw new Error('Photo not found');
     return URL.createObjectURL(photo.blob);
+  },
+
+  // ─── FAVORITES OFFLINE-AWARE ──────────────────────────────────
+  addFavoriteOffline: async (objectCode: string) => {
+    if (!isOffline()) return api.addFavorite(objectCode);
+    const { db, localId, enqueueSync } = await import('../db/index');
+    const id = localId();
+    const token = localStorage.getItem('accessToken');
+    const userId = token ? JSON.parse(atob(token.split('.')[1])).userId : 'unknown';
+    await db.favorites.add({
+      id,
+      userId,
+      objectCode,
+      addedAt: new Date().toISOString(),
+      dirty: true,
+    });
+    await enqueueSync({ operation: 'create', entityType: 'favorite' as any, entityId: id });
+    return { id, objectCode, _offline: true };
+  },
+
+  getLocalFavorites: async () => {
+    const { db } = await import('../db/index');
+    return db.favorites.toArray();
   },
 };

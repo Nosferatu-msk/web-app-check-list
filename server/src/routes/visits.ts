@@ -133,6 +133,27 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+
+  // Filter tasks by engineer's specialization
+  if (req.userRole === 'engineer') {
+    const engineer = await prisma.user.findUnique({
+      where: { id: req.userId as string },
+      select: { specializationVik: true, specializationIszh: true },
+    });
+    if (engineer) {
+      const hasVik = engineer.specializationVik;
+      const hasIszh = engineer.specializationIszh;
+      if (hasVik && !hasIszh) {
+        const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar'];
+        visit.tasks = visit.tasks.filter(t => t.equipmentType && VIK_CODES.includes(t.equipmentType.code));
+      } else if (hasIszh && !hasVik) {
+        const ISZH_CODES = ['rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc', 'seti_vodosnab', 'teplovye_seti'];
+        visit.tasks = visit.tasks.filter(t => t.equipmentType && ISZH_CODES.includes(t.equipmentType.code));
+      }
+      // If both or neither — no filtering
+    }
+  }
+
   res.json(visit);
 });
 

@@ -53,10 +53,18 @@ export interface LocalPhoto {
   dirty: boolean;
 }
 
+export interface LocalFavorite {
+  id: string;
+  userId: string;
+  objectCode: string;
+  addedAt: string;
+  dirty: boolean;
+}
+
 export interface SyncQueueItem {
   id?: number; // auto-increment
   operation: 'create' | 'update' | 'delete' | 'upload_photo' | 'complete' | 'send_report' | 'reassign';
-  entityType: 'visit' | 'task' | 'photo' | 'report';
+  entityType: 'visit' | 'task' | 'photo' | 'report' | 'favorite';
   entityId: string; // local ID
   payload?: any;
   createdAt: string;
@@ -76,6 +84,7 @@ class ChecklistDB extends Dexie {
   photos!: Table<LocalPhoto, string>;
   syncQueue!: Table<SyncQueueItem, number>;
   cachedRefs!: Table<CachedRef, string>;
+  favorites!: Table<LocalFavorite, string>;
 
   constructor() {
     super('ChecklistDB');
@@ -85,6 +94,14 @@ class ChecklistDB extends Dexie {
       photos: 'id, serverId, taskLocalId, taskServerId, dirty',
       syncQueue: '++id, entityType, entityId, createdAt',
       cachedRefs: 'key',
+    });
+    this.version(2).stores({
+      visits: 'id, serverId, userId, status, dirty, isDeleted',
+      tasks: 'id, serverId, visitLocalId, visitServerId, dirty',
+      photos: 'id, serverId, taskLocalId, taskServerId, dirty',
+      syncQueue: '++id, entityType, entityId, createdAt',
+      cachedRefs: 'key',
+      favorites: 'id, userId, objectCode, addedAt',
     });
   }
 }

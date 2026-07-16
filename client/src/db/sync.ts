@@ -1,4 +1,4 @@
-import { db, type SyncQueueItem, type LocalVisit, type LocalTask, type LocalPhoto } from './index';
+import { db, type SyncQueueItem, type LocalVisit, type LocalTask, type LocalPhoto, type LocalFavorite } from './index';
 
 type SyncStatus = 'idle' | 'syncing' | 'error';
 type SyncCallback = (status: SyncStatus, pending: number, error?: string) => void;
@@ -206,6 +206,34 @@ async function processQueueItem(item: SyncQueueItem, token: string) {
       break;
     }
 
+    case 'create:favorite': {
+      const fav = await db.favorites.get(item.entityId);
+      if (!fav) throw new Error('Favorite not found locally');
+      const res = await fetch('/api/profile/favorites', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectCode: fav.objectCode }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      await db.favorites.update(item.entityId, { dirty: false });
+      break;
+    }
+
+    case 'delete:favorite': {
+      const fav = await db.favorites.get(item.entityId);
+      if (!fav) {
+        // Already removed locally
+        break;
+      }
+      const res = await fetch(`/api/profile/favorites/${fav.objectCode}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      await db.favorites.delete(item.entityId);
+      break;
+    }
+
     default:
       throw new Error(`Unknown operation: ${item.operation}:${item.entityType}`);
   }
@@ -269,9 +297,43 @@ export async function getCachedRefData(key: string): Promise<any | null> {
   return entry?.data || null;
 }
 
+// ─── PULL FAVORITES FROM SERVER ───────────────────────────────
+export async function pullFavoritesFromServer(): Promise<number> {
+  const token = localStorage.getItem('accessToken');
+  if (!token) return 0;
+
+  const res = await fetch('/api/profile/favorites', {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return 0;
+
+  const data = await res.json();
+  const favorites: any[] = Array.isArray(data) ? data : (data.data || []);
+  let count = 0;
+
+  for (const sf of favorites) {
+    const existing = await db.favorites.where('objectCode').equals(sf.objectCode).first();
+    if (!existing) {
+      await db.favorites.add({
+        id: `server_${sf.id || sf.objectCode}`,
+        userId: sf.userId || '',
+        objectCode: sf.objectCode,
+        addedAt: sf.addedAt || sf.createdAt || new Date().toISOString(),
+        dirty: false,
+      });
+      count++;
+    } else if (!existing.dirty) {
+      await db.favorites.update(existing.id, { dirty: false });
+    }
+  }
+
+  return count;
+}
+
 // ─── FULL SYNC ────────────────────────────────────────────────
 export async function fullSync(): Promise<{ pushed: { success: number; failed: number }; pulled: number }> {
   const pushed = await processSyncQueue();
   const pulled = await pullVisitsFromServer();
+  await pullFavoritesFromServer();
   return { pushed, pulled };
 }

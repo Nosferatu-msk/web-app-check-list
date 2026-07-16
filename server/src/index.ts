@@ -11,6 +11,7 @@ import refRoutes from './routes/refs.js';
 import reportRoutes from './routes/reports.js';
 import importRoutes from './routes/import.js';
 import proposalRoutes from './routes/proposals.js';
+import profileRoutes from './routes/profile.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -32,6 +33,7 @@ app.use('/api/refs', refRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin/import', importRoutes);
 app.use('/api/proposals', proposalRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

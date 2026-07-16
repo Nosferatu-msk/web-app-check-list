@@ -184,7 +184,14 @@ router.get('/users', async (_req: AuthRequest, res: Response) => {
 router.post('/users', validate(userSchema), async (req: AuthRequest, res: Response) => {
   const { password, ...rest } = req.body;
   const passwordHash = await bcrypt.hash(password || 'default123', 12);
-  const item = await prisma.user.create({ data: { ...rest, passwordHash } });
+  const item = await prisma.user.create({
+    data: {
+      ...rest,
+      passwordHash,
+      specializationVik: rest.role === 'engineer' ? false : false,
+      specializationIszh: rest.role === 'engineer' ? true : false,
+    },
+  });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'user', entityId: item.id, newValue: { fullName: rest.fullName, email: rest.email, role: rest.role }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json({ id: item.id, fullName: item.fullName, email: item.email, role: item.role, isActive: item.isActive });
 });
@@ -193,7 +200,11 @@ router.put('/users/:id', async (req: AuthRequest, res: Response) => {
   const { password, ...rest } = req.body;
   const data: any = { ...rest };
   if (password) data.passwordHash = await bcrypt.hash(password, 12);
-  const item = await prisma.user.update({ where: { id: req.params.id as string }, data, select: { id: true, fullName: true, email: true, role: true, isActive: true } });
+  const item = await prisma.user.update({
+    where: { id: req.params.id as string },
+    data,
+    select: { id: true, fullName: true, email: true, role: true, isActive: true, specializationVik: true, specializationIszh: true },
+  });
   await logAudit({ userId: req.userId, action: 'update', entityType: 'user', entityId: item.id, newValue: rest, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(item);
 });
