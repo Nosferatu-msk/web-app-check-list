@@ -9,12 +9,13 @@ export default function AdminAuditLog() {
   const [data, setData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<Record<string, string>>({});
 
-  const load = async (p = page, f = filters) => {
+  const load = async (p = page, f = filters, ps = pageSize) => {
     setLoading(true);
-    const params: any = { page: String(p), pageSize: '50', ...f };
+    const params: any = { page: String(p), pageSize: String(ps), ...f };
     const res = await api.adminGet('audit-log', params);
     setData(res.data || []);
     setTotal(res.total || 0);
@@ -49,7 +50,7 @@ export default function AdminAuditLog() {
         />
       </Space>
       <Table dataSource={data} columns={columns} rowKey="id" loading={loading}
-        pagination={{ current: page, total, pageSize: 50, onChange: (p) => { setPage(p); load(p); } }}
+        pagination={{ current: page, total, defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'], onChange: (p, ps) => { setPage(p); if (ps !== pageSize) { setPageSize(ps); load(1, filters, ps); } else { load(p, filters); } } }}
         size="small"
       />
     </div>

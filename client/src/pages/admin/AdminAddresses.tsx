@@ -8,6 +8,7 @@ export default function AdminAddresses() {
   const [data, setData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -29,9 +30,9 @@ export default function AdminAddresses() {
     form.setFieldValue('fullAddress', parts.join(', '));
   };
 
-  const load = async (p = page, q = search) => {
+  const load = async (p = page, q = search, ps = pageSize) => {
     setLoading(true);
-    const params: any = { page: String(p), pageSize: '20' };
+    const params: any = { page: String(p), pageSize: String(ps) };
     if (q) params.q = q;
     const res = await api.adminGet('addresses', params);
     setData(res.data || []);
@@ -88,7 +89,7 @@ export default function AdminAddresses() {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
         </Space>
       </div>
-      <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={{ current: page, total, pageSize: 20, onChange: setPage }} />
+      <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={{ current: page, total, defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'], onChange: (p, ps) => { setPage(p); if (ps !== pageSize) { setPageSize(ps); load(1, search, ps); } else { load(p); } } }} />
       <Modal title={editing ? 'Редактировать адрес' : 'Новый адрес'} open={modalOpen} onOk={handleSave} onCancel={() => { setModalOpen(false); setEditing(null); form.resetFields(); }} okText="Сохранить">
         <Form form={form} layout="vertical">
           <Form.Item name="city" label="Город" rules={[{ required: true }]}><Input onChange={generateFullAddress} /></Form.Item>

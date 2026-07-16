@@ -118,7 +118,7 @@ export default function AdminTmAssignments() {
                 dataSource={filteredObjects}
                 rowKey="id"
                 loading={loading}
-                pagination={{ pageSize: 20 }}
+                pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'] }}
                 columns={[
                   { title: 'ТМ', render: (_: any, r: any) => r.tm?.fullName },
                   { title: 'Адрес', render: (_: any, r: any) => r.address?.fullAddress },
@@ -156,7 +156,7 @@ export default function AdminTmAssignments() {
                 dataSource={filteredEngineers}
                 rowKey="id"
                 loading={loading}
-                pagination={false}
+                pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'] }}
                 columns={[
                   { title: 'ТМ', render: (_: any, r: any) => r.tm?.fullName },
                   { title: 'Инженер', render: (_: any, r: any) => r.engineer?.fullName },

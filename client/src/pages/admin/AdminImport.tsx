@@ -344,7 +344,7 @@ export default function AdminImport() {
           size="small"
           dataSource={history}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50'] }}
           columns={[
             { title: 'Дата', render: (_: any, r: any) => new Date(r.createdAt).toLocaleString('ru-RU') },
             { title: 'Тип', dataIndex: 'entityType' },

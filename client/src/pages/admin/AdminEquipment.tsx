@@ -30,7 +30,7 @@ export default function AdminEquipment() {
         <h2>Виды оборудования</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
       </div>
-      <Table dataSource={data} rowKey="id" loading={loading} pagination={false} columns={[
+      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50'] }} columns={[
         { title: 'Название', dataIndex: 'name' },
         { title: 'Код', dataIndex: 'code' },
         { title: 'Фото', dataIndex: 'photosRequired' },

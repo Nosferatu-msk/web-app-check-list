@@ -149,7 +149,7 @@ export default function AdminProposals() {
         columns={columns}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 20 }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'] }}
         locale={{ emptyText: 'Нет предложений' }}
       />
     </div>

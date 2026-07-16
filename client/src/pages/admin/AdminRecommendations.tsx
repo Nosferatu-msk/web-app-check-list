@@ -43,7 +43,7 @@ export default function AdminRecommendations() {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
         </Space>
       </div>
-      <Table dataSource={data} rowKey="id" loading={loading} pagination={false} columns={[
+      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'] }} columns={[
         { title: 'Оборудование', render: (_: any, r: any) => equipmentTypes.find(e => e.id === r.equipmentTypeId)?.name || '—' },
         { title: 'Текст', dataIndex: 'text', ellipsis: true },
         { title: 'Порядок', dataIndex: 'sortOrder', width: 80 },
