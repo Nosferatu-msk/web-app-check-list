@@ -5,7 +5,7 @@ ALTER TABLE "users" ADD COLUMN "specialization_iszh" BOOLEAN NOT NULL DEFAULT tr
 -- Create user_favorite_objects table
 CREATE TABLE "user_favorite_objects" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "user_id" UUID NOT NULL,
+  "user_id" TEXT NOT NULL,
   "object_code" VARCHAR(50) NOT NULL,
   "added_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "user_favorite_objects_pkey" PRIMARY KEY ("id")
