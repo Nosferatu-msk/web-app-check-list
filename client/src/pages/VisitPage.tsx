@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin } from 'antd';
+import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -42,6 +42,7 @@ export default function VisitPage() {
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [eqTypeMap, setEqTypeMap] = useState<Map<string, any>>(new Map());
   const [rmTypeMap, setRmTypeMap] = useState<Map<string, any>>(new Map());
+  const [proposeEquipment, setProposeEquipment] = useState(false);
 
   const handleAutoSave = useCallback(async () => {
     if (isNew) return;
@@ -163,9 +164,31 @@ export default function VisitPage() {
     } else {
       await api.createTask(visit.id, taskData);
     }
+
+    // If propose checkbox is checked, create a proposal
+    if (proposeEquipment && !isOffline()) {
+      const eqType = equipmentTypes.find(e => e.id === values.equipmentTypeId);
+      const rmType = roomTypes.find(r => r.id === values.roomTypeId);
+      try {
+        await api.createProposal({
+          addressId: visit.addressId,
+          equipmentTypeCode: eqType?.code || '',
+          roomTypeCode: rmType?.code || '',
+          brand: values.brand || '',
+          model: values.model || '',
+          serialNumber: values.serialNumber || '',
+          locationDescription: values.comment || '',
+        });
+        message.success('Предложение отправлено администратору');
+      } catch {
+        message.warning('Задача создана, но предложение не удалось отправить');
+      }
+    }
+
     const v = await api.getVisit(visit.id);
     setTasks(v.tasks || []);
     setModalOpen(false);
+    setProposeEquipment(false);
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -414,6 +437,14 @@ export default function VisitPage() {
           </Form.Item>
           <Form.Item name="serialNumber" label="Серийный номер">
             <Input placeholder="Необязательно" />
+          </Form.Item>
+          <Form.Item>
+            <Checkbox
+              checked={proposeEquipment}
+              onChange={(e) => setProposeEquipment(e.target.checked)}
+            >
+              Предложить добавить в привязку объекта
+            </Checkbox>
           </Form.Item>
           <Form.Item><Button type="primary" htmlType="submit" block>Добавить</Button></Form.Item>
         </Form>

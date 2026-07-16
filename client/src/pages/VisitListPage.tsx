@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App } from 'antd';
-import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch } from 'antd';
+import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { VISIT_STATUS_LABELS, ROLE_LABELS } from '../../../shared/types/index';
@@ -24,6 +25,7 @@ export default function VisitListPage() {
   const [selectedEngineer, setSelectedEngineer] = useState<string>('');
   const [reassignModal, setReassignModal] = useState<{ visible: boolean; visitId?: string }>({ visible: false });
   const [reassignTarget, setReassignTarget] = useState<string>('');
+  const [showDeleted, setShowDeleted] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { message, modal } = App.useApp();
@@ -36,6 +38,7 @@ export default function VisitListPage() {
     try {
       const params: Record<string, string> = {};
       if (selectedEngineer) params.user_id = selectedEngineer;
+      if (showDeleted) params.include_deleted = 'true';
       const res = await api.getVisits(params);
       setVisits(res.data || []);
       if (isManager) {
@@ -44,7 +47,7 @@ export default function VisitListPage() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [selectedEngineer, isManager]);
+  }, [selectedEngineer, isManager, showDeleted]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -97,6 +100,9 @@ export default function VisitListPage() {
           <div style={{ color: '#666', fontSize: 14 }}>{user?.fullName} ({roleLabel})</div>
         </div>
         <Space>
+          {isManager && (
+            <Button icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')}>Сводные отчёты</Button>
+          )}
           {isAdmin && (
             <Button icon={<SettingOutlined />} onClick={() => navigate('/admin')}>Админ</Button>
           )}
@@ -129,6 +135,14 @@ export default function VisitListPage() {
             options={engineers.map((e: any) => ({ value: e.id, label: e.fullName }))}
           />
         )}
+        {isManager && (
+          <Switch
+            checked={showDeleted}
+            onChange={setShowDeleted}
+            checkedChildren="Удалённые"
+            unCheckedChildren="Активные"
+          />
+        )}
       </div>
 
       {loading ? <Spin /> : visits.length === 0 ? (
@@ -139,8 +153,18 @@ export default function VisitListPage() {
           renderItem={(v: any) => {
             const statusLabel = VISIT_STATUS_LABELS[v.status as keyof typeof VISIT_STATUS_LABELS] || v.status;
             const statusColor = STATUS_COLORS[v.status] || 'default';
+            const isDeleted = v.isDeleted;
+            const sentDate = v.status === 'sent_by_engineer' && v.sentByEngineerAt
+              ? dayjs(v.sentByEngineerAt).format('DD.MM.YYYY HH:mm')
+              : v.status === 'sent_by_tm' && v.sentByTmAt
+                ? dayjs(v.sentByTmAt).format('DD.MM.YYYY HH:mm')
+                : null;
             return (
-              <div className="visit-card" onClick={() => navigate(`/visit/${v.id}`)}>
+              <div
+                className="visit-card"
+                onClick={() => navigate(`/visit/${v.id}`)}
+                style={isDeleted ? { opacity: 0.6, background: '#f5f5f5' } : undefined}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600 }}>{v.address?.fullAddress || 'Адрес'}</div>
@@ -154,14 +178,25 @@ export default function VisitListPage() {
                   </div>
                   <Space>
                     <Tag color={statusColor}>{statusLabel}</Tag>
-                    {isManager && !v.isDeleted && ['not_started', 'in_progress', 'planned'].includes(v.status) && (
+                    {sentDate && (
+                      <span style={{ fontSize: 12, color: '#888' }}>📤 {sentDate}</span>
+                    )}
+                    {isDeleted && (
+                      <Tag color="default">Удалён</Tag>
+                    )}
+                    {isDeleted && v.deletedBy && v.deletedAt && (
+                      <span style={{ fontSize: 12, color: '#999' }}>
+                        {v.deletedBy.fullName}, {dayjs(v.deletedAt).format('DD.MM.YYYY HH:mm')}
+                      </span>
+                    )}
+                    {isManager && !isDeleted && ['not_started', 'in_progress', 'planned'].includes(v.status) && (
                       <Button size="small" icon={<SwapOutlined />} onClick={(e) => {
                         e.stopPropagation();
                         setReassignModal({ visible: true, visitId: v.id });
                         setReassignTarget('');
                       }} />
                     )}
-                    {!v.isDeleted && (
+                    {!isDeleted && (
                       <Button size="small" danger icon={<DeleteOutlined />} onClick={(e) => handleDelete(e, v.id)} />
                     )}
                   </Space>

@@ -126,6 +126,20 @@ export const api = {
   sendReport: (visitId: string, data: { email: string; cc?: string; comment?: string }) =>
     request<any>(`/reports/${visitId}/report/send`, { method: 'POST', body: JSON.stringify(data) }),
 
+  // Summary & Object reports
+  downloadSummaryReport: (params: { period: string; date?: string; engineerId?: string; addressId?: string }) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
+    ).toString();
+    window.open(`${API_BASE}/reports/summary?${qs}`, '_blank');
+  },
+  downloadObjectReport: (params: { addressId: string; dateFrom?: string; dateTo?: string }) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
+    ).toString();
+    window.open(`${API_BASE}/reports/by-object?${qs}`, '_blank');
+  },
+
   // Admin
   adminGet: (entity: string, params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -137,6 +151,18 @@ export const api = {
     request<any>(`/admin/${entity}/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDelete: (entity: string, id: string) =>
     request<any>(`/admin/${entity}/${id}`, { method: 'DELETE' }),
+
+  // Proposals
+  createProposal: (data: any) =>
+    request<any>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
+  getProposals: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any>(`/proposals/admin${qs}`);
+  },
+  approveProposal: (id: string) =>
+    request<any>(`/proposals/admin/${id}/approve`, { method: 'PUT' }),
+  rejectProposal: (id: string) =>
+    request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT' }),
 
   // ─── OFFLINE-AWARE METHODS ────────────────────────────────────
   // These methods work both online and offline.
