@@ -97,6 +97,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         address: true,
         user: { select: { id: true, fullName: true, email: true } },
         assignedBy: { select: { id: true, fullName: true, email: true } },
+        deletedBy: { select: { id: true, fullName: true, email: true } },
         _count: { select: { tasks: true } },
       },
     }),

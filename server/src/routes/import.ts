@@ -5,6 +5,8 @@ import { Readable } from 'stream';
 import prisma from '../models/prisma.js';
 import { authMiddleware, adminOnly, AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
+import iconv from 'iconv-lite';
+import { sendMail } from '../utils/email.js';
 
 const router = Router();
 router.use(authMiddleware, adminOnly);
@@ -31,8 +33,26 @@ function parseCsv(buffer: Buffer): Promise<CsvRow[]> {
   });
 }
 
+function decodeBuffer(buffer: Buffer): string {
+  // Check for UTF-8 BOM
+  if (buffer.length >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+    return buffer.toString('utf-8').replace(/^\uFEFF/, '');
+  }
+  // Check for UTF-16 LE BOM
+  if (buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE) {
+    return iconv.decode(buffer, 'utf-16le');
+  }
+  // Try UTF-8 first
+  const utf8Text = buffer.toString('utf-8');
+  // If it contains replacement characters, it's likely not valid UTF-8
+  if (utf8Text.includes('\uFFFD')) {
+    return iconv.decode(buffer, 'win1251');
+  }
+  return utf8Text;
+}
+
 function detectSeparator(buffer: Buffer): string {
-  const firstLine = buffer.toString('utf-8').split('\n')[0] || '';
+  const firstLine = decodeBuffer(buffer).split('\n')[0] || '';
   const semicolons = (firstLine.match(/;/g) || []).length;
   const commas = (firstLine.match(/,/g) || []).length;
   return semicolons > commas ? ';' : ',';
@@ -52,8 +72,13 @@ function parseCsvWithSeparator(buffer: Buffer, sep: string): Promise<CsvRow[]> {
 async function parseUploadedCsv(req: any): Promise<{ rows: CsvRow[]; fileName: string }> {
   const file = req.file;
   if (!file) throw new Error('Файл не загружен');
-  const sep = detectSeparator(file.buffer);
-  const rows = await parseCsvWithSeparator(file.buffer, sep);
+  const decodedText = decodeBuffer(file.buffer);
+  const decodedBuffer = Buffer.from(decodedText, 'utf-8');
+  const sep = detectSeparator(decodedBuffer);
+  const rows = await parseCsvWithSeparator(decodedBuffer, sep);
+  if (rows.length > 20000) {
+    throw new Error('Файл содержит более 20 000 строк. Разбейте файл на части.');
+  }
   return { rows, fileName: file.originalname };
 }
 
@@ -64,11 +89,25 @@ interface ImportResult {
   errors: { row: number; message: string }[];
 }
 
+interface ValidateResult {
+  totalRows: number;
+  validRows: number;
+  duplicateRows: number;
+  errorRows: number;
+  duplicates: { row: number; value: string }[];
+  errors: { row: number; message: string }[];
+}
+
+function isValidateMode(req: any): boolean {
+  return req.query.mode === 'validate';
+}
+
 // ─── ADDRESSES ───────────────────────────────────────────────
 router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -76,13 +115,16 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
       if (!fullAddress) { result.errors.push({ row: i + 2, message: 'Не заполнен full_address' }); continue; }
 
       const existing = await prisma.address.findFirst({ where: { fullAddress } });
-      if (existing) { result.duplicates++; continue; }
+      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
 
       let customerEmail = r.customer_email || r.customerEmail || r['email заказчика'] || null;
       if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
         result.errors.push({ row: i + 2, message: `Некорректный email: ${customerEmail}` });
         customerEmail = null;
       }
+
+      const validateMode = isValidateMode(req);
+      if (validateMode) continue;
 
       await prisma.address.create({
         data: {
@@ -98,6 +140,18 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
       result.success++;
     }
 
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: rows[row - 2]?.full_address || rows[row - 2]?.fullAddress || rows[row - 2]?.['полный адрес'] || '' })),
+        errors: result.errors,
+      };
+      return res.json(vr);
+    }
+
     await prisma.importLog.create({
       data: { userId: req.userId!, entityType: 'addresses', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
     });
@@ -110,6 +164,7 @@ router.post('/equipment-types', upload.single('file'), async (req: AuthRequest, 
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -121,12 +176,26 @@ router.post('/equipment-types', upload.single('file'), async (req: AuthRequest, 
       if (photosRequired < 1 || photosRequired > 2) { result.errors.push({ row: i + 2, message: 'photos_required должен быть 1 или 2' }); continue; }
 
       const existing = await prisma.equipmentType.findUnique({ where: { code } });
-      if (existing) { result.duplicates++; continue; }
+      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
+
+      if (isValidateMode(req)) continue;
 
       await prisma.equipmentType.create({
         data: { name, code, photosRequired, isActive: (r.is_active || r.isActive || 'true').toLowerCase() === 'true' },
       });
       result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: rows[row - 2]?.code || rows[row - 2]?.['код'] || '' })),
+        errors: result.errors,
+      };
+      return res.json(vr);
     }
 
     await prisma.importLog.create({
@@ -141,6 +210,7 @@ router.post('/room-types', upload.single('file'), async (req: AuthRequest, res: 
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -149,10 +219,24 @@ router.post('/room-types', upload.single('file'), async (req: AuthRequest, res: 
       if (!code || !name) { result.errors.push({ row: i + 2, message: 'Не заполнены code или name' }); continue; }
 
       const existing = await prisma.roomType.findUnique({ where: { code } });
-      if (existing) { result.duplicates++; continue; }
+      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
+
+      if (isValidateMode(req)) continue;
 
       await prisma.roomType.create({ data: { name, code } });
       result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: rows[row - 2]?.code || rows[row - 2]?.['код'] || '' })),
+        errors: result.errors,
+      };
+      return res.json(vr);
     }
 
     await prisma.importLog.create({
@@ -167,6 +251,7 @@ router.post('/recommendations', upload.single('file'), async (req: AuthRequest, 
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
     const eqTypes = await prisma.equipmentType.findMany();
     const eqMap = new Map(eqTypes.map(e => [e.code, e.id]));
 
@@ -182,10 +267,24 @@ router.post('/recommendations', upload.single('file'), async (req: AuthRequest, 
       const sortOrder = parseInt(r.sort_order || r.sortOrder || '0') || 0;
       const isActive = (r.is_active || r.isActive || 'true').toLowerCase() !== 'false';
 
+      if (isValidateMode(req)) continue;
+
       await prisma.recommendation.create({
         data: { equipmentTypeId: eqId, text: text.substring(0, 500), sortOrder, isActive },
       });
       result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: [],
+        errors: result.errors,
+      };
+      return res.json(vr);
     }
 
     await prisma.importLog.create({
@@ -200,6 +299,7 @@ router.post('/users', upload.single('file'), async (req: AuthRequest, res: Respo
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
     const TEMP_PASSWORD = 'Welcome2026!';
 
     for (let i = 0; i < rows.length; i++) {
@@ -212,15 +312,31 @@ router.post('/users', upload.single('file'), async (req: AuthRequest, res: Respo
       if (!['engineer', 'tm', 'admin'].includes(role)) { result.errors.push({ row: i + 2, message: `Недопустимая роль: ${role}` }); continue; }
 
       const existing = await prisma.user.findUnique({ where: { email } });
-      if (existing) { result.duplicates++; continue; }
+      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
 
       const password = r.password || r['пароль'] || TEMP_PASSWORD;
       const passwordHash = await bcrypt.hash(password, 12);
 
+      if (isValidateMode(req)) continue;
+
+      const mustChange = !r.password;
       await prisma.user.create({
-        data: { fullName, email, passwordHash, role: role as any, mustChangePassword: !r.password },
+        data: { fullName, email, passwordHash, role: role as any, mustChangePassword: mustChange },
       });
       result.success++;
+
+      // Send credentials email when a temporary password was generated
+      if (mustChange) {
+        try {
+          await sendMail({
+            to: email,
+            subject: 'Доступ к системе «Чек-лист инженера»',
+            text: `Ваши учётные данные:\n\nЛогин: ${email}\nПароль: ${password}\n\nПри первом входе система предложит сменить пароль.\n\nСсылка для входа: ${process.env.CLIENT_URL}`,
+          });
+        } catch (mailErr) {
+          console.error(`Failed to send credentials email to ${email}:`, mailErr);
+        }
+      }
 
       // If engineer with tm_email, create tm_engineer link
       if (role === 'engineer') {
@@ -241,6 +357,18 @@ router.post('/users', upload.single('file'), async (req: AuthRequest, res: Respo
       }
     }
 
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: rows[row - 2]?.email || '' })),
+        errors: result.errors,
+      };
+      return res.json(vr);
+    }
+
     await prisma.importLog.create({
       data: { userId: req.userId!, entityType: 'users', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
     });
@@ -253,6 +381,7 @@ router.post('/tm-objects', upload.single('file'), async (req: AuthRequest, res: 
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -271,10 +400,24 @@ router.post('/tm-objects', upload.single('file'), async (req: AuthRequest, res: 
       const addr = address || (await prisma.address.findFirst({ where: { fullAddress: objectCode } }))!;
 
       const existing = await prisma.tmObject.findFirst({ where: { tmId: tm.id, addressId: addr.id } });
-      if (existing) { result.duplicates++; continue; }
+      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
+
+      if (isValidateMode(req)) continue;
 
       await prisma.tmObject.create({ data: { tmId: tm.id, addressId: addr.id } });
       result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: `${rows[row - 2]?.object_code || rows[row - 2]?.objectCode || ''} → ${rows[row - 2]?.tm_email || rows[row - 2]?.tmEmail || ''}` })),
+        errors: result.errors,
+      };
+      return res.json(vr);
     }
 
     await prisma.importLog.create({
@@ -289,6 +432,7 @@ router.post('/tm-engineers', upload.single('file'), async (req: AuthRequest, res
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -303,10 +447,24 @@ router.post('/tm-engineers', upload.single('file'), async (req: AuthRequest, res
       if (!tm || tm.role !== 'tm') { result.errors.push({ row: i + 2, message: `ТМ не найден: ${tmEmail}` }); continue; }
 
       const existing = await prisma.tmEngineer.findUnique({ where: { engineerId: engineer.id } });
-      if (existing) { result.duplicates++; continue; }
+      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
+
+      if (isValidateMode(req)) continue;
 
       await prisma.tmEngineer.create({ data: { tmId: tm.id, engineerId: engineer.id } });
       result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: `${rows[row - 2]?.engineer_email || rows[row - 2]?.engineerEmail || ''} → ${rows[row - 2]?.tm_email || rows[row - 2]?.tmEmail || ''}` })),
+        errors: result.errors,
+      };
+      return res.json(vr);
     }
 
     await prisma.importLog.create({
@@ -321,6 +479,7 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
   try {
     const { rows, fileName } = await parseUploadedCsv(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -369,7 +528,9 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       }
 
       const existing = await prisma.objectEquipment.findFirst({ where: duplicateWhere });
-      if (existing) { result.duplicates++; continue; }
+      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
+
+      if (isValidateMode(req)) continue;
 
       await prisma.objectEquipment.create({
         data: {
@@ -383,6 +544,18 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         },
       });
       result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: `${rows[row - 2]?.object_code || rows[row - 2]?.objectCode || ''} / ${rows[row - 2]?.equipment_type || rows[row - 2]?.equipmentType || ''}` })),
+        errors: result.errors,
+      };
+      return res.json(vr);
     }
 
     await prisma.importLog.create({

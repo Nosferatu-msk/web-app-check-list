@@ -67,6 +67,7 @@ export interface Visit {
   tasks?: Task[];
   user?: { id: string; fullName: string; email: string };
   assignedBy?: { id: string; fullName: string; email: string };
+  deletedBy?: { id: string; fullName: string; email: string };
 }
 
 export interface Task {
