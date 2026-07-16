@@ -30,9 +30,13 @@ export default function SummaryReportPage() {
 
   const loadEngineers = useCallback(async () => {
     try {
-      const users = await api.adminGet('users');
-      const list = (users || []).filter((u: any) => u.role === 'engineer' && u.isActive);
-      setEngineers(list);
+      const res = await fetch('/api/refs/engineers', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+      if (res.ok) {
+        const list = await res.json();
+        setEngineers(list);
+      }
     } catch { /* ignore */ }
   }, []);
 
@@ -49,31 +53,31 @@ export default function SummaryReportPage() {
     }
   };
 
-  const handleSummaryDownload = () => {
+  const handleSummaryDownload = async () => {
     try {
-      api.downloadSummaryReport({
+      await api.downloadSummaryReport({
         period,
         date: date ? date.format('YYYY-MM-DD') : undefined,
         engineerId: engineerId || undefined,
       });
-      message.success('Отчёт формируется и будет скачан');
+      message.success('Отчёт скачан');
     } catch (err: any) {
       message.error(err.message || 'Ошибка формирования отчёта');
     }
   };
 
-  const handleObjectDownload = () => {
+  const handleObjectDownload = async () => {
     if (!addressId) {
       message.warning('Выберите адрес объекта');
       return;
     }
     try {
-      api.downloadObjectReport({
+      await api.downloadObjectReport({
         addressId,
         dateFrom: dateRange[0] ? dateRange[0].format('YYYY-MM-DD') : undefined,
         dateTo: dateRange[1] ? dateRange[1].format('YYYY-MM-DD') : undefined,
       });
-      message.success('Отчёт формируется и будет скачан');
+      message.success('Отчёт скачан');
     } catch (err: any) {
       message.error(err.message || 'Ошибка формирования отчёта');
     }

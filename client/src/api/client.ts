@@ -127,17 +127,49 @@ export const api = {
     request<any>(`/reports/${visitId}/report/send`, { method: 'POST', body: JSON.stringify(data) }),
 
   // Summary & Object reports
-  downloadSummaryReport: (params: { period: string; date?: string; engineerId?: string; addressId?: string }) => {
+  downloadSummaryReport: async (params: { period: string; date?: string; engineerId?: string; addressId?: string }): Promise<void> => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
     ).toString();
-    window.open(`${API_BASE}/reports/summary?${qs}`, '_blank');
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${API_BASE}/reports/summary?${qs}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || res.statusText);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `summary_${params.period}_${params.date || 'report'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   },
-  downloadObjectReport: (params: { addressId: string; dateFrom?: string; dateTo?: string }) => {
+  downloadObjectReport: async (params: { addressId: string; dateFrom?: string; dateTo?: string }): Promise<void> => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
     ).toString();
-    window.open(`${API_BASE}/reports/by-object?${qs}`, '_blank');
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${API_BASE}/reports/by-object?${qs}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || res.statusText);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `object_${params.addressId}_report.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   },
 
   // Admin

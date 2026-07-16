@@ -48,4 +48,25 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   res.json(data);
 });
 
+// GET /api/refs/engineers — list engineers (admin: all, tm: own group)
+router.get('/engineers', async (req: AuthRequest, res: Response) => {
+  const role = req.userRole;
+  if (role === 'admin') {
+    const data = await prisma.user.findMany({
+      where: { role: 'engineer', isActive: true },
+      select: { id: true, fullName: true, email: true },
+      orderBy: { fullName: 'asc' },
+    });
+    res.json(data);
+  } else if (role === 'tm') {
+    const assignments = await prisma.tmEngineer.findMany({
+      where: { tmId: req.userId as string },
+      select: { engineer: { select: { id: true, fullName: true, email: true } } },
+    });
+    res.json(assignments.map(a => a.engineer));
+  } else {
+    res.json([]);
+  }
+});
+
 export default router;
