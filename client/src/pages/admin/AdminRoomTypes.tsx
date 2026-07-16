@@ -29,7 +29,7 @@ export default function AdminRoomTypes() {
         <h2>Типы помещений</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
       </div>
-      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50'] }} columns={[
+      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50], showTotal: (total: number) => `Всего: ${total}` }} columns={[
         { title: 'Название', dataIndex: 'name' },
         { title: 'Код', dataIndex: 'code' },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (

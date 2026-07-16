@@ -29,7 +29,7 @@ export default function AdminUsers() {
         <h2>Пользователи</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
       </div>
-      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'] }} columns={[
+      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }} columns={[
         { title: 'ФИО', dataIndex: 'fullName' },
         { title: 'Email', dataIndex: 'email' },
         { title: 'Роль', dataIndex: 'role', render: (v: string) => {

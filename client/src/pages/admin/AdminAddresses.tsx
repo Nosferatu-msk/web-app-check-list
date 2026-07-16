@@ -89,7 +89,7 @@ export default function AdminAddresses() {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
         </Space>
       </div>
-      <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={{ current: page, total, defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '25', '50', '100'], onChange: (p, ps) => { setPage(p); if (ps !== pageSize) { setPageSize(ps); load(1, search, ps); } else { load(p); } } }} />
+      <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={{ current: page, total, pageSize: pageSize, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}`, onChange: (p, ps) => { setPage(p); if (ps !== pageSize) { setPageSize(ps); load(1, search, ps); } else { load(p); } } }} />
       <Modal title={editing ? 'Редактировать адрес' : 'Новый адрес'} open={modalOpen} onOk={handleSave} onCancel={() => { setModalOpen(false); setEditing(null); form.resetFields(); }} okText="Сохранить">
         <Form form={form} layout="vertical">
           <Form.Item name="city" label="Город" rules={[{ required: true }]}><Input onChange={generateFullAddress} /></Form.Item>
