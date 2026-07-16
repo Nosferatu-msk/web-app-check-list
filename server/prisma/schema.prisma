@@ -164,7 +164,10 @@ model Task {
   visitId                   String      @map("visit_id")
   equipmentTypeId           String      @map("equipment_type_id")
   roomTypeId                String?     @map("room_type_id")
-  location                  String?
+  comment                   String?
+  brand                     String?
+  model                     String?
+  serialNumber              String?     @map("serial_number")
   sortOrder                 Int         @default(0) @map("sort_order")
   status                    TaskStatus  @default(not_started)
   parameters                Json?

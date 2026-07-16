@@ -188,7 +188,7 @@ export default function PhotoPage() {
 
       <Card>
         <div style={{ marginBottom: 8, fontWeight: 600, fontSize: 16 }}>{task?.equipmentType?.name}</div>
-        <div style={{ color: '#888', marginBottom: 16 }}>{task?.roomType?.name || task?.location || ''}</div>
+        <div style={{ color: '#888', marginBottom: 16 }}>{task?.roomType?.name || task?.comment || ''}</div>
 
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontWeight: 500, marginBottom: 8 }}>📷 Фото ДО выполнения работ:</div>

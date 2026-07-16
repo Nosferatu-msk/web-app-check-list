@@ -123,7 +123,15 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   res.json(visit);
 });
 
-router.put('/:id', async (req: AuthRequest, res: Response) => {
+const updateVisitSchema = z.object({
+  addressId: z.string().uuid().optional(),
+  engineerName: z.string().min(1).optional(),
+  dateStart: z.string().optional(),
+  timeStart: z.string().optional(),
+  season: z.enum(['summer', 'winter']).optional(),
+});
+
+router.put('/:id', validate(updateVisitSchema), async (req: AuthRequest, res: Response) => {
   const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(existing.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
@@ -229,7 +237,10 @@ router.post('/:id/reassign', validate(reassignSchema), async (req: AuthRequest, 
 const createTaskSchema = z.object({
   equipmentTypeId: z.string().uuid(),
   roomTypeId: z.string().uuid().optional().or(z.literal('')),
-  location: z.string().optional(),
+  comment: z.string().optional(),
+  brand: z.string().optional(),
+  model: z.string().optional(),
+  serialNumber: z.string().optional(),
 });
 
 router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthRequest, res: Response) => {
@@ -246,7 +257,10 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
       visitId,
       equipmentTypeId: data.equipmentTypeId,
       roomTypeId: data.roomTypeId || null,
-      location: data.location || null,
+      comment: data.comment || null,
+      brand: data.brand || null,
+      model: data.model || null,
+      serialNumber: data.serialNumber || null,
       sortOrder: (maxOrder._max?.sortOrder ?? 0) + 1,
     },
     include: { equipmentType: true, roomType: true, photos: true },
@@ -289,7 +303,10 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   const data: Record<string, any> = {};
   if (req.body.equipmentTypeId !== undefined) data.equipmentTypeId = req.body.equipmentTypeId;
   if (req.body.roomTypeId !== undefined) data.roomTypeId = req.body.roomTypeId || null;
-  if (req.body.location !== undefined) data.location = req.body.location;
+  if (req.body.comment !== undefined) data.comment = req.body.comment;
+  if (req.body.brand !== undefined) data.brand = req.body.brand;
+  if (req.body.model !== undefined) data.model = req.body.model;
+  if (req.body.serialNumber !== undefined) data.serialNumber = req.body.serialNumber;
   if (req.body.status !== undefined) data.status = req.body.status;
   if (req.body.parameters !== undefined) data.parameters = req.body.parameters;
   if (req.body.selectedRecommendationIds !== undefined) data.selectedRecommendationIds = req.body.selectedRecommendationIds;

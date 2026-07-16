@@ -24,7 +24,10 @@ export interface LocalTask {
   visitServerId?: string;
   equipmentTypeId: string;
   roomTypeId?: string;
-  location?: string;
+  comment?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
   sortOrder: number;
   status: string;
   parameters?: Record<string, unknown>;

@@ -128,7 +128,10 @@ async function processQueueItem(item: SyncQueueItem, token: string) {
         body: JSON.stringify({
           equipmentTypeId: task.equipmentTypeId,
           roomTypeId: task.roomTypeId || '',
-          location: task.location || '',
+          comment: task.comment || '',
+          brand: task.brand || '',
+          model: task.model || '',
+          serialNumber: task.serialNumber || '',
         }),
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);

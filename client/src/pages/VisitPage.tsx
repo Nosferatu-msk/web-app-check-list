@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
+import { useAutoSave } from '../hooks/useAutoSave';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/ru';
+
+dayjs.extend(relativeTime);
+dayjs.locale('ru');
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
   not_started: { color: 'default', label: 'Не начато' },
@@ -37,6 +43,29 @@ export default function VisitPage() {
   const [eqTypeMap, setEqTypeMap] = useState<Map<string, any>>(new Map());
   const [rmTypeMap, setRmTypeMap] = useState<Map<string, any>>(new Map());
 
+  const handleAutoSave = useCallback(async () => {
+    if (isNew) return;
+    const values = form.getFieldsValue(true);
+    if (!values.addressId) return;
+    await api.updateVisit(id!, {
+      addressId: values.addressId,
+      engineerName: values.engineerName,
+      dateStart: values.dateStart ? values.dateStart.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+      timeStart: values.timeStart ? values.timeStart.format('HH:mm') : dayjs().format('HH:mm'),
+      season: values.season,
+    });
+  }, [isNew, id, form]);
+
+  const {
+    isSaving: autoSaving,
+    lastSavedAt,
+    markDirty: markAutoSaveDirty,
+    resetDirty: resetAutoSave,
+  } = useAutoSave(handleAutoSave, {
+    enabled: !isNew && !loading,
+    isSubmitting: saving,
+  });
+
   useEffect(() => {
     Promise.all([api.getEquipmentTypes(), api.getRoomTypes()]).then(([eq, rt]) => {
       setEquipmentTypes(eq);
@@ -56,6 +85,7 @@ export default function VisitPage() {
           timeStart: dayjs(v.timeStart, 'HH:mm'),
           season: v.season,
         });
+        resetAutoSave();
         setLoading(false);
       });
     } else {
@@ -103,6 +133,7 @@ export default function VisitPage() {
       } else {
         const v = await api.updateVisit(id!, data);
         setVisit(v);
+        resetAutoSave();
         message.success('Сохранено');
       }
     } catch (err: any) {
@@ -115,22 +146,22 @@ export default function VisitPage() {
 
   const handleAddTask = async (values: any) => {
     if (!visit?.id) { message.warning('Сначала сохраните визит'); return; }
-    if (!values.roomTypeId && !values.location) {
-      message.warning('Укажите тип помещения или местоположение');
+    if (!values.roomTypeId && !values.comment) {
+      message.warning('Укажите тип помещения или комментарий');
       return;
     }
+    const taskData = {
+      equipmentTypeId: values.equipmentTypeId,
+      roomTypeId: values.roomTypeId || '',
+      comment: values.comment || '',
+      brand: values.brand || '',
+      model: values.model || '',
+      serialNumber: values.serialNumber || '',
+    };
     if (isOffline()) {
-      await api.createTaskOffline(visit.id, {
-        equipmentTypeId: values.equipmentTypeId,
-        roomTypeId: values.roomTypeId || '',
-        location: values.location || '',
-      });
+      await api.createTaskOffline(visit.id, taskData);
     } else {
-      await api.createTask(visit.id, {
-        equipmentTypeId: values.equipmentTypeId,
-        roomTypeId: values.roomTypeId || '',
-        location: values.location || '',
-      });
+      await api.createTask(visit.id, taskData);
     }
     const v = await api.getVisit(visit.id);
     setTasks(v.tasks || []);
@@ -182,8 +213,8 @@ export default function VisitPage() {
     },
     {
       title: 'Местоположение',
-      key: 'location',
-      render: (_: any, r: any) => r.roomType?.name || r.location || '—',
+      key: 'comment',
+      render: (_: any, r: any) => r.roomType?.name || r.comment || '—',
     },
     {
       title: 'Фото',
@@ -224,7 +255,7 @@ export default function VisitPage() {
       </div>
 
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" onValuesChange={markAutoSaveDirty}>
           <Form.Item label="Инженер" name="engineerName" rules={[{ required: true, message: 'Введите ФИО' }]}>
             <Input placeholder="Иванов П.С." />
           </Form.Item>
@@ -264,7 +295,12 @@ export default function VisitPage() {
           </Space>
         </Form>
         <Space>
-          <Button type="primary" onClick={handleSave} loading={saving}>💾 Сохранить</Button>
+          <Button type="primary" onClick={handleSave} loading={saving} icon={<SaveOutlined />}>Сохранить</Button>
+          {!isNew && (autoSaving || lastSavedAt) && (
+            <span style={{ fontSize: 12, color: '#999' }}>
+              {autoSaving ? 'Автосохранение...' : `Сохранено ${dayjs(lastSavedAt).fromNow()}`}
+            </span>
+          )}
           {!isNew && visit && (
             <Popconfirm title="Удалить визит?" onConfirm={handleDeleteVisit} okText="Да" cancelText="Нет">
               <Button danger>Удалить визит</Button>
@@ -310,7 +346,10 @@ export default function VisitPage() {
                     await api.createTask(visit.id, {
                       equipmentTypeId: eqType?.id || '',
                       roomTypeId: rmType?.id || '',
-                      location: eq.locationDescription || '',
+                      comment: eq.locationDescription || '',
+                      brand: eq.brand || '',
+                      model: eq.model || '',
+                      serialNumber: eq.serialNumber || '',
                     });
                   }
                   const v = await api.getVisit(visit.id);
@@ -364,7 +403,16 @@ export default function VisitPage() {
           <Form.Item name="roomTypeId" label="Тип помещения">
             <Select placeholder="Выберите..." allowClear options={roomTypes.map(r => ({ label: r.name, value: r.id }))} />
           </Form.Item>
-          <Form.Item name="location" label="Местоположение / Назначение">
+          <Form.Item name="comment" label="Комментарий">
+            <Input placeholder="Необязательно" />
+          </Form.Item>
+          <Form.Item name="brand" label="Марка">
+            <Input placeholder="Необязательно" />
+          </Form.Item>
+          <Form.Item name="model" label="Модель">
+            <Input placeholder="Необязательно" />
+          </Form.Item>
+          <Form.Item name="serialNumber" label="Серийный номер">
             <Input placeholder="Необязательно" />
           </Form.Item>
           <Form.Item><Button type="primary" htmlType="submit" block>Добавить</Button></Form.Item>

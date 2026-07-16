@@ -131,8 +131,8 @@ export async function generateReportHtml(visitId: string): Promise<string> {
       recsHtml += `<li>${task.additionalRecommendations}</li>`;
     }
 
-    const location = task.roomType ? task.roomType.name : (task.location || '—');
-    const title = `${i + 1}. ${task.equipmentType.name}${task.location ? ` (${task.location})` : ''}`;
+    const location = task.roomType ? task.roomType.name : (task.comment || '—');
+    const title = `${i + 1}. ${task.equipmentType.name}${task.comment ? ` (${task.comment})` : ''}`;
 
     tasksHtml += `
       <div style="margin:20px 0;padding:15px;border:1px solid #ccc;border-radius:4px;">

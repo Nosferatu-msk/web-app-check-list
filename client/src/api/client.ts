@@ -166,7 +166,7 @@ export const api = {
     await db.tasks.add({
       id, visitLocalId: visitId, visitServerId: visit?.serverId,
       equipmentTypeId: data.equipmentTypeId, roomTypeId: data.roomTypeId,
-      location: data.location, sortOrder: data.sortOrder || 0,
+      comment: data.comment, brand: data.brand, model: data.model, serialNumber: data.serialNumber, sortOrder: data.sortOrder || 0,
       status: 'not_started', selectedRecommendationIds: [],
       createdAt: now, updatedAt: now, dirty: true,
     });
