@@ -1,8 +1,15 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm } from 'antd';
-import { ArrowLeftOutlined, CameraOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CameraOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
+import { useAutoSave } from '../hooks/useAutoSave';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/ru';
+
+dayjs.extend(relativeTime);
+dayjs.locale('ru');
 
 const { TextArea } = Input;
 
@@ -149,6 +156,30 @@ export default function TaskPage() {
   const loadedParamsRef = useRef<Record<string, any>>({});
   const location = useLocation();
 
+  const handleAutoSave = useCallback(async () => {
+    if (!visitId || !taskId || !task) return;
+    const allValues = form.getFieldsValue(true);
+    const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
+    const finalConclusion = formConclusion || conclusion;
+    const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
+    await api.updateTask(visitId, taskId, {
+      parameters,
+      selectedRecommendationIds: selectedRecs,
+      additionalRecommendations: additionalRecommendations || '',
+      conclusion: finalConclusion,
+    });
+  }, [visitId, taskId, task, form, conclusion, selectedRecs]);
+
+  const {
+    isSaving: autoSaving,
+    lastSavedAt,
+    markDirty: markAutoSaveDirty,
+    resetDirty: resetAutoSave,
+  } = useAutoSave(handleAutoSave, {
+    enabled: !loading,
+    isSubmitting: saving,
+  });
+
   useEffect(() => {
     if (!visitId || !taskId) return;
     setFormInitialValues(null);
@@ -198,6 +229,7 @@ export default function TaskPage() {
       }));
       const timer = setTimeout(() => {
         form.setFields(fields);
+        resetAutoSave();
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -279,7 +311,7 @@ export default function TaskPage() {
       </div>
 
       <Card>
-        <Form form={form} key={formKey} initialValues={formInitialValues} layout="vertical">
+        <Form form={form} key={formKey} initialValues={formInitialValues} layout="vertical" onValuesChange={markAutoSaveDirty}>
           {paramConfig.map(p => (
             <Form.Item key={p.key} label={p.label} name={p.key} rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}>
               {p.type === 'select' ? (
@@ -298,7 +330,7 @@ export default function TaskPage() {
 
           {recommendations.length > 0 && (
             <Form.Item label="Типовые рекомендации">
-              <Checkbox.Group value={selectedRecs} onChange={(v) => setSelectedRecs(v as string[])}>
+              <Checkbox.Group value={selectedRecs} onChange={(v) => { setSelectedRecs(v as string[]); markAutoSaveDirty(); }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {recommendations.map(r => (
                     <Checkbox key={r.id} value={r.id}>{r.text}</Checkbox>
@@ -326,9 +358,14 @@ export default function TaskPage() {
         </Form>
 
         <Space style={{ width: '100%' }} direction="vertical" size="middle">
-          <Button type="primary" onClick={handleSave} loading={saving} block size="large">
+          <Button type="primary" onClick={handleSave} loading={saving} icon={<SaveOutlined />} block size="large">
             Сохранить и вернуться в чек-лист
           </Button>
+          {(autoSaving || lastSavedAt) && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: '#999' }}>
+              {autoSaving ? 'Автосохранение...' : `Сохранено ${dayjs(lastSavedAt).fromNow()}`}
+            </div>
+          )}
           <Space>
             <Button onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
             <Button icon={<CameraOutlined />} onClick={handleGoToPhotos}>Фото</Button>

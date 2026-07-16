@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import prisma from '../models/prisma.js';
 import { generateAccessToken, generateRefreshToken, authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -9,6 +10,14 @@ import { logAudit } from '../middleware/audit.js';
 import { sendMail } from '../utils/email.js';
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Слишком много попыток. Попробуйте через 15 минут.' },
+});
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -25,7 +34,7 @@ const resetPasswordSchema = z.object({
 });
 
 // POST /api/auth/login
-router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
+router.post('/login', authLimiter, validate(loginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user || !user.isActive) {
@@ -75,7 +84,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', validate(forgotPasswordSchema), async (req: Request, res: Response) => {
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), async (req: Request, res: Response) => {
   const { email } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
@@ -111,7 +120,7 @@ router.post('/forgot-password', validate(forgotPasswordSchema), async (req: Requ
 });
 
 // POST /api/auth/reset-password
-router.post('/reset-password', validate(resetPasswordSchema), async (req: Request, res: Response) => {
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), async (req: Request, res: Response) => {
   const { token, password } = req.body;
   const resetToken = await prisma.passwordResetToken.findUnique({ where: { token } });
   if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
