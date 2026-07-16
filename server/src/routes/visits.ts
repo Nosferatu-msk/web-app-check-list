@@ -46,6 +46,18 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     visitUserId = req.userId!;
   }
 
+  // Validate address access: engineer/tm can only use addresses assigned to their TM
+  if (req.userRole === 'engineer') {
+    const assignment = await prisma.tmEngineer.findUnique({ where: { engineerId: req.userId as string } });
+    if (assignment) {
+      const tmObject = await prisma.tmObject.findFirst({ where: { tmId: assignment.tmId, addressId: rest.addressId } });
+      if (!tmObject) { res.status(403).json({ error: 'Адрес не закреплён за вашим ТМ' }); return; }
+    } else { res.status(403).json({ error: 'Вы не привязаны к ТМ' }); return; }
+  } else if (req.userRole === 'tm') {
+    const tmObject = await prisma.tmObject.findFirst({ where: { tmId: req.userId as string, addressId: rest.addressId } });
+    if (!tmObject) { res.status(403).json({ error: 'Адрес не закреплён за вами' }); return; }
+  }
+
   const visit = await prisma.visit.create({
     data: {
       ...rest,

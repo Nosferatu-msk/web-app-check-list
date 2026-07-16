@@ -30,10 +30,29 @@ router.get('/recommendations', async (req: AuthRequest, res: Response) => {
 router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
-  const data = await prisma.address.findMany({
-    where: { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] },
-    take: 20,
-  });
+
+  const textFilter = { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] };
+
+  // Role-based filtering: engineer sees only TM's addresses, tm sees own, admin sees all
+  let addressIds: string[] | null = null;
+  if (req.userRole === 'engineer') {
+    const assignment = await prisma.tmEngineer.findUnique({ where: { engineerId: req.userId as string } });
+    if (assignment) {
+      const tmObjects = await prisma.tmObject.findMany({ where: { tmId: assignment.tmId }, select: { addressId: true } });
+      addressIds = tmObjects.map(t => t.addressId);
+    } else {
+      res.json([]); return;
+    }
+  } else if (req.userRole === 'tm') {
+    const tmObjects = await prisma.tmObject.findMany({ where: { tmId: req.userId as string }, select: { addressId: true } });
+    addressIds = tmObjects.map(t => t.addressId);
+  }
+
+  const where: any = addressIds !== null
+    ? { AND: [textFilter, { id: { in: addressIds } }] }
+    : textFilter;
+
+  const data = await prisma.address.findMany({ where, take: 20 });
   res.json(data);
 });
 
