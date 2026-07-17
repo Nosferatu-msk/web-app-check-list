@@ -14,6 +14,7 @@ QWEN.md
 .qwen/
 .vscode/
 .git/
+autotest/
 
 # Зависимости
 node_modules/

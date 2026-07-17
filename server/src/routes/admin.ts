@@ -359,14 +359,26 @@ router.delete('/object-equipment/:id', async (req: AuthRequest, res: Response) =
 });
 
 // ─── AUDIT LOG ───────────────────────────────────────────────
+function buildAuditWhere(req: any) {
+  const where: any = {};
+  const userId = req.query.user_id as string;
+  const action = req.query.action as string;
+  const dateFrom = req.query.date_from as string;
+  const dateTo = req.query.date_to as string;
+  if (userId) where.userId = userId;
+  if (action) where.action = action;
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+    if (dateTo) where.createdAt.lte = new Date(dateTo);
+  }
+  return where;
+}
+
 router.get('/audit-log', async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 50;
-  const userId = req.query.user_id as string;
-  const action = req.query.action as string;
-  const where: any = {};
-  if (userId) where.userId = userId;
-  if (action) where.action = action;
+  const where = buildAuditWhere(req);
   const [data, total] = await Promise.all([
     prisma.auditLog.findMany({
       where, skip: (page - 1) * pageSize, take: pageSize,
@@ -376,6 +388,43 @@ router.get('/audit-log', async (req: AuthRequest, res: Response) => {
     prisma.auditLog.count({ where }),
   ]);
   res.json({ data, total, page, pageSize });
+});
+
+router.get('/audit-log/export', async (req: AuthRequest, res: Response) => {
+  const where = buildAuditWhere(req);
+  const data = await prisma.auditLog.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: { user: { select: { fullName: true, email: true } } },
+  });
+  const fmt = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  };
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const header = 'Дата;Пользователь;Email;Действие;Сущность;ID сущности;IP-адрес';
+  const rows = data.map(r => [
+    fmt(r.createdAt),
+    r.user?.fullName || '—',
+    r.user?.email || '—',
+    r.action,
+    r.entityType,
+    r.entityId || '—',
+    r.ipAddress || '—',
+  ].join(';'));
+  const csv = '\uFEFF' + [header, ...rows].join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="audit-log-${dateStr}.csv"`);
+  res.send(csv);
+});
+
+router.delete('/audit-log', async (req: AuthRequest, res: Response) => {
+  const where = buildAuditWhere(req);
+  const count = await prisma.auditLog.count({ where });
+  await prisma.auditLog.deleteMany({ where });
+  await logAudit({ userId: req.userId, action: 'delete', entityType: 'audit_log', entityId: null, oldValue: { filters: where, deletedCount: count }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json({ message: `Удалено записей: ${count}` });
 });
 
 export default router;

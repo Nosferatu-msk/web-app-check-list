@@ -184,6 +184,21 @@ export const api = {
   adminDelete: (entity: string, id: string) =>
     request<any>(`/admin/${entity}/${id}`, { method: 'DELETE' }),
 
+  exportAuditLog: async (params: Record<string, string>) => {
+    const token = localStorage.getItem('accessToken');
+    const qs = '?' + new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/admin/audit-log/export${qs}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Ошибка выгрузки');
+    return res.blob();
+  },
+
+  clearAuditLog: (params: Record<string, string>) => {
+    const qs = '?' + new URLSearchParams(params).toString();
+    return request<any>(`/admin/audit-log${qs}`, { method: 'DELETE' });
+  },
+
   // Proposals
   createProposal: (data: any) =>
     request<any>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
