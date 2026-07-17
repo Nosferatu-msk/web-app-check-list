@@ -58,9 +58,13 @@ export default function AdminAddresses() {
   };
 
   const handleDelete = async (id: string) => {
-    await api.adminDelete('addresses', id);
-    message.success('Удалено');
-    load();
+    try {
+      await api.adminDelete('addresses', id);
+      message.success('Удалено');
+      load();
+    } catch (e: any) {
+      message.error(e?.message || 'Ошибка при удалении');
+    }
   };
 
   const columns = [
