@@ -77,7 +77,7 @@ export default function AdminObjectEquipment() {
         </Space>
       </div>
 
-      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }} columns={[
+      <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }} columns={[
         { title: 'Тип оборудования', dataIndex: 'equipmentTypeCode', render: (v: string) => eqTypeMap.get(v) || v },
         { title: 'Помещение', dataIndex: 'roomTypeCode', render: (v: string) => rmTypeMap.get(v) || v },
         { title: 'Марка', dataIndex: 'brand' },

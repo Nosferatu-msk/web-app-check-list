@@ -118,7 +118,7 @@ export default function AdminTmAssignments() {
                 dataSource={filteredObjects}
                 rowKey="id"
                 loading={loading}
-                pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }}
+                pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }}
                 columns={[
                   { title: 'ТМ', render: (_: any, r: any) => r.tm?.fullName },
                   { title: 'Адрес', render: (_: any, r: any) => r.address?.fullAddress },
@@ -156,7 +156,7 @@ export default function AdminTmAssignments() {
                 dataSource={filteredEngineers}
                 rowKey="id"
                 loading={loading}
-                pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }}
+                pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }}
                 columns={[
                   { title: 'ТМ', render: (_: any, r: any) => r.tm?.fullName },
                   { title: 'Инженер', render: (_: any, r: any) => r.engineer?.fullName },
