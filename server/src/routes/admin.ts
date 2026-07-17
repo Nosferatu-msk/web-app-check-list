@@ -66,9 +66,18 @@ router.put('/addresses/:id', validate(addressSchema), async (req: AuthRequest, r
 });
 
 router.delete('/addresses/:id', async (req: AuthRequest, res: Response) => {
-  await prisma.address.delete({ where: { id: req.params.id as string } });
-  await logAudit({ userId: req.userId, action: 'delete', entityType: 'address', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
-  res.json({ message: 'Удалено' });
+  try {
+    await prisma.address.delete({ where: { id: req.params.id as string } });
+    await logAudit({ userId: req.userId, action: 'delete', entityType: 'address', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+    res.json({ message: 'Удалено' });
+  } catch (err: any) {
+    if (err?.code === 'P2003') {
+      res.status(409).json({ error: 'Нельзя удалить: адрес используется в визитах или оборудовании' });
+    } else {
+      console.error('Delete address error:', err);
+      res.status(500).json({ error: 'Ошибка при удалении' });
+    }
+  }
 });
 
 // ─── EQUIPMENT TYPES ─────────────────────────────────────────
