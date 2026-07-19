@@ -56,7 +56,6 @@ router.get('/favorites', async (req: AuthRequest, res: Response) => {
 // POST /api/profile/favorites — add to favorites
 router.post('/favorites', async (req: AuthRequest, res: Response) => {
   const { objectCode, addressId } = req.body;
-  console.log('[favorites] body:', req.body, 'objectCode:', objectCode, 'addressId:', addressId);
   let resolvedCode = objectCode;
 
   // If addressId is provided instead of objectCode, resolve it
