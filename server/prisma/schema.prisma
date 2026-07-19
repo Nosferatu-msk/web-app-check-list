@@ -66,10 +66,11 @@ model User {
   tmObjects      TmObject[]           @relation("TmObjectRelation")
   tmEngineers    TmEngineer[]         @relation("TmEngineerTmRelation")
   engineersAsTm  TmEngineer[]         @relation("TmEngineerEngineerRelation")
-  deletedVisits        Visit[]              @relation("DeletedBy")
-  equipmentProposals   EquipmentProposal[]  @relation("proposedBy")
-  reviewedProposals    EquipmentProposal[]  @relation("reviewedBy")
-  favoriteObjects      UserFavoriteObject[]
+  deletedVisits            Visit[]              @relation("DeletedBy")
+  equipmentProposals       EquipmentProposal[]  @relation("proposedBy")
+  reviewedProposals        EquipmentProposal[]  @relation("reviewedBy")
+  favoriteObjects          UserFavoriteObject[]
+  confirmedObjectEquipment ObjectEquipment[]    @relation("objectEquipmentRoomConfirm")
 
   @@map("users")
 }
@@ -295,20 +296,23 @@ model ImportLog {
 }
 
 model ObjectEquipment {
-  id                  String   @id @default(uuid())
-  addressId           String   @map("address_id")
-  equipmentTypeCode   String   @map("equipment_type_code")
-  roomTypeCode        String   @map("room_type_code")
+  id                  String    @id @default(uuid())
+  addressId           String    @map("address_id")
+  equipmentTypeCode   String    @map("equipment_type_code")
+  roomTypeCode        String?   @map("room_type_code")
   brand               String?
   model               String?
-  serialNumber        String?  @map("serial_number")
-  locationDescription String?  @map("location_description")
-  isActive            Boolean  @default(true) @map("is_active")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  serialNumber        String?   @map("serial_number")
+  locationDescription String?   @map("location_description")
+  isActive            Boolean   @default(true) @map("is_active")
+  roomConfirmedAt     DateTime? @map("room_confirmed_at")
+  roomConfirmedBy     String?   @map("room_confirmed_by")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  address Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
-  tasks   Task[]
+  address         Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  roomConfirmedByUser User? @relation("objectEquipmentRoomConfirm", fields: [roomConfirmedBy], references: [id])
+  tasks           Task[]
 
   @@unique([addressId, equipmentTypeCode, serialNumber])
   @@unique([addressId, equipmentTypeCode, locationDescription])

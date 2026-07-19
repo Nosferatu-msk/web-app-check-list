@@ -322,7 +322,7 @@ router.get('/import-logs', async (req: AuthRequest, res: Response) => {
 const objectEquipmentSchema = z.object({
   addressId: z.string().uuid(),
   equipmentTypeCode: z.string().min(1),
-  roomTypeCode: z.string().min(1),
+  roomTypeCode: z.string().min(1).optional().or(z.literal('')),
   brand: z.string().optional(),
   model: z.string().optional(),
   serialNumber: z.string().optional(),
@@ -341,14 +341,46 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/object-equipment', validate(objectEquipmentSchema), async (req: AuthRequest, res: Response) => {
-  const item = await prisma.objectEquipment.create({ data: req.body });
+  const data = { ...req.body };
+  if (data.roomTypeCode === '') data.roomTypeCode = null;
+  const item = await prisma.objectEquipment.create({ data });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'object_equipment', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json(item);
 });
 
 router.put('/object-equipment/:id', validate(objectEquipmentSchema), async (req: AuthRequest, res: Response) => {
-  const item = await prisma.objectEquipment.update({ where: { id: req.params.id as string }, data: req.body });
+  const data = { ...req.body };
+  if (data.roomTypeCode === '') data.roomTypeCode = null;
+  const item = await prisma.objectEquipment.update({ where: { id: req.params.id as string }, data });
   await logAudit({ userId: req.userId, action: 'update', entityType: 'object_equipment', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json(item);
+});
+
+const confirmRoomSchema = z.object({
+  roomTypeCode: z.string().min(1),
+});
+
+router.patch('/object-equipment/:id/room', validate(confirmRoomSchema), async (req: AuthRequest, res: Response) => {
+  const existing = await prisma.objectEquipment.findUnique({ where: { id: req.params.id as string } });
+  if (!existing) { res.status(404).json({ error: 'Запись не найдена' }); return; }
+  if (existing.roomTypeCode) {
+    res.status(409).json({ error: 'Помещение уже указано' });
+    return;
+  }
+  const rmType = await prisma.roomType.findFirst({ where: { code: req.body.roomTypeCode } });
+  if (!rmType) {
+    res.status(400).json({ error: 'Тип помещения не найден в справочнике' });
+    return;
+  }
+  const item = await prisma.objectEquipment.update({
+    where: { id: req.params.id as string },
+    data: {
+      roomTypeCode: req.body.roomTypeCode,
+      roomConfirmedAt: new Date(),
+      roomConfirmedBy: req.userId,
+    },
+  });
+  await logAudit({ userId: req.userId, action: 'update', entityType: 'object_equipment', entityId: item.id, newValue: { roomTypeCode: req.body.roomTypeCode }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(item);
 });
 

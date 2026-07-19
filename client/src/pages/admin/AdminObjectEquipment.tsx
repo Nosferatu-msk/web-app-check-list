@@ -79,7 +79,7 @@ export default function AdminObjectEquipment() {
 
       <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }} columns={[
         { title: 'Тип оборудования', dataIndex: 'equipmentTypeCode', render: (v: string) => eqTypeMap.get(v) || v },
-        { title: 'Помещение', dataIndex: 'roomTypeCode', render: (v: string) => rmTypeMap.get(v) || v },
+        { title: 'Помещение', dataIndex: 'roomTypeCode', render: (v: string) => v ? (rmTypeMap.get(v) || v) : <span style={{ color: '#faad14' }}>⚠️ Не указано</span> },
         { title: 'Марка', dataIndex: 'brand' },
         { title: 'Модель', dataIndex: 'model' },
         { title: 'Серийный №', dataIndex: 'serialNumber' },
@@ -106,8 +106,8 @@ export default function AdminObjectEquipment() {
           <Form.Item name="equipmentTypeCode" label="Тип оборудования" rules={[{ required: true }]}>
             <Select options={equipmentTypes.map((e: any) => ({ value: e.code, label: e.name }))} />
           </Form.Item>
-          <Form.Item name="roomTypeCode" label="Тип помещения" rules={[{ required: true }]}>
-            <Select options={roomTypes.map((r: any) => ({ value: r.code, label: r.name }))} />
+          <Form.Item name="roomTypeCode" label="Тип помещения">
+            <Select allowClear options={roomTypes.map((r: any) => ({ value: r.code, label: r.name }))} placeholder="Можно не указывать" />
           </Form.Item>
           <Form.Item name="brand" label="Марка"><Input /></Form.Item>
           <Form.Item name="model" label="Модель"><Input /></Form.Item>

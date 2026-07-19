@@ -136,4 +136,33 @@ router.get('/engineers', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// PATCH /api/refs/object-equipment/:id/room — confirm room for equipment
+router.patch('/object-equipment/:id/room', async (req: AuthRequest, res: Response) => {
+  const roomTypeCode = req.body?.roomTypeCode as string;
+  if (!roomTypeCode) { res.status(400).json({ error: 'Не указан roomTypeCode' }); return; }
+
+  const existing = await prisma.objectEquipment.findUnique({ where: { id: req.params.id as string } });
+  if (!existing) { res.status(404).json({ error: 'Запись не найдена' }); return; }
+  if (existing.roomTypeCode) {
+    res.status(409).json({ error: 'Помещение уже указано' });
+    return;
+  }
+
+  const rmType = await prisma.roomType.findFirst({ where: { code: roomTypeCode } });
+  if (!rmType) {
+    res.status(400).json({ error: 'Тип помещения не найден в справочнике' });
+    return;
+  }
+
+  const item = await prisma.objectEquipment.update({
+    where: { id: req.params.id as string },
+    data: {
+      roomTypeCode,
+      roomConfirmedAt: new Date(),
+      roomConfirmedBy: req.userId,
+    },
+  });
+  res.json(item);
+});
+
 export default router;

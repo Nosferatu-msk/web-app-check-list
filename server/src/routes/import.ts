@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
+import ExcelJS from 'exceljs';
 import prisma from '../models/prisma.js';
 import { authMiddleware, adminOnly, AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
@@ -15,36 +16,27 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) cb(null, true);
-    else cb(new Error('Только CSV файлы'));
+    const name = file.originalname.toLowerCase();
+    if (
+      file.mimetype === 'text/csv' ||
+      name.endsWith('.csv') ||
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      name.endsWith('.xlsx')
+    ) cb(null, true);
+    else cb(new Error('Поддерживаются только файлы CSV и XLSX'));
   },
 });
 
 interface CsvRow { [key: string]: string }
 
-function parseCsv(buffer: Buffer): Promise<CsvRow[]> {
-  return new Promise((resolve, reject) => {
-    const rows: CsvRow[] = [];
-    const stream = Readable.from(buffer);
-    stream.pipe(csv({ separator: undefined, mapHeaders: ({ header }) => header.trim() }))
-      .on('data', (row: CsvRow) => rows.push(row))
-      .on('end', () => resolve(rows))
-      .on('error', reject);
-  });
-}
-
 function decodeBuffer(buffer: Buffer): string {
-  // Check for UTF-8 BOM
   if (buffer.length >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
     return buffer.toString('utf-8').replace(/^\uFEFF/, '');
   }
-  // Check for UTF-16 LE BOM
   if (buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE) {
     return iconv.decode(buffer, 'utf-16le');
   }
-  // Try UTF-8 first
   const utf8Text = buffer.toString('utf-8');
-  // If it contains replacement characters, it's likely not valid UTF-8
   if (utf8Text.includes('\uFFFD')) {
     return iconv.decode(buffer, 'win1251');
   }
@@ -69,13 +61,58 @@ function parseCsvWithSeparator(buffer: Buffer, sep: string): Promise<CsvRow[]> {
   });
 }
 
-async function parseUploadedCsv(req: any): Promise<{ rows: CsvRow[]; fileName: string }> {
+async function parseExcel(buffer: Buffer): Promise<CsvRow[]> {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buffer as any);
+  const ws = wb.worksheets[0];
+  if (!ws) throw new Error('Excel-файл не содержит листов');
+
+  const rows: CsvRow[] = [];
+  let headers: string[] = [];
+
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const cells = row.values as any[];
+    if (rowNumber === 1) {
+      headers = cells.slice(1).map((v: any) => String(v || '').trim());
+      return;
+    }
+    const values = cells.slice(1);
+    const obj: CsvRow = {};
+    let hasData = false;
+    headers.forEach((h, i) => {
+      const cell = values[i];
+      let val = '';
+      if (cell instanceof Date) {
+        val = cell.toISOString().split('T')[0];
+      } else if (cell != null) {
+        val = String(cell).trim();
+      }
+      obj[h] = val;
+      if (val) hasData = true;
+    });
+    if (hasData) rows.push(obj);
+  });
+
+  return rows;
+}
+
+async function parseUploadedFile(req: any): Promise<{ rows: CsvRow[]; fileName: string }> {
   const file = req.file;
   if (!file) throw new Error('Файл не загружен');
-  const decodedText = decodeBuffer(file.buffer);
-  const decodedBuffer = Buffer.from(decodedText, 'utf-8');
-  const sep = detectSeparator(decodedBuffer);
-  const rows = await parseCsvWithSeparator(decodedBuffer, sep);
+
+  const isExcel = file.originalname.toLowerCase().endsWith('.xlsx') ||
+    file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+  let rows: CsvRow[];
+  if (isExcel) {
+    rows = await parseExcel(file.buffer);
+  } else {
+    const decodedText = decodeBuffer(file.buffer);
+    const decodedBuffer = Buffer.from(decodedText, 'utf-8');
+    const sep = detectSeparator(decodedBuffer);
+    rows = await parseCsvWithSeparator(decodedBuffer, sep);
+  }
+
   if (rows.length > 20000) {
     throw new Error('Файл содержит более 20 000 строк. Разбейте файл на части.');
   }
@@ -105,7 +142,7 @@ function isValidateMode(req: any): boolean {
 // ─── ADDRESSES ───────────────────────────────────────────────
 router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
@@ -162,7 +199,7 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
 // ─── EQUIPMENT TYPES ─────────────────────────────────────────
 router.post('/equipment-types', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
@@ -208,7 +245,7 @@ router.post('/equipment-types', upload.single('file'), async (req: AuthRequest, 
 // ─── ROOM TYPES ──────────────────────────────────────────────
 router.post('/room-types', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
@@ -249,7 +286,7 @@ router.post('/room-types', upload.single('file'), async (req: AuthRequest, res: 
 // ─── RECOMMENDATIONS ─────────────────────────────────────────
 router.post('/recommendations', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
     const eqTypes = await prisma.equipmentType.findMany();
@@ -297,7 +334,7 @@ router.post('/recommendations', upload.single('file'), async (req: AuthRequest, 
 // ─── USERS ───────────────────────────────────────────────────
 router.post('/users', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
     const TEMP_PASSWORD = 'Welcome2026!';
@@ -381,7 +418,7 @@ router.post('/users', upload.single('file'), async (req: AuthRequest, res: Respo
 // ─── TM OBJECTS ──────────────────────────────────────────────
 router.post('/tm-objects', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
@@ -432,7 +469,7 @@ router.post('/tm-objects', upload.single('file'), async (req: AuthRequest, res: 
 // ─── TM ENGINEERS ────────────────────────────────────────────
 router.post('/tm-engineers', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
@@ -479,7 +516,7 @@ router.post('/tm-engineers', upload.single('file'), async (req: AuthRequest, res
 // ─── OBJECT EQUIPMENT ────────────────────────────────────────
 router.post('/object-equipment', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rows, fileName } = await parseUploadedCsv(req);
+    const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
@@ -487,38 +524,38 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       const r = rows[i];
       const objectCode = r.object_code || r.objectCode || r['код объекта'];
       const equipmentType = r.equipment_type || r.equipmentType || r['тип оборудования'];
-      const roomType = r.room_type || r.roomType || r['тип помещения'];
+      const roomType = (r.room_type || r.roomType || r['тип помещения'] || '').trim() || null;
 
-      if (!objectCode || !equipmentType || !roomType) {
-        result.errors.push({ row: i + 2, message: 'Не заполнены object_code, equipment_type или room_type' });
+      if (!objectCode || !equipmentType) {
+        result.errors.push({ row: i + 2, message: 'Не заполнены object_code или equipment_type' });
         continue;
       }
 
-      // Find address by object_code
       const address = await prisma.address.findFirst({ where: { objectCode } });
       if (!address) {
         result.errors.push({ row: i + 2, message: `Адрес с object_code "${objectCode}" не найден` });
         continue;
       }
 
-      // Check if equipment type exists
       const eqType = await prisma.equipmentType.findFirst({ where: { code: equipmentType } });
       if (!eqType) {
         result.errors.push({ row: i + 2, message: `Тип оборудования "${equipmentType}" не найден` });
         continue;
       }
 
-      // Check if room type exists
-      const rmType = await prisma.roomType.findFirst({ where: { code: roomType } });
-      if (!rmType) {
-        result.errors.push({ row: i + 2, message: `Тип помещения "${roomType}" не найден` });
-        continue;
+      let roomTypeCode: string | null = null;
+      if (roomType) {
+        const rmType = await prisma.roomType.findFirst({ where: { code: roomType } });
+        if (!rmType) {
+          result.errors.push({ row: i + 2, message: `Тип помещения "${roomType}" не найден` });
+          continue;
+        }
+        roomTypeCode = roomType;
       }
 
       const serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
       const locationDescription = r.location_description || r.locationDescription || r['местоположение'] || null;
 
-      // Check for duplicate: same address + equipment type + serial number (or location if no SN)
       const duplicateWhere: any = {
         addressId: address.id,
         equipmentTypeCode: equipmentType,
@@ -538,7 +575,7 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         data: {
           addressId: address.id,
           equipmentTypeCode: equipmentType,
-          roomTypeCode: roomType,
+          roomTypeCode,
           brand: r.brand || r['марка'] || null,
           model: r.model || r['модель'] || null,
           serialNumber,

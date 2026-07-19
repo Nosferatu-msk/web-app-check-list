@@ -217,6 +217,10 @@ export const api = {
   rejectProposal: (id: string) =>
     request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT' }),
 
+  // Object equipment room confirmation
+  confirmEquipmentRoom: (id: string, roomTypeCode: string) =>
+    request<any>(`/refs/object-equipment/${id}/room`, { method: 'PATCH', body: JSON.stringify({ roomTypeCode }) }),
+
   // Profile
   getProfile: () => request<any>('/profile'),
   updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean }) =>

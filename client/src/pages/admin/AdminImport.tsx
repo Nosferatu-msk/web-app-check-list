@@ -13,7 +13,7 @@ const IMPORT_TYPES = [
   { key: 'users', label: 'Пользователи', icon: '👥', description: 'CSV: full_name, email, role, password, tm_email' },
   { key: 'tm-objects', label: 'Привязка объектов к ТМ', icon: '🔗', description: 'CSV: object_code, tm_email' },
   { key: 'tm-engineers', label: 'Привязка инженеров к ТМ', icon: '🔗', description: 'CSV: engineer_email, tm_email' },
-  { key: 'object-equipment', label: 'Оборудование объектов', icon: '⚙️', description: 'CSV: object_code, equipment_type, room_type, brand, model, serial_number, location_description' },
+  { key: 'object-equipment', label: 'Оборудование объектов', icon: '⚙️', description: 'CSV/XLSX: object_code, equipment_type, room_type (опц.), brand, model, serial_number, location_description' },
 ];
 
 interface ImportResult {
@@ -165,14 +165,14 @@ export default function AdminImport() {
         <Card title={`Импорт: ${IMPORT_TYPES.find(t => t.key === selectedType)?.label}`} style={{ marginBottom: 24 }}>
           <Space direction="vertical" style={{ width: '100%' }} size="large">
             <Upload
-              accept=".csv"
+              accept=".csv,.xlsx"
               maxCount={1}
               fileList={fileList}
               beforeUpload={() => false}
               onChange={({ fileList }) => { setFileList(fileList); setValidateResult(null); setResult(null); setPhase('idle'); }}
               disabled={loading}
             >
-              <Button icon={<UploadOutlined />} size="large" disabled={loading}>Выбрать CSV файл</Button>
+              <Button icon={<UploadOutlined />} size="large" disabled={loading}>Выбрать файл (CSV или XLSX)</Button>
             </Upload>
 
             {phase !== 'idle' && (

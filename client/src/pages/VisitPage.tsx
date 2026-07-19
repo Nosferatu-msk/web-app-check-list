@@ -44,6 +44,7 @@ export default function VisitPage() {
   const [linkedEquipment, setLinkedEquipment] = useState<any[]>([]);
   const [linkedLoading, setLinkedLoading] = useState(false);
   const [selectedLinkedIds, setSelectedLinkedIds] = useState<string[]>([]);
+  const [roomSelections, setRoomSelections] = useState<Record<string, string>>({});
   const [addingLinked, setAddingLinked] = useState(false);
   const [proposeEquipment, setProposeEquipment] = useState(false);
   const [newTaskForm] = Form.useForm();
@@ -188,6 +189,7 @@ export default function VisitPage() {
     setAddModalOpen(true);
     setAddModalTab('linked');
     setSelectedLinkedIds([]);
+    setRoomSelections({});
     await loadLinkedEquipment(currentVisit.id, currentVisit.addressId);
   }, [visit, form, navigate, loadLinkedEquipment, message]);
 
@@ -198,8 +200,19 @@ export default function VisitPage() {
       for (const eqId of selectedLinkedIds) {
         const eq = linkedEquipment.find(e => e.id === eqId);
         if (!eq) continue;
+
+        let roomTypeCode = eq.roomTypeCode;
+        if (!roomTypeCode) {
+          const selectedRoom = roomSelections[eqId];
+          if (!selectedRoom) continue;
+          if (!isOffline()) {
+            await api.confirmEquipmentRoom(eqId, selectedRoom);
+          }
+          roomTypeCode = selectedRoom;
+        }
+
         const eqType = eqTypeMap.get(eq.equipmentTypeCode);
-        const rmType = rmTypeMap.get(eq.roomTypeCode);
+        const rmType = rmTypeMap.get(roomTypeCode);
         const taskData = {
           equipmentTypeId: eqType?.id || '',
           roomTypeId: rmType?.id || '',
@@ -435,7 +448,7 @@ export default function VisitPage() {
       <Modal
         title="Добавление оборудования"
         open={addModalOpen}
-        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); }}
+        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); setRoomSelections({}); }}
         footer={null}
         width={560}
       >
@@ -455,6 +468,7 @@ export default function VisitPage() {
                     const eqType = eqTypeMap.get(eq.equipmentTypeCode);
                     const rmType = rmTypeMap.get(eq.roomTypeCode);
                     const checked = selectedLinkedIds.includes(eq.id);
+                    const noRoom = !eq.roomTypeCode;
                     return (
                       <List.Item
                         style={{ cursor: 'pointer', padding: '8px 4px' }}
@@ -472,8 +486,24 @@ export default function VisitPage() {
                             </div>
                             <div style={{ fontSize: 12, color: '#888' }}>
                               {eq.serialNumber && <span>SN: {eq.serialNumber} · </span>}
-                              {rmType?.name || eq.roomTypeCode}
+                              {noRoom ? (
+                                <span style={{ color: '#faad14' }}>⚠️ Помещение не указано</span>
+                              ) : (
+                                rmType?.name || eq.roomTypeCode
+                              )}
                             </div>
+                            {checked && noRoom && (
+                              <div style={{ marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
+                                <Select
+                                  size="small"
+                                  style={{ width: '100%' }}
+                                  placeholder="Выберите помещение..."
+                                  value={roomSelections[eq.id] || undefined}
+                                  onChange={(v) => setRoomSelections({ ...roomSelections, [eq.id]: v })}
+                                  options={roomTypes.map((r: any) => ({ label: r.name, value: r.code }))}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </List.Item>
@@ -484,7 +514,10 @@ export default function VisitPage() {
                   type="primary"
                   block
                   style={{ marginTop: 12 }}
-                  disabled={selectedLinkedIds.length === 0}
+                  disabled={selectedLinkedIds.length === 0 || selectedLinkedIds.some(id => {
+                    const eq = linkedEquipment.find(e => e.id === id);
+                    return eq && !eq.roomTypeCode && !roomSelections[id];
+                  })}
                   loading={addingLinked}
                   onClick={handleAddLinkedEquipment}
                 >
