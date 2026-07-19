@@ -42,8 +42,8 @@ export default function VisitListPage() {
       const res = await api.getVisits(params);
       setVisits(res.data || []);
       if (isManager) {
-        const users = await api.adminGet('users');
-        setEngineers((users || []).filter((u: any) => u.role === 'engineer' && u.isActive));
+        const users = await api.getEngineers();
+        setEngineers((users || []).filter((u: any) => u.isActive !== false));
       }
     } catch { /* ignore */ }
     setLoading(false);

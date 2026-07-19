@@ -268,8 +268,8 @@ function TmProfile() {
   const loadTeam = useCallback(async () => {
     setTeamLoading(true);
     try {
-      const users = await api.adminGet('users');
-      setEngineers((users || []).filter((u: any) => u.role === 'engineer' && u.isActive));
+      const users = await api.getEngineers();
+      setEngineers((users || []).filter((u: any) => u.isActive !== false));
     } catch { /* ignore */ }
     setTeamLoading(false);
   }, []);
