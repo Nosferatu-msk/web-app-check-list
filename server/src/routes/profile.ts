@@ -86,4 +86,28 @@ router.delete('/favorites/:objectCode', async (req: AuthRequest, res: Response) 
   res.json({ message: 'Удалено из избранного' });
 });
 
+// GET /api/profile/stats — quick stats for profile page
+router.get('/stats', async (req: AuthRequest, res: Response) => {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [visitsThisMonth, issuesFound] = await Promise.all([
+    prisma.visit.count({
+      where: {
+        userId: req.userId as string,
+        createdAt: { gte: startOfMonth },
+        isDeleted: false,
+      },
+    }),
+    prisma.task.count({
+      where: {
+        visit: { userId: req.userId as string, isDeleted: false },
+        conclusion: { in: ['ok_with_notes', 'faulty'] },
+      },
+    }),
+  ]);
+
+  res.json({ visitsThisMonth, issuesFound });
+});
+
 export default router;
