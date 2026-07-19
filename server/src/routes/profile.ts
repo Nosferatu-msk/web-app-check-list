@@ -125,4 +125,38 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
   res.json({ visitsThisMonth, issuesFound });
 });
 
+// GET /api/profile/objects — TM's assigned objects
+router.get('/objects', async (req: AuthRequest, res: Response) => {
+  const tmObjects = await prisma.tmObject.findMany({
+    where: { tmId: req.userId as string },
+    include: {
+      address: {
+        include: {
+          visits: {
+            where: { isDeleted: false },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: {
+              tasks: {
+                where: { conclusion: 'faulty' },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const result = tmObjects.map(to => ({
+    id: to.addressId,
+    objectCode: to.address.objectCode,
+    fullAddress: to.address.fullAddress,
+    hasFaultyVisit: to.address.visits?.[0]?.tasks?.length > 0,
+  }));
+
+  res.json(result);
+});
+
 export default router;

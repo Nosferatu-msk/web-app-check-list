@@ -232,6 +232,7 @@ export const api = {
   removeFavorite: (objectCode: string) =>
     request<any>(`/profile/favorites/${objectCode}`, { method: 'DELETE' }),
   getProfileStats: () => request<any>('/profile/stats'),
+  getTmObjects: () => request<any[]>('/profile/objects'),
 
   // ─── OFFLINE-AWARE METHODS ────────────────────────────────────
   // These methods work both online and offline.

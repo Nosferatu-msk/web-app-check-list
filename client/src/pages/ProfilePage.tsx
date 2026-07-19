@@ -261,9 +261,9 @@ function TmProfile() {
   const [engineers, setEngineers] = useState<any[]>([]);
   const [teamLoading, setTeamLoading] = useState(true);
 
-  // Favorites with fault indicator
-  const [favorites, setFavorites] = useState<any[]>([]);
-  const [favLoading, setFavLoading] = useState(false);
+  // Assigned objects (TM)
+  const [tmObjects, setTmObjects] = useState<any[]>([]);
+  const [objLoading, setObjLoading] = useState(false);
 
   const loadTeam = useCallback(async () => {
     setTeamLoading(true);
@@ -274,26 +274,16 @@ function TmProfile() {
     setTeamLoading(false);
   }, []);
 
-  const loadFavorites = useCallback(async () => {
-    setFavLoading(true);
+  const loadObjects = useCallback(async () => {
+    setObjLoading(true);
     try {
-      const data = await api.getFavorites();
-      setFavorites(Array.isArray(data) ? data : (data as any).data || []);
+      const data = await api.getTmObjects();
+      setTmObjects(Array.isArray(data) ? data : []);
     } catch { /* ignore */ }
-    setFavLoading(false);
+    setObjLoading(false);
   }, []);
 
-  useEffect(() => { loadTeam(); loadFavorites(); }, [loadTeam, loadFavorites]);
-
-  const handleRemoveFavorite = async (objectCode: string) => {
-    try {
-      await api.removeFavorite(objectCode);
-      message.success('Удалено из избранного');
-      loadFavorites();
-    } catch (err: any) {
-      message.error(err.message || 'Ошибка удаления');
-    }
-  };
+  useEffect(() => { loadTeam(); loadObjects(); }, [loadTeam, loadObjects]);
 
   return (
     <div>
@@ -324,41 +314,35 @@ function TmProfile() {
         )}
       </Card>
 
-      {/* Favorites with fault indicators */}
+      {/* Assigned objects */}
       <Card
-        title={<span><StarFilled style={{ color: '#faad14' }} /> Избранные объекты</span>}
+        title={<span><StarFilled style={{ color: '#faad14' }} /> Закреплённые объекты</span>}
         size="small"
         style={{ marginBottom: 16 }}
       >
-        {favLoading ? <Spin /> : favorites.length === 0 ? (
-          <Empty description="Нет избранных объектов" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        {objLoading ? <Spin /> : tmObjects.length === 0 ? (
+          <Empty description="Нет закреплённых объектов" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
           <List
             size="small"
-            dataSource={favorites}
-            renderItem={(fav: any) => {
-              const hasFault = fav.hasFaultyVisit || fav.lastVisitStatus === 'faulty';
-              return (
-                <List.Item
-                  actions={[
-                    <Popconfirm title="Удалить из избранного?" onConfirm={() => handleRemoveFavorite(fav.objectCode)} key="del">
-                      <Button type="link" size="small" danger><StarFilled /></Button>
-                    </Popconfirm>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={hasFault ? <Badge status="error" /> : undefined}
-                    title={fav.fullAddress || fav.address?.fullAddress || fav.objectCode}
-                    description={
-                      <Space>
-                        <Text type="secondary" style={{ fontSize: 12 }}>{fav.objectCode}</Text>
-                        {hasFault && <Tag color="red">Есть неисправности</Tag>}
-                      </Space>
-                    }
-                  />
-                </List.Item>
-              );
-            }}
+            dataSource={tmObjects}
+            renderItem={(obj: any) => (
+              <List.Item
+                onClick={() => navigate(`/visit/new?addressId=${obj.objectCode || obj.id}`)}
+                style={{ cursor: 'pointer' }}
+              >
+                <List.Item.Meta
+                  avatar={obj.hasFaultyVisit ? <Badge status="error" /> : <StarFilled style={{ color: '#faad14' }} />}
+                  title={obj.fullAddress || obj.objectCode}
+                  description={
+                    <Space>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{obj.objectCode}</Text>
+                      {obj.hasFaultyVisit && <Tag color="red">Есть неисправности</Tag>}
+                    </Space>
+                  }
+                />
+              </List.Item>
+            )}
           />
         )}
       </Card>
