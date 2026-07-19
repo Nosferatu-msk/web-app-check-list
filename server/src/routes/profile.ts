@@ -79,9 +79,11 @@ router.post('/favorites', async (req: AuthRequest, res: Response) => {
 });
 
 // DELETE /api/profile/favorites/:objectCode — remove from favorites
-router.delete('/favorites/:objectCode', async (req: AuthRequest, res: Response) => {
+router.delete('/favorites/*', async (req: AuthRequest, res: Response) => {
+  const objectCode = req.params[0] as string;
+  if (!objectCode) { res.status(400).json({ error: 'Укажите код объекта' }); return; }
   await prisma.userFavoriteObject.delete({
-    where: { userId_objectCode: { userId: req.userId as string, objectCode: req.params.objectCode as string } },
+    where: { userId_objectCode: { userId: req.userId as string, objectCode } },
   });
   res.json({ message: 'Удалено из избранного' });
 });
