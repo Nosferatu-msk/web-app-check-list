@@ -271,6 +271,7 @@ router.post('/:id/reassign', validate(reassignSchema), async (req: AuthRequest, 
 const createTaskSchema = z.object({
   equipmentTypeId: z.string().uuid(),
   roomTypeId: z.string().uuid().optional().or(z.literal('')),
+  objectEquipmentId: z.string().uuid().optional().or(z.literal('')),
   comment: z.string().optional(),
   brand: z.string().optional(),
   model: z.string().optional(),
@@ -285,12 +286,14 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
 
   const data = req.body;
   if (data.roomTypeId === '') data.roomTypeId = undefined;
+  if (data.objectEquipmentId === '') data.objectEquipmentId = undefined;
   const maxOrder = await prisma.task.aggregate({ where: { visitId }, _max: { sortOrder: true } });
   const task = await prisma.task.create({
     data: {
       visitId,
       equipmentTypeId: data.equipmentTypeId,
       roomTypeId: data.roomTypeId || null,
+      objectEquipmentId: data.objectEquipmentId || null,
       comment: data.comment || null,
       brand: data.brand || null,
       model: data.model || null,

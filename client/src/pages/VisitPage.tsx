@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined } from '@ant-design/icons';
+import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty } from 'antd';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, LinkOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -33,16 +33,20 @@ export default function VisitPage() {
   const [visit, setVisit] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(!isNew);
-  const [modalOpen, setModalOpen] = useState(false);
   const [equipmentTypes, setEquipmentTypes] = useState<any[]>([]);
   const [roomTypes, setRoomTypes] = useState<any[]>([]);
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
-  const [objectEquipment, setObjectEquipment] = useState<any[]>([]);
-  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [eqTypeMap, setEqTypeMap] = useState<Map<string, any>>(new Map());
   const [rmTypeMap, setRmTypeMap] = useState<Map<string, any>>(new Map());
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addModalTab, setAddModalTab] = useState<string>('linked');
+  const [linkedEquipment, setLinkedEquipment] = useState<any[]>([]);
+  const [linkedLoading, setLinkedLoading] = useState(false);
+  const [selectedLinkedIds, setSelectedLinkedIds] = useState<string[]>([]);
+  const [addingLinked, setAddingLinked] = useState(false);
   const [proposeEquipment, setProposeEquipment] = useState(false);
+  const [newTaskForm] = Form.useForm();
 
   const handleAutoSave = useCallback(async () => {
     if (isNew) return;
@@ -129,6 +133,7 @@ export default function VisitPage() {
 
       if (isNew) {
         const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
+        setVisit(v);
         navigate(`/visit/${v.id}`, { replace: true });
         message.success(isOffline() ? 'Визит сохранён локально' : 'Визит создан');
       } else {
@@ -145,7 +150,82 @@ export default function VisitPage() {
     }
   };
 
-  const handleAddTask = async (values: any) => {
+  const loadLinkedEquipment = useCallback(async (visitId: string, addressId: string) => {
+    setLinkedLoading(true);
+    try {
+      const eq = await api.getObjectEquipment(addressId, { exclude_visit_id: visitId });
+      setLinkedEquipment(eq);
+    } catch { /* ignore */ }
+    setLinkedLoading(false);
+  }, []);
+
+  const handleOpenAddModal = useCallback(async () => {
+    let currentVisit = visit;
+    if (!currentVisit?.id) {
+      try {
+        const values = await form.validateFields();
+        setSaving(true);
+        const data = {
+          addressId: values.addressId,
+          engineerName: values.engineerName,
+          dateStart: values.dateStart.format('YYYY-MM-DD'),
+          timeStart: values.timeStart ? values.timeStart.format('HH:mm') : dayjs().format('HH:mm'),
+          season: values.season,
+        };
+        localStorage.setItem('lastEngineerName', values.engineerName);
+        const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
+        setVisit(v);
+        navigate(`/visit/${v.id}`, { replace: true });
+        currentVisit = v;
+        setSaving(false);
+      } catch (err: any) {
+        setSaving(false);
+        if (err.errorFields) return;
+        message.error(err.message || 'Ошибка сохранения визита');
+        return;
+      }
+    }
+    setAddModalOpen(true);
+    setAddModalTab('linked');
+    setSelectedLinkedIds([]);
+    await loadLinkedEquipment(currentVisit.id, currentVisit.addressId);
+  }, [visit, form, navigate, loadLinkedEquipment, message]);
+
+  const handleAddLinkedEquipment = useCallback(async () => {
+    if (!visit?.id || selectedLinkedIds.length === 0) return;
+    setAddingLinked(true);
+    try {
+      for (const eqId of selectedLinkedIds) {
+        const eq = linkedEquipment.find(e => e.id === eqId);
+        if (!eq) continue;
+        const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+        const rmType = rmTypeMap.get(eq.roomTypeCode);
+        const taskData = {
+          equipmentTypeId: eqType?.id || '',
+          roomTypeId: rmType?.id || '',
+          objectEquipmentId: eq.id,
+          comment: eq.locationDescription || '',
+          brand: eq.brand || '',
+          model: eq.model || '',
+          serialNumber: eq.serialNumber || '',
+        };
+        if (isOffline()) {
+          await api.createTaskOffline(visit.id, taskData);
+        } else {
+          await api.createTask(visit.id, taskData);
+        }
+      }
+      const v = await api.getVisit(visit.id);
+      setTasks(v.tasks || []);
+      setAddModalOpen(false);
+      message.success(`Добавлено задач: ${selectedLinkedIds.length}`);
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка добавления');
+    }
+    setAddingLinked(false);
+  }, [visit, selectedLinkedIds, linkedEquipment, eqTypeMap, rmTypeMap, message]);
+
+  const handleAddNewTask = async (values: any) => {
     if (!visit?.id) { message.warning('Сначала сохраните визит'); return; }
     if (!values.roomTypeId && !values.comment) {
       message.warning('Укажите тип помещения или комментарий');
@@ -165,7 +245,6 @@ export default function VisitPage() {
       await api.createTask(visit.id, taskData);
     }
 
-    // If propose checkbox is checked, create a proposal
     if (proposeEquipment && !isOffline()) {
       const eqType = equipmentTypes.find(e => e.id === values.equipmentTypeId);
       const rmType = roomTypes.find(r => r.id === values.roomTypeId);
@@ -187,8 +266,9 @@ export default function VisitPage() {
 
     const v = await api.getVisit(visit.id);
     setTasks(v.tasks || []);
-    setModalOpen(false);
+    setAddModalOpen(false);
     setProposeEquipment(false);
+    newTaskForm.resetFields();
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -288,17 +368,8 @@ export default function VisitPage() {
               filterOption={false}
               onSearch={searchAddresses}
               placeholder="Начните вводить адрес..."
-              onChange={async (v: string) => {
+              onChange={(v: string) => {
                 form.setFieldValue('addressId', v);
-                setSelectedEquipment([]);
-                setObjectEquipment([]);
-                if (v) {
-                  try {
-                    const eq = await api.getObjectEquipment(v);
-                    setObjectEquipment(eq);
-                    setSelectedEquipment(eq.map((e: any) => e.id));
-                  } catch { /* ignore */ }
-                }
               }}
               options={addressOptions.map((a: any) => ({ label: a.fullAddress, value: a.id, dataId: a.id }))}
               notFoundContent="Адрес не найден"
@@ -332,122 +403,132 @@ export default function VisitPage() {
         </Space>
       </div>
 
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>Проведённые работы</div>
+        <Button type="dashed" icon={<PlusOutlined />} onClick={handleOpenAddModal}>Добавить оборудование</Button>
+      </div>
+
+      <Table
+        dataSource={tasks}
+        columns={columns}
+        rowKey="id"
+        pagination={false}
+        size="small"
+        onRow={(record) => ({
+          onClick: () => {
+            if (visit?.id) {
+              navigate(`/visit/${visit.id}/task/${record.id}`);
+            }
+          },
+          style: { cursor: 'pointer' },
+        })}
+      />
+
       {visit && (
-        <>
-          {objectEquipment.length > 0 && tasks.length === 0 && (
-            <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>Оборудование объекта ({objectEquipment.length} ед.)</div>
-              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                {objectEquipment.map((eq: any) => {
-                  const eqType = eqTypeMap.get(eq.equipmentTypeCode);
-                  const rmType = rmTypeMap.get(eq.roomTypeCode);
-                  return (
-                    <div key={eq.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedEquipment.includes(eq.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedEquipment([...selectedEquipment, eq.id]);
-                          else setSelectedEquipment(selectedEquipment.filter(id => id !== eq.id));
-                        }}
-                      />
-                      <span>{eqType?.name || eq.equipmentTypeCode}</span>
-                      {eq.brand && <span style={{ color: '#666' }}>({eq.brand} {eq.model || ''})</span>}
-                      {eq.serialNumber && <span style={{ color: '#999', fontSize: 12 }}>SN: {eq.serialNumber}</span>}
-                      <span style={{ color: '#888', fontSize: 12 }}>{rmType?.name || eq.roomTypeCode}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              {selectedEquipment.length > 0 && (
-                <Button type="primary" size="small" style={{ marginTop: 8 }} onClick={async () => {
-                  for (const eqId of selectedEquipment) {
-                    const eq = objectEquipment.find(e => e.id === eqId);
-                    if (!eq) continue;
-                    const eqType = eqTypeMap.get(eq.equipmentTypeCode);
-                    const rmType = rmTypeMap.get(eq.roomTypeCode);
-                    await api.createTask(visit.id, {
-                      equipmentTypeId: eqType?.id || '',
-                      roomTypeId: rmType?.id || '',
-                      comment: eq.locationDescription || '',
-                      brand: eq.brand || '',
-                      model: eq.model || '',
-                      serialNumber: eq.serialNumber || '',
-                    });
-                  }
-                  const v = await api.getVisit(visit.id);
-                  setTasks(v.tasks || []);
-                  setObjectEquipment([]);
-                  setSelectedEquipment([]);
-                  message.success(`Добавлено задач: ${selectedEquipment.length}`);
-                }}>
-                  Добавить выбранное ({selectedEquipment.length})
-                </Button>
-              )}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontWeight: 600, fontSize: 16 }}>Проведённые работы</div>
-            <Button type="dashed" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Добавить оборудование</Button>
-          </div>
-
-          <Table
-            dataSource={tasks}
-            columns={columns}
-            rowKey="id"
-            pagination={false}
-            size="small"
-            onRow={(record) => ({
-              onClick: () => {
-                if (record.status === 'not_started') {
-                  navigate(`/visit/${visit.id}/task/${record.id}`);
-                } else {
-                  navigate(`/visit/${visit.id}/task/${record.id}`);
-                }
-              },
-              style: { cursor: 'pointer' },
-            })}
-          />
-
-          <div style={{ marginTop: 16 }}>
-            <Button type="primary" size="large" icon={<CheckOutlined />} onClick={handleComplete} disabled={tasks.filter(t => t.status === 'completed').length === 0} block>
-              ✅ Завершить визит
-            </Button>
-          </div>
-        </>
+        <div style={{ marginTop: 16 }}>
+          <Button type="primary" size="large" icon={<CheckOutlined />} onClick={handleComplete} disabled={tasks.filter(t => t.status === 'completed').length === 0} block>
+            ✅ Завершить визит
+          </Button>
+        </div>
       )}
 
-      <Modal title="Добавить оборудование" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null}>
-        <Form layout="vertical" onFinish={handleAddTask}>
-          <Form.Item name="equipmentTypeId" label="Вид оборудования" rules={[{ required: true, message: 'Выберите вид оборудования' }]}>
-            <Select placeholder="Выберите..." options={equipmentTypes.map(e => ({ label: e.name, value: e.id }))} />
-          </Form.Item>
-          <Form.Item name="roomTypeId" label="Тип помещения">
-            <Select placeholder="Выберите..." allowClear options={roomTypes.map(r => ({ label: r.name, value: r.id }))} />
-          </Form.Item>
-          <Form.Item name="comment" label="Комментарий">
-            <Input placeholder="Необязательно" />
-          </Form.Item>
-          <Form.Item name="brand" label="Марка">
-            <Input placeholder="Необязательно" />
-          </Form.Item>
-          <Form.Item name="model" label="Модель">
-            <Input placeholder="Необязательно" />
-          </Form.Item>
-          <Form.Item name="serialNumber" label="Серийный номер">
-            <Input placeholder="Необязательно" />
-          </Form.Item>
-          <Form.Item>
-            <Checkbox
-              checked={proposeEquipment}
-              onChange={(e) => setProposeEquipment(e.target.checked)}
-            >
-              Предложить добавить в привязку объекта
-            </Checkbox>
-          </Form.Item>
-          <Form.Item><Button type="primary" htmlType="submit" block>Добавить</Button></Form.Item>
-        </Form>
+      <Modal
+        title="Добавление оборудования"
+        open={addModalOpen}
+        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); }}
+        footer={null}
+        width={560}
+      >
+        <Tabs activeKey={addModalTab} onChange={setAddModalTab} items={[
+          {
+            key: 'linked',
+            label: <span><LinkOutlined /> Связанное оборудование</span>,
+            children: linkedLoading ? (
+              <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
+            ) : linkedEquipment.length === 0 ? (
+              <Empty description="Всё оборудование уже добавлено в визит" />
+            ) : (
+              <>
+                <List
+                  dataSource={linkedEquipment}
+                  renderItem={(eq: any) => {
+                    const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+                    const rmType = rmTypeMap.get(eq.roomTypeCode);
+                    const checked = selectedLinkedIds.includes(eq.id);
+                    return (
+                      <List.Item
+                        style={{ cursor: 'pointer', padding: '8px 4px' }}
+                        onClick={() => {
+                          if (checked) setSelectedLinkedIds(selectedLinkedIds.filter(id => id !== eq.id));
+                          else setSelectedLinkedIds([...selectedLinkedIds, eq.id]);
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                          <Checkbox checked={checked} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 500 }}>
+                              {eqType?.name || eq.equipmentTypeCode}
+                              {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#888' }}>
+                              {eq.serialNumber && <span>SN: {eq.serialNumber} · </span>}
+                              {rmType?.name || eq.roomTypeCode}
+                            </div>
+                          </div>
+                        </div>
+                      </List.Item>
+                    );
+                  }}
+                />
+                <Button
+                  type="primary"
+                  block
+                  style={{ marginTop: 12 }}
+                  disabled={selectedLinkedIds.length === 0}
+                  loading={addingLinked}
+                  onClick={handleAddLinkedEquipment}
+                >
+                  Добавить {selectedLinkedIds.length > 0 ? `(${selectedLinkedIds.length})` : ''}
+                </Button>
+              </>
+            ),
+          },
+          {
+            key: 'new',
+            label: <span><PlusOutlined /> Добавить новое</span>,
+            children: (
+              <Form form={newTaskForm} layout="vertical" onFinish={handleAddNewTask}>
+                <Form.Item name="equipmentTypeId" label="Вид оборудования" rules={[{ required: true, message: 'Выберите вид оборудования' }]}>
+                  <Select placeholder="Выберите..." options={equipmentTypes.map(e => ({ label: e.name, value: e.id }))} />
+                </Form.Item>
+                <Form.Item name="roomTypeId" label="Тип помещения">
+                  <Select placeholder="Выберите..." allowClear options={roomTypes.map(r => ({ label: r.name, value: r.id }))} />
+                </Form.Item>
+                <Form.Item name="comment" label="Комментарий">
+                  <Input placeholder="Необязательно" />
+                </Form.Item>
+                <Form.Item name="brand" label="Марка">
+                  <Input placeholder="Необязательно" />
+                </Form.Item>
+                <Form.Item name="model" label="Модель">
+                  <Input placeholder="Необязательно" />
+                </Form.Item>
+                <Form.Item name="serialNumber" label="Серийный номер">
+                  <Input placeholder="Необязательно" />
+                </Form.Item>
+                <Form.Item>
+                  <Checkbox
+                    checked={proposeEquipment}
+                    onChange={(e) => setProposeEquipment(e.target.checked)}
+                  >
+                    Предложить добавить в привязку объекта
+                  </Checkbox>
+                </Form.Item>
+                <Form.Item><Button type="primary" htmlType="submit" block>Добавить</Button></Form.Item>
+              </Form>
+            ),
+          },
+        ]} />
       </Modal>
     </div>
   );

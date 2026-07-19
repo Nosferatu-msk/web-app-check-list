@@ -128,6 +128,7 @@ async function processQueueItem(item: SyncQueueItem, token: string) {
         body: JSON.stringify({
           equipmentTypeId: task.equipmentTypeId,
           roomTypeId: task.roomTypeId || '',
+          objectEquipmentId: task.objectEquipmentId || '',
           comment: task.comment || '',
           brand: task.brand || '',
           model: task.model || '',

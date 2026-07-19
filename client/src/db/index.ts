@@ -24,6 +24,7 @@ export interface LocalTask {
   visitServerId?: string;
   equipmentTypeId: string;
   roomTypeId?: string;
+  objectEquipmentId?: string;
   comment?: string;
   brand?: string;
   model?: string;

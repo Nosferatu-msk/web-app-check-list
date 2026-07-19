@@ -67,7 +67,13 @@ export const api = {
   getRecommendations: (equipmentTypeId: string) =>
     request<any[]>(`/refs/recommendations?equipment_type_id=${equipmentTypeId}`),
   searchAddresses: (q: string) => request<any[]>(`/refs/addresses/search?q=${encodeURIComponent(q)}`),
-  getObjectEquipment: (addressId: string) => request<any[]>(`/refs/object-equipment?address_id=${addressId}`),
+  getObjectEquipment: (addressId: string, params?: { exclude_visit_id?: string; specialization?: string }) => {
+    const entries: Record<string, string> = { address_id: addressId };
+    if (params?.exclude_visit_id) entries.exclude_visit_id = params.exclude_visit_id;
+    if (params?.specialization) entries.specialization = params.specialization;
+    const qs = new URLSearchParams(entries).toString();
+    return request<any[]>(`/refs/object-equipment?${qs}`);
+  },
 
   // Visits
   createVisit: (data: any) =>
@@ -250,6 +256,7 @@ export const api = {
     await db.tasks.add({
       id, visitLocalId: visitId, visitServerId: visit?.serverId,
       equipmentTypeId: data.equipmentTypeId, roomTypeId: data.roomTypeId,
+      objectEquipmentId: data.objectEquipmentId,
       comment: data.comment, brand: data.brand, model: data.model, serialNumber: data.serialNumber, sortOrder: data.sortOrder || 0,
       status: 'not_started', selectedRecommendationIds: [],
       createdAt: now, updatedAt: now, dirty: true,

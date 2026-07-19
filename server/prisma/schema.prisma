@@ -171,6 +171,7 @@ model Task {
   visitId                   String      @map("visit_id")
   equipmentTypeId           String      @map("equipment_type_id")
   roomTypeId                String?     @map("room_type_id")
+  objectEquipmentId         String?     @map("object_equipment_id")
   comment                   String?
   brand                     String?
   model                     String?
@@ -184,10 +185,11 @@ model Task {
   createdAt                 DateTime    @default(now()) @map("created_at")
   updatedAt                 DateTime    @updatedAt @map("updated_at")
 
-  visit         Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  equipmentType EquipmentType @relation(fields: [equipmentTypeId], references: [id])
-  roomType      RoomType?     @relation(fields: [roomTypeId], references: [id])
-  photos        Photo[]
+  visit           Visit           @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  equipmentType   EquipmentType   @relation(fields: [equipmentTypeId], references: [id])
+  roomType        RoomType?       @relation(fields: [roomTypeId], references: [id])
+  objectEquipment ObjectEquipment? @relation(fields: [objectEquipmentId], references: [id])
+  photos          Photo[]
 
   @@index([visitId, status])
   @@map("tasks")
@@ -306,6 +308,7 @@ model ObjectEquipment {
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   address Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  tasks   Task[]
 
   @@unique([addressId, equipmentTypeCode, serialNumber])
   @@unique([addressId, equipmentTypeCode, locationDescription])

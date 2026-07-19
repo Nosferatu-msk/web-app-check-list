@@ -95,6 +95,18 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
     where.equipmentTypeCode = { in: allowedCodes };
   }
 
+  const excludeVisitId = req.query.exclude_visit_id as string;
+  if (excludeVisitId) {
+    const usedEquipment = await prisma.task.findMany({
+      where: { visitId: excludeVisitId, objectEquipmentId: { not: null } },
+      select: { objectEquipmentId: true },
+    });
+    const usedIds = usedEquipment.map(t => t.objectEquipmentId).filter(Boolean) as string[];
+    if (usedIds.length > 0) {
+      where.id = { notIn: usedIds };
+    }
+  }
+
   const data = await prisma.objectEquipment.findMany({
     where,
     orderBy: { createdAt: 'asc' },
