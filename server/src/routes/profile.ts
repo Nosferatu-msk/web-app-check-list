@@ -66,12 +66,13 @@ router.post('/favorites', async (req: AuthRequest, res: Response) => {
     res.status(201).json(fav);
   } catch (err: any) {
     if (err.code === 'P2002') {
-      // Duplicate — return existing
       const existing = await prisma.userFavoriteObject.findUnique({
         where: { userId_objectCode: { userId: req.userId as string, objectCode } },
         include: { address: true },
       });
       res.json(existing);
+    } else if (err.code === 'P2003') {
+      res.status(400).json({ error: `Объект с кодом "${objectCode}" не найден в справочнике адресов` });
     } else {
       throw err;
     }
