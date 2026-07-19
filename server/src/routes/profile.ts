@@ -55,24 +55,36 @@ router.get('/favorites', async (req: AuthRequest, res: Response) => {
 
 // POST /api/profile/favorites — add to favorites
 router.post('/favorites', async (req: AuthRequest, res: Response) => {
-  const { objectCode } = req.body;
-  if (!objectCode) { res.status(400).json({ error: 'Укажите код объекта' }); return; }
+  const { objectCode, addressId } = req.body;
+  let resolvedCode = objectCode;
+
+  // If addressId is provided instead of objectCode, resolve it
+  if (!resolvedCode && addressId) {
+    const addr = await prisma.address.findUnique({ where: { id: addressId }, select: { objectCode: true } });
+    if (!addr || !addr.objectCode) {
+      res.status(400).json({ error: 'У адреса не задан аналитический код (object_code)' });
+      return;
+    }
+    resolvedCode = addr.objectCode;
+  }
+
+  if (!resolvedCode) { res.status(400).json({ error: 'Укажите код объекта или ID адреса' }); return; }
 
   try {
     const fav = await prisma.userFavoriteObject.create({
-      data: { userId: req.userId as string, objectCode },
+      data: { userId: req.userId as string, objectCode: resolvedCode },
       include: { address: true },
     });
     res.status(201).json(fav);
   } catch (err: any) {
     if (err.code === 'P2002') {
       const existing = await prisma.userFavoriteObject.findUnique({
-        where: { userId_objectCode: { userId: req.userId as string, objectCode } },
+        where: { userId_objectCode: { userId: req.userId as string, objectCode: resolvedCode } },
         include: { address: true },
       });
       res.json(existing);
     } else if (err.code === 'P2003') {
-      res.status(400).json({ error: `Объект с кодом "${objectCode}" не найден в справочнике адресов` });
+      res.status(400).json({ error: `Объект с кодом "${resolvedCode}" не найден в справочнике адресов` });
     } else {
       throw err;
     }

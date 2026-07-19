@@ -226,8 +226,8 @@ export const api = {
   updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean }) =>
     request<any>('/profile/specialization', { method: 'PATCH', body: JSON.stringify(data) }),
   getFavorites: () => request<any[]>('/profile/favorites'),
-  addFavorite: (objectCode: string) =>
-    request<any>('/profile/favorites', { method: 'POST', body: JSON.stringify({ objectCode }) }),
+  addFavorite: (addressIdOrCode: string) =>
+    request<any>('/profile/favorites', { method: 'POST', body: JSON.stringify(addressIdOrCode.includes('/') ? { objectCode: addressIdOrCode } : { addressId: addressIdOrCode }) }),
   removeFavorite: (objectCode: string) =>
     request<any>(`/profile/favorites/${objectCode}`, { method: 'DELETE' }),
   getProfileStats: () => request<any>('/profile/stats'),
