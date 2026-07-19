@@ -233,6 +233,8 @@ export const api = {
     request<any>(`/profile/favorites/${objectCode}`, { method: 'DELETE' }),
   getProfileStats: () => request<any>('/profile/stats'),
   getTmObjects: () => request<any[]>('/profile/objects'),
+  createEngineer: (data: { fullName: string; email: string; specializationVik?: boolean; specializationIszh?: boolean }) =>
+    request<any>('/profile/engineers', { method: 'POST', body: JSON.stringify(data) }),
 
   // ─── OFFLINE-AWARE METHODS ────────────────────────────────────
   // These methods work both online and offline.

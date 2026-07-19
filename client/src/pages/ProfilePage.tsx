@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Button, Card, Checkbox, List, Tag, Space, Spin, Typography, Divider,
   Select, App, Statistic, Row, Col, Badge, Tooltip, Popconfirm, Empty,
+  Form, Modal, Input,
 } from 'antd';
 import {
   ArrowLeftOutlined, StarOutlined, StarFilled, DeleteOutlined,
@@ -260,6 +261,9 @@ function TmProfile() {
   // Team
   const [engineers, setEngineers] = useState<any[]>([]);
   const [teamLoading, setTeamLoading] = useState(true);
+  const [engineerModalOpen, setEngineerModalOpen] = useState(false);
+  const [engineerForm] = Form.useForm();
+  const [engineerSaving, setEngineerSaving] = useState(false);
 
   // Assigned objects (TM)
   const [tmObjects, setTmObjects] = useState<any[]>([]);
@@ -285,10 +289,32 @@ function TmProfile() {
 
   useEffect(() => { loadTeam(); loadObjects(); }, [loadTeam, loadObjects]);
 
+  const handleCreateEngineer = async () => {
+    try {
+      const values = await engineerForm.validateFields();
+      setEngineerSaving(true);
+      await api.createEngineer(values);
+      message.success('Инженер создан. Данные для входа отправлены на email.');
+      setEngineerModalOpen(false);
+      engineerForm.resetFields();
+      loadTeam();
+    } catch (err: any) {
+      if (err.errorFields) return;
+      message.error(err.message || 'Ошибка создания');
+    } finally {
+      setEngineerSaving(false);
+    }
+  };
+
   return (
     <div>
       {/* Team list */}
-      <Card title={<span><TeamOutlined /> Команда</span>} size="small" style={{ marginBottom: 16 }}>
+      <Card
+        title={<span><TeamOutlined /> Команда</span>}
+        size="small"
+        style={{ marginBottom: 16 }}
+        extra={<Button type="link" size="small" icon={<PlusOutlined />} onClick={() => setEngineerModalOpen(true)}>Инженер</Button>}
+      >
         {teamLoading ? <Spin /> : engineers.length === 0 ? (
           <Empty description="Нет инженеров в команде" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
@@ -346,6 +372,38 @@ function TmProfile() {
           />
         )}
       </Card>
+
+      {/* Create engineer modal */}
+      <Modal
+        title="Добавить инженера"
+        open={engineerModalOpen}
+        onOk={handleCreateEngineer}
+        onCancel={() => { setEngineerModalOpen(false); engineerForm.resetFields(); }}
+        confirmLoading={engineerSaving}
+        okText="Создать"
+      >
+        <Form form={engineerForm} layout="vertical">
+          <Form.Item name="fullName" label="ФИО" rules={[{ required: true, message: 'Введите ФИО' }]}>
+            <Input placeholder="Иванов П.С." />
+          </Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный email' }]}>
+            <Input placeholder="engineer@example.com" />
+          </Form.Item>
+          <Form.Item label="Специализация">
+            <Space>
+              <Form.Item name="specializationVik" valuePropName="checked" noStyle>
+                <Checkbox>ВиК</Checkbox>
+              </Form.Item>
+              <Form.Item name="specializationIszh" valuePropName="checked" noStyle initialValue={true}>
+                <Checkbox>ИСЖ</Checkbox>
+              </Form.Item>
+            </Space>
+          </Form.Item>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Пароль: Welcome2026! — будет отправлен на email инженера.
+          </Text>
+        </Form>
+      </Modal>
 
       {/* Security */}
       <Card title="Безопасность" size="small">

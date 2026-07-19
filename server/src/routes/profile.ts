@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import prisma from '../models/prisma.js';
 import { logAudit } from '../middleware/audit.js';
+import bcrypt from 'bcryptjs';
+import { sendMail } from '../utils/email.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -157,6 +159,54 @@ router.get('/objects', async (req: AuthRequest, res: Response) => {
   }));
 
   res.json(result);
+});
+
+// POST /api/profile/engineers — TM creates engineer linked to themselves
+router.post('/engineers', async (req: AuthRequest, res: Response) => {
+  const { fullName, email, specializationVik, specializationIszh } = req.body;
+  if (!fullName || !email) {
+    res.status(400).json({ error: 'Укажите ФИО и email' });
+    return;
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (existing) {
+    res.status(409).json({ error: 'Пользователь с таким email уже существует' });
+    return;
+  }
+
+  const TEMP_PASSWORD = 'Welcome2026!';
+  const passwordHash = await bcrypt.hash(TEMP_PASSWORD, 12);
+
+  const engineer = await prisma.user.create({
+    data: {
+      fullName,
+      email: normalizedEmail,
+      passwordHash,
+      role: 'engineer',
+      mustChangePassword: true,
+      specializationVik: !!specializationVik,
+      specializationIszh: specializationIszh !== undefined ? !!specializationIszh : true,
+    },
+  });
+
+  // Link to TM
+  await prisma.tmEngineer.create({
+    data: { tmId: req.userId as string, engineerId: engineer.id },
+  });
+
+  // Send credentials
+  try {
+    await sendMail({
+      to: normalizedEmail,
+      subject: 'Доступ к системе «Чек-лист инженера»',
+      text: `Вас добавил территориальный менеджер.\n\nЛогин: ${normalizedEmail}\nПароль: ${TEMP_PASSWORD}\n\nПри первом входе система предложит сменить пароль.\n\nСсылка для входа: ${process.env.CLIENT_URL}`,
+    });
+  } catch { /* ignore mail errors */ }
+
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'user', entityId: engineer.id, newValue: { fullName, email: normalizedEmail, role: 'engineer' }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json({ id: engineer.id, fullName: engineer.fullName, email: engineer.email, role: engineer.role });
 });
 
 export default router;
