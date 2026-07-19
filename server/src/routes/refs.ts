@@ -31,7 +31,7 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
 
-  const textFilter = { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] };
+  const textFilter = { AND: [{ isDeleted: false }, { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] }] };
 
   // Role-based filtering: engineer sees only TM's addresses, tm sees own, admin sees all
   let addressIds: string[] | null = null;

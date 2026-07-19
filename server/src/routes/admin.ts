@@ -23,12 +23,16 @@ router.get('/addresses', async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 20;
   const search = req.query.q as string;
-  const where = search ? {
-    OR: [
-      { fullAddress: { contains: search, mode: 'insensitive' as const } },
-      { street: { contains: search, mode: 'insensitive' as const } },
-    ],
-  } : {};
+  const includeDeleted = req.query.include_deleted === 'true';
+  const where: any = {
+    ...(includeDeleted ? {} : { isDeleted: false }),
+    ...(search ? {
+      OR: [
+        { fullAddress: { contains: search, mode: 'insensitive' as const } },
+        { street: { contains: search, mode: 'insensitive' as const } },
+      ],
+    } : {}),
+  };
   const [data, total] = await Promise.all([
     prisma.address.findMany({ where, skip: (page - 1) * pageSize, take: pageSize, orderBy: { fullAddress: 'asc' } }),
     prisma.address.count({ where }),
@@ -40,7 +44,7 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
   const data = await prisma.address.findMany({
-    where: { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] },
+    where: { isDeleted: false, OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] },
     take: 20,
   });
   res.json(data);
@@ -67,16 +71,15 @@ router.put('/addresses/:id', validate(addressSchema), async (req: AuthRequest, r
 
 router.delete('/addresses/:id', async (req: AuthRequest, res: Response) => {
   try {
-    await prisma.address.delete({ where: { id: req.params.id as string } });
+    await prisma.address.update({
+      where: { id: req.params.id as string },
+      data: { isDeleted: true },
+    });
     await logAudit({ userId: req.userId, action: 'delete', entityType: 'address', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
     res.json({ message: 'Удалено' });
   } catch (err: any) {
-    if (err?.code === 'P2003') {
-      res.status(409).json({ error: 'Нельзя удалить: адрес используется в визитах или оборудовании' });
-    } else {
-      console.error('Delete address error:', err);
-      res.status(500).json({ error: 'Ошибка при удалении' });
-    }
+    console.error('Delete address error:', err);
+    res.status(500).json({ error: 'Ошибка при удалении' });
   }
 });
 

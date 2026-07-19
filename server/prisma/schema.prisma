@@ -84,6 +84,7 @@ model Address {
   fullAddress   String   @map("full_address")
   customerEmail String?  @map("customer_email")
   objectCode    String?  @unique @map("object_code")
+  isDeleted     Boolean  @default(false) @map("is_deleted")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
