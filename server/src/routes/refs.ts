@@ -57,11 +57,15 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/refs/object-equipment?address_id=...&specialization=vik|iszh
+// Уровни привязки оборудования
+const ROOM_BINDING_CODES = ['splitvn', 'splitnar', 'mssvn', 'mssnar', 'vrv_vn', 'vrv_nar', 'teplozavesa', 'pritochnaya', 'pritochno-vytyzhnaya', 'vytyzhnaya'];
+const OBJECT_BINDING_CODES = ['seti_vodosnab', 'teplovye_seti'];
+
 router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   const addressId = req.query.address_id as string;
   if (!addressId) { res.json([]); return; }
 
-  const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar'];
+  const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar', 'teplozavesa', 'pritochnaya', 'pritochno-vytyzhnaya', 'vytyzhnaya'];
   const ISZH_CODES = ['rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc', 'seti_vodosnab', 'teplovye_seti'];
 
   // Determine which codes to filter by
@@ -73,7 +77,6 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   } else if (specParam === 'iszh') {
     allowedCodes = ISZH_CODES;
   } else if (req.userRole === 'engineer') {
-    // Auto-detect from engineer's specialization
     const engineer = await prisma.user.findUnique({
       where: { id: req.userId as string },
       select: { specializationVik: true, specializationIszh: true },
@@ -86,13 +89,28 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
       } else if (hasIszh && !hasVik) {
         allowedCodes = ISZH_CODES;
       }
-      // Both or neither — no filtering
     }
   }
 
   const where: any = { addressId, isActive: true };
   if (allowedCodes) {
     where.equipmentTypeCode = { in: allowedCodes };
+  }
+
+  // Фильтрация по уровню привязки
+  const bindingLevel = req.query.binding_level as string;
+  if (bindingLevel === 'room') {
+    where.equipmentTypeCode = { in: allowedCodes ? allowedCodes.filter(c => ROOM_BINDING_CODES.includes(c)) : ROOM_BINDING_CODES };
+  } else if (bindingLevel === 'object') {
+    const objCodes = allowedCodes ? allowedCodes.filter(c => OBJECT_BINDING_CODES.includes(c)) : OBJECT_BINDING_CODES;
+    where.equipmentTypeCode = { in: objCodes };
+    where.roomTypeCode = null;
+  }
+
+  // Фильтрация по помещению
+  const roomTypeCode = req.query.room_type_code as string;
+  if (roomTypeCode) {
+    where.roomTypeCode = roomTypeCode;
   }
 
   const excludeVisitId = req.query.exclude_visit_id as string;
@@ -113,6 +131,60 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   });
 
   res.json(data);
+});
+
+// GET /api/refs/object-equipment/rooms — список помещений с оборудованием для адреса
+router.get('/object-equipment/rooms', async (req: AuthRequest, res: Response) => {
+  const addressId = req.query.address_id as string;
+  if (!addressId) { res.json([]); return; }
+
+  const excludeVisitId = req.query.exclude_visit_id as string;
+
+  // Получаем оборудование с привязкой к помещению
+  const equipment = await prisma.objectEquipment.findMany({
+    where: {
+      addressId,
+      isActive: true,
+      equipmentTypeCode: { in: ROOM_BINDING_CODES },
+      roomTypeCode: { not: null },
+    },
+    select: { roomTypeCode: true, id: true },
+  });
+
+  // Исключаем уже добавленные в визит
+  let usedIds: string[] = [];
+  if (excludeVisitId) {
+    const usedEquipment = await prisma.task.findMany({
+      where: { visitId: excludeVisitId, objectEquipmentId: { not: null } },
+      select: { objectEquipmentId: true },
+    });
+    usedIds = usedEquipment.map(t => t.objectEquipmentId).filter(Boolean) as string[];
+  }
+
+  // Группируем по roomTypeCode, считаем количество (исключая использованные)
+  const roomMap = new Map<string, number>();
+  for (const eq of equipment) {
+    if (usedIds.includes(eq.id)) continue;
+    const code = eq.roomTypeCode!;
+    roomMap.set(code, (roomMap.get(code) || 0) + 1);
+  }
+
+  // Получаем названия помещений
+  const roomCodes = Array.from(roomMap.keys());
+  if (roomCodes.length === 0) { res.json([]); return; }
+
+  const roomTypes = await prisma.roomType.findMany({
+    where: { code: { in: roomCodes } },
+    select: { code: true, name: true },
+  });
+
+  const result = roomTypes.map(rt => ({
+    code: rt.code,
+    name: rt.name,
+    count: roomMap.get(rt.code) || 0,
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
+  res.json(result);
 });
 
 // GET /api/refs/engineers — list engineers (admin: all, tm: own group)

@@ -144,7 +144,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       const hasVik = engineer.specializationVik;
       const hasIszh = engineer.specializationIszh;
       if (hasVik && !hasIszh) {
-        const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar'];
+        const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar', 'teplozavesa', 'pritochnaya', 'pritochno-vytyzhnaya', 'vytyzhnaya'];
         visit.tasks = visit.tasks.filter(t => t.equipmentType && VIK_CODES.includes(t.equipmentType.code));
       } else if (hasIszh && !hasVik) {
         const ISZH_CODES = ['rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc', 'seti_vodosnab', 'teplovye_seti'];

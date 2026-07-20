@@ -124,7 +124,7 @@ function EngineerProfile() {
     return fav.objectEquipment.some((eq: any) => {
       const et = eq.equipmentType;
       if (!et) return false;
-      if (vik && ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar'].includes(et.code)) return true;
+      if (vik && ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar', 'teplozavesa', 'pritochnaya', 'pritochno-vytyzhnaya', 'vytyzhnaya'].includes(et.code)) return true;
       if (iszh && ['rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc', 'seti_vodosnab', 'teplovye_seti'].includes(et.code)) return true;
       return false;
     });

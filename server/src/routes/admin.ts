@@ -89,6 +89,7 @@ const equipmentTypeSchema = z.object({
   code: z.string().min(1),
   photosRequired: z.number().int().min(1).max(2),
   isActive: z.boolean().optional(),
+  specializationReq: z.string().optional().nullable(),
 });
 
 router.get('/equipment-types', async (_req: AuthRequest, res: Response) => {

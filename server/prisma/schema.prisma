@@ -99,11 +99,12 @@ model Address {
 }
 
 model EquipmentType {
-  id             String  @id @default(uuid())
-  name           String
-  code           String  @unique
-  photosRequired Int     @default(1) @map("photos_required")
-  isActive       Boolean @default(true) @map("is_active")
+  id                String  @id @default(uuid())
+  name              String
+  code              String  @unique
+  photosRequired    Int     @default(1) @map("photos_required")
+  isActive          Boolean @default(true) @map("is_active")
+  specializationReq String? @map("specialization_req")
 
   tasks           Task[]
   recommendations Recommendation[]

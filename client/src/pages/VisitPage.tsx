@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, LinkOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -40,12 +40,17 @@ export default function VisitPage() {
   const [eqTypeMap, setEqTypeMap] = useState<Map<string, any>>(new Map());
   const [rmTypeMap, setRmTypeMap] = useState<Map<string, any>>(new Map());
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addModalTab, setAddModalTab] = useState<string>('linked');
-  const [linkedEquipment, setLinkedEquipment] = useState<any[]>([]);
-  const [linkedLoading, setLinkedLoading] = useState(false);
-  const [selectedLinkedIds, setSelectedLinkedIds] = useState<string[]>([]);
-  const [roomSelections, setRoomSelections] = useState<Record<string, string>>({});
-  const [addingLinked, setAddingLinked] = useState(false);
+  const [addModalTab, setAddModalTab] = useState<string>('room');
+  const [equipmentRooms, setEquipmentRooms] = useState<any[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [roomEquipment, setRoomEquipment] = useState<any[]>([]);
+  const [roomEquipLoading, setRoomEquipLoading] = useState(false);
+  const [selectedRoomEquipIds, setSelectedRoomEquipIds] = useState<string[]>([]);
+  const [objectEquipment, setObjectEquipment] = useState<any[]>([]);
+  const [objectEquipLoading, setObjectEquipLoading] = useState(false);
+  const [selectedObjectEquipIds, setSelectedObjectEquipIds] = useState<string[]>([]);
+  const [addingEquipment, setAddingEquipment] = useState(false);
   const [proposeEquipment, setProposeEquipment] = useState(false);
   const [newTaskForm] = Form.useForm();
 
@@ -151,13 +156,33 @@ export default function VisitPage() {
     }
   };
 
-  const loadLinkedEquipment = useCallback(async (visitId: string, addressId: string) => {
-    setLinkedLoading(true);
+  const loadEquipmentRooms = useCallback(async (visitId: string, addressId: string) => {
+    setRoomsLoading(true);
     try {
-      const eq = await api.getObjectEquipment(addressId, { exclude_visit_id: visitId });
-      setLinkedEquipment(eq);
+      const rooms = await api.getEquipmentRooms(addressId, { exclude_visit_id: visitId });
+      setEquipmentRooms(rooms);
     } catch { /* ignore */ }
-    setLinkedLoading(false);
+    setRoomsLoading(false);
+  }, []);
+
+  const loadRoomEquipment = useCallback(async (addressId: string, roomTypeCode: string, visitId: string) => {
+    setRoomEquipLoading(true);
+    try {
+      const eq = await api.getObjectEquipment(addressId, { exclude_visit_id: visitId, binding_level: 'room', room_type_code: roomTypeCode });
+      setRoomEquipment(eq);
+      setSelectedRoomEquipIds(eq.map((e: any) => e.id));
+    } catch { /* ignore */ }
+    setRoomEquipLoading(false);
+  }, []);
+
+  const loadObjectEquipment = useCallback(async (addressId: string, visitId: string) => {
+    setObjectEquipLoading(true);
+    try {
+      const eq = await api.getObjectEquipment(addressId, { exclude_visit_id: visitId, binding_level: 'object' });
+      setObjectEquipment(eq);
+      setSelectedObjectEquipIds(eq.map((e: any) => e.id));
+    } catch { /* ignore */ }
+    setObjectEquipLoading(false);
   }, []);
 
   const handleOpenAddModal = useCallback(async () => {
@@ -187,32 +212,33 @@ export default function VisitPage() {
       }
     }
     setAddModalOpen(true);
-    setAddModalTab('linked');
-    setSelectedLinkedIds([]);
-    setRoomSelections({});
-    await loadLinkedEquipment(currentVisit.id, currentVisit.addressId);
-  }, [visit, form, navigate, loadLinkedEquipment, message]);
+    setAddModalTab('room');
+    setSelectedRoom(null);
+    setRoomEquipment([]);
+    setSelectedRoomEquipIds([]);
+    setObjectEquipment([]);
+    setSelectedObjectEquipIds([]);
+    await loadEquipmentRooms(currentVisit.id, currentVisit.addressId);
+    await loadObjectEquipment(currentVisit.addressId, currentVisit.id);
+  }, [visit, form, navigate, loadEquipmentRooms, loadObjectEquipment, message]);
 
-  const handleAddLinkedEquipment = useCallback(async () => {
-    if (!visit?.id || selectedLinkedIds.length === 0) return;
-    setAddingLinked(true);
+  const handleSelectRoom = useCallback(async (roomCode: string) => {
+    setSelectedRoom(roomCode);
+    if (visit?.addressId && visit?.id) {
+      await loadRoomEquipment(visit.addressId, roomCode, visit.id);
+    }
+  }, [visit, loadRoomEquipment]);
+
+  const handleAddEquipmentBatch = useCallback(async (equipIds: string[], equipment: any[]) => {
+    if (!visit?.id || equipIds.length === 0) return;
+    setAddingEquipment(true);
     try {
-      for (const eqId of selectedLinkedIds) {
-        const eq = linkedEquipment.find(e => e.id === eqId);
+      for (const eqId of equipIds) {
+        const eq = equipment.find(e => e.id === eqId);
         if (!eq) continue;
 
-        let roomTypeCode = eq.roomTypeCode;
-        if (!roomTypeCode) {
-          const selectedRoom = roomSelections[eqId];
-          if (!selectedRoom) continue;
-          if (!isOffline()) {
-            await api.confirmEquipmentRoom(eqId, selectedRoom);
-          }
-          roomTypeCode = selectedRoom;
-        }
-
         const eqType = eqTypeMap.get(eq.equipmentTypeCode);
-        const rmType = rmTypeMap.get(roomTypeCode);
+        const rmType = eq.roomTypeCode ? rmTypeMap.get(eq.roomTypeCode) : null;
         const taskData = {
           equipmentTypeId: eqType?.id || '',
           roomTypeId: rmType?.id || '',
@@ -231,12 +257,12 @@ export default function VisitPage() {
       const v = await api.getVisit(visit.id);
       setTasks(v.tasks || []);
       setAddModalOpen(false);
-      message.success(`Добавлено задач: ${selectedLinkedIds.length}`);
+      message.success(`Добавлено задач: ${equipIds.length}`);
     } catch (err: any) {
       message.error(err.message || 'Ошибка добавления');
     }
-    setAddingLinked(false);
-  }, [visit, selectedLinkedIds, linkedEquipment, eqTypeMap, rmTypeMap, message]);
+    setAddingEquipment(false);
+  }, [visit, eqTypeMap, rmTypeMap, message]);
 
   const handleAddNewTask = async (values: any) => {
     if (!visit?.id) { message.warning('Сначала сохраните визит'); return; }
@@ -448,33 +474,135 @@ export default function VisitPage() {
       <Modal
         title="Добавление оборудования"
         open={addModalOpen}
-        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); setRoomSelections({}); }}
+        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); setSelectedRoom(null); }}
         footer={null}
-        width={560}
+        width={600}
       >
         <Tabs activeKey={addModalTab} onChange={setAddModalTab} items={[
           {
-            key: 'linked',
-            label: <span><LinkOutlined /> Связанное оборудование</span>,
-            children: linkedLoading ? (
+            key: 'room',
+            label: '📍 Уровень помещения',
+            children: roomsLoading ? (
               <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
-            ) : linkedEquipment.length === 0 ? (
-              <Empty description="Всё оборудование уже добавлено в визит" />
+            ) : equipmentRooms.length === 0 ? (
+              <Empty description="Нет доступных помещений с оборудованием" />
             ) : (
               <>
+                {!selectedRoom ? (
+                  <List
+                    header={<div style={{ fontWeight: 500 }}>Выберите помещение:</div>}
+                    bordered
+                    dataSource={equipmentRooms}
+                    renderItem={(room: any) => (
+                      <List.Item
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleSelectRoom(room.code)}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <span>{room.name}</span>
+                          <Tag>{room.count} ед.</Tag>
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <Button size="small" onClick={() => { setSelectedRoom(null); setRoomEquipment([]); setSelectedRoomEquipIds([]); }}>
+                        ← Назад
+                      </Button>
+                      <span style={{ fontWeight: 500 }}>
+                        {rmTypeMap.get(selectedRoom)?.name || selectedRoom}
+                      </span>
+                    </div>
+                    {roomEquipLoading ? (
+                      <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
+                    ) : roomEquipment.length === 0 ? (
+                      <Empty description="Нет оборудования в этом помещении" />
+                    ) : (
+                      <>
+                        <div style={{ marginBottom: 8 }}>
+                          <Checkbox
+                            checked={selectedRoomEquipIds.length === roomEquipment.length}
+                            onChange={(e) => setSelectedRoomEquipIds(e.target.checked ? roomEquipment.map(eq => eq.id) : [])}
+                          >
+                            Выбрать все ({roomEquipment.length})
+                          </Checkbox>
+                        </div>
+                        <List
+                          dataSource={roomEquipment}
+                          renderItem={(eq: any) => {
+                            const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+                            const checked = selectedRoomEquipIds.includes(eq.id);
+                            return (
+                              <List.Item
+                                style={{ cursor: 'pointer', padding: '8px 4px' }}
+                                onClick={() => {
+                                  if (checked) setSelectedRoomEquipIds(selectedRoomEquipIds.filter(id => id !== eq.id));
+                                  else setSelectedRoomEquipIds([...selectedRoomEquipIds, eq.id]);
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                                  <Checkbox checked={checked} />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 500 }}>
+                                      {eqType?.name || eq.equipmentTypeCode}
+                                      {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: '#888' }}>
+                                      {eq.serialNumber && <span>SN: {eq.serialNumber}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              </List.Item>
+                            );
+                          }}
+                        />
+                        <Button
+                          type="primary"
+                          block
+                          style={{ marginTop: 12 }}
+                          disabled={selectedRoomEquipIds.length === 0}
+                          loading={addingEquipment}
+                          onClick={() => handleAddEquipmentBatch(selectedRoomEquipIds, roomEquipment)}
+                        >
+                          Добавить {selectedRoomEquipIds.length > 0 ? `(${selectedRoomEquipIds.length})` : ''}
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+              </>
+            ),
+          },
+          {
+            key: 'object',
+            label: '🏠 Уровень объекта',
+            children: objectEquipLoading ? (
+              <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
+            ) : objectEquipment.length === 0 ? (
+              <Empty description="Нет оборудования на уровне объекта" />
+            ) : (
+              <>
+                <div style={{ marginBottom: 8 }}>
+                  <Checkbox
+                    checked={selectedObjectEquipIds.length === objectEquipment.length}
+                    onChange={(e) => setSelectedObjectEquipIds(e.target.checked ? objectEquipment.map(eq => eq.id) : [])}
+                  >
+                    Выбрать все ({objectEquipment.length})
+                  </Checkbox>
+                </div>
                 <List
-                  dataSource={linkedEquipment}
+                  dataSource={objectEquipment}
                   renderItem={(eq: any) => {
                     const eqType = eqTypeMap.get(eq.equipmentTypeCode);
-                    const rmType = rmTypeMap.get(eq.roomTypeCode);
-                    const checked = selectedLinkedIds.includes(eq.id);
-                    const noRoom = !eq.roomTypeCode;
+                    const checked = selectedObjectEquipIds.includes(eq.id);
                     return (
                       <List.Item
                         style={{ cursor: 'pointer', padding: '8px 4px' }}
                         onClick={() => {
-                          if (checked) setSelectedLinkedIds(selectedLinkedIds.filter(id => id !== eq.id));
-                          else setSelectedLinkedIds([...selectedLinkedIds, eq.id]);
+                          if (checked) setSelectedObjectEquipIds(selectedObjectEquipIds.filter(id => id !== eq.id));
+                          else setSelectedObjectEquipIds([...selectedObjectEquipIds, eq.id]);
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
@@ -485,25 +613,9 @@ export default function VisitPage() {
                               {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
                             </div>
                             <div style={{ fontSize: 12, color: '#888' }}>
-                              {eq.serialNumber && <span>SN: {eq.serialNumber} · </span>}
-                              {noRoom ? (
-                                <span style={{ color: '#faad14' }}>⚠️ Помещение не указано</span>
-                              ) : (
-                                rmType?.name || eq.roomTypeCode
-                              )}
+                              {eq.serialNumber && <span>SN: {eq.serialNumber}</span>}
+                              {eq.locationDescription && <span>{eq.locationDescription}</span>}
                             </div>
-                            {checked && noRoom && (
-                              <div style={{ marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
-                                <Select
-                                  size="small"
-                                  style={{ width: '100%' }}
-                                  placeholder="Выберите помещение..."
-                                  value={roomSelections[eq.id] || undefined}
-                                  onChange={(v) => setRoomSelections({ ...roomSelections, [eq.id]: v })}
-                                  options={roomTypes.map((r: any) => ({ label: r.name, value: r.code }))}
-                                />
-                              </div>
-                            )}
                           </div>
                         </div>
                       </List.Item>
@@ -514,14 +626,11 @@ export default function VisitPage() {
                   type="primary"
                   block
                   style={{ marginTop: 12 }}
-                  disabled={selectedLinkedIds.length === 0 || selectedLinkedIds.some(id => {
-                    const eq = linkedEquipment.find(e => e.id === id);
-                    return eq && !eq.roomTypeCode && !roomSelections[id];
-                  })}
-                  loading={addingLinked}
-                  onClick={handleAddLinkedEquipment}
+                  disabled={selectedObjectEquipIds.length === 0}
+                  loading={addingEquipment}
+                  onClick={() => handleAddEquipmentBatch(selectedObjectEquipIds, objectEquipment)}
                 >
-                  Добавить {selectedLinkedIds.length > 0 ? `(${selectedLinkedIds.length})` : ''}
+                  Добавить {selectedObjectEquipIds.length > 0 ? `(${selectedObjectEquipIds.length})` : ''}
                 </Button>
               </>
             ),

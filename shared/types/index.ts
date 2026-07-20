@@ -31,6 +31,7 @@ export interface EquipmentType {
   code: string;
   photosRequired: number;
   isActive: boolean;
+  specializationReq?: string | null;
 }
 
 export interface RoomType {

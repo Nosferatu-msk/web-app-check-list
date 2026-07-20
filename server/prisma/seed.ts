@@ -46,23 +46,31 @@ async function main() {
 
   // ─── EQUIPMENT TYPES ─────────────────────────────────────
   const equipmentTypes = [
-    { name: 'РЩ/ГРЩ', code: 'rsch', photosRequired: 1 },
-    { name: 'Вентиляционная установка', code: 'vent', photosRequired: 2 },
-    { name: 'Внутренний блок VRV', code: 'vrv_vn', photosRequired: 2 },
-    { name: 'Внутренний блок МСС', code: 'mssvn', photosRequired: 2 },
-    { name: 'Внутренний блок СС', code: 'splitvn', photosRequired: 2 },
-    { name: 'Наружный блок VRV', code: 'vrv_nar', photosRequired: 2 },
-    { name: 'Наружный блок МСС', code: 'mssnar', photosRequired: 2 },
-    { name: 'Наружный блок СС', code: 'splitnar', photosRequired: 2 },
-    { name: 'Прибор учета ГВС', code: 'schetchik_gvs', photosRequired: 1 },
-    { name: 'Прибор учета ХВС', code: 'schetchik_hvs', photosRequired: 1 },
-    { name: 'Прибор учета э/э', code: 'schetchik_electroshc', photosRequired: 1 },
-    { name: 'Сети водоснабжения и водоотведения', code: 'seti_vodosnab', photosRequired: 1 },
-    { name: 'Тепловые сети', code: 'teplovye_seti', photosRequired: 1 },
+    { name: 'РЩ/ГРЩ', code: 'rsch', photosRequired: 1, specializationReq: 'iszh' },
+    { name: 'Вентиляционная установка', code: 'vent', photosRequired: 2, isActive: false, specializationReq: 'vik' },
+    { name: 'Внутренний блок VRV', code: 'vrv_vn', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Внутренний блок МСС', code: 'mssvn', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Внутренний блок СС', code: 'splitvn', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Наружный блок VRV', code: 'vrv_nar', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Наружный блок МСС', code: 'mssnar', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Наружный блок СС', code: 'splitnar', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Тепловая завеса', code: 'teplozavesa', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Приточная установка', code: 'pritochnaya', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Приточно-вытяжная установка', code: 'pritochno-vytyzhnaya', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Вытяжная установка', code: 'vytyzhnaya', photosRequired: 2, specializationReq: 'vik' },
+    { name: 'Прибор учета ГВС', code: 'schetchik_gvs', photosRequired: 1, specializationReq: 'iszh' },
+    { name: 'Прибор учета ХВС', code: 'schetchik_hvs', photosRequired: 1, specializationReq: 'iszh' },
+    { name: 'Прибор учета э/э', code: 'schetchik_electroshc', photosRequired: 1, specializationReq: 'iszh' },
+    { name: 'Сети водоснабжения и водоотведения', code: 'seti_vodosnab', photosRequired: 1, specializationReq: 'iszh' },
+    { name: 'Тепловые сети', code: 'teplovye_seti', photosRequired: 1, specializationReq: 'iszh' },
   ];
 
   for (const et of equipmentTypes) {
-    await prisma.equipmentType.upsert({ where: { code: et.code }, update: {}, create: et });
+    await prisma.equipmentType.upsert({
+      where: { code: et.code },
+      update: { name: et.name, photosRequired: et.photosRequired, isActive: et.isActive ?? true, specializationReq: et.specializationReq },
+      create: { ...et, isActive: et.isActive ?? true },
+    });
   }
   console.log('Equipment types created');
 
@@ -102,6 +110,38 @@ async function main() {
       'Выполнить тепловизионный контроль шин и автоматов; при нагреве выше +60°C выявить причину перегрузки.',
     ]},
     { equipmentCode: 'vent', texts: [
+      'Заменить или очистить фильтры (класс G4/F7) по перепаду давления или согласно регламенту.',
+      'Выполнить балансировку рабочего колеса вентилятора; проверить состояние подшипников.',
+      'Прочистить дренажный поддон и трубку отвода конденсата; проверить уклон.',
+      'Очистить теплообменник калорифера/охладителя (при необходимости — химическая промывка).',
+      'Проверить работоспособность приводов воздушных заслонок и датчиков температуры/влажности.',
+      'При обмерзании калорифера увеличить расход воздуха или установить дополнительный датчик защиты от заморозки.',
+    ]},
+    { equipmentCode: 'teplozavesa', texts: [
+      'Заменить или очистить фильтры (класс G4/F7) по перепаду давления или согласно регламенту.',
+      'Выполнить балансировку рабочего колеса вентилятора; проверить состояние подшипников.',
+      'Прочистить дренажный поддон и трубку отвода конденсата; проверить уклон.',
+      'Очистить теплообменник калорифера/охладителя (при необходимости — химическая промывка).',
+      'Проверить работоспособность приводов воздушных заслонок и датчиков температуры/влажности.',
+      'При обмерзании калорифера увеличить расход воздуха или установить дополнительный датчик защиты от заморозки.',
+    ]},
+    { equipmentCode: 'pritochnaya', texts: [
+      'Заменить или очистить фильтры (класс G4/F7) по перепаду давления или согласно регламенту.',
+      'Выполнить балансировку рабочего колеса вентилятора; проверить состояние подшипников.',
+      'Прочистить дренажный поддон и трубку отвода конденсата; проверить уклон.',
+      'Очистить теплообменник калорифера/охладителя (при необходимости — химическая промывка).',
+      'Проверить работоспособность приводов воздушных заслонок и датчиков температуры/влажности.',
+      'При обмерзании калорифера увеличить расход воздуха или установить дополнительный датчик защиты от заморозки.',
+    ]},
+    { equipmentCode: 'pritochno-vytyzhnaya', texts: [
+      'Заменить или очистить фильтры (класс G4/F7) по перепаду давления или согласно регламенту.',
+      'Выполнить балансировку рабочего колеса вентилятора; проверить состояние подшипников.',
+      'Прочистить дренажный поддон и трубку отвода конденсата; проверить уклон.',
+      'Очистить теплообменник калорифера/охладителя (при необходимости — химическая промывка).',
+      'Проверить работоспособность приводов воздушных заслонок и датчиков температуры/влажности.',
+      'При обмерзании калорифера увеличить расход воздуха или установить дополнительный датчик защиты от заморозки.',
+    ]},
+    { equipmentCode: 'vytyzhnaya', texts: [
       'Заменить или очистить фильтры (класс G4/F7) по перепаду давления или согласно регламенту.',
       'Выполнить балансировку рабочего колеса вентилятора; проверить состояние подшипников.',
       'Прочистить дренажный поддон и трубку отвода конденсата; проверить уклон.',
