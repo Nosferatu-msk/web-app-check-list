@@ -126,42 +126,32 @@ export default function GroupTaskPage() {
     try {
       await form.validateFields();
 
-      // Проверка: все единицы должны иметь статус
-      const itemsWithoutStatus = items.filter(i => !i.status);
-      if (itemsWithoutStatus.length > 0) {
-        message.warning('Укажите статус для всех единиц оборудования');
-        return;
-      }
-
-      // Проверка: все единицы должны иметь фото
-      const itemsWithoutPhotos = items.filter(i => i.photos.length < 2);
-      if (itemsWithoutPhotos.length > 0) {
-        message.warning('Загрузите фото ДО и ПОСЛЕ для всех единиц оборудования');
-        return;
-      }
-
-      // Проверка: если есть "Не ОК" — рекомендации обязательны
-      const hasNotOk = items.some(i => i.status === 'not_ok');
-      const additionalRecs = form.getFieldValue('additionalRecommendations');
-      if (hasNotOk && selectedRecs.length === 0 && !additionalRecs) {
-        message.warning('При наличии неисправных единиц укажите рекомендации');
-        return;
-      }
-
       setSaving(true);
       const allValues = form.getFieldsValue(true);
       const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
       const finalConclusion = formConclusion || conclusion;
       const parameters = { ...formParamValues, conclusion: finalConclusion };
 
+      // Автоматическое определение статуса:
+      // "completed" — если все единицы имеют статус и оба фото (ДО + ПОСЛЕ)
+      // "in_progress" — если хотя бы одна единица не заполнена полностью
+      const allComplete = items.length > 0 && items.every(i => i.status && i.photos.length >= 2);
+      const taskStatus = allComplete ? 'completed' : 'in_progress';
+
       await api.updateTask(visitId, taskId, {
         parameters,
         selectedRecommendationIds: selectedRecs,
         additionalRecommendations: additionalRecommendations || '',
         conclusion: finalConclusion,
-        status: 'completed',
+        status: taskStatus,
       });
-      message.success('Сохранено');
+
+      if (allComplete) {
+        message.success('Задача завершена');
+      } else {
+        const incomplete = items.filter(i => !i.status || i.photos.length < 2).length;
+        message.info(`Сохранено. Не завершено единиц: ${incomplete}`);
+      }
       navigate(`/visit/${visitId}`);
     } catch (err: any) {
       if (err.errorFields) return;
@@ -407,6 +397,9 @@ export default function GroupTaskPage() {
         <Button type="primary" onClick={handleSave} loading={saving} icon={<SaveOutlined />} block size="large">
           💾 Сохранить и вернуться в чек-лист
         </Button>
+        <div style={{ textAlign: 'center', fontSize: 12, color: '#999', marginTop: -8 }}>
+          Можно сохранить неполностью — незавершённые единицы останутся в статусе «В работе»
+        </div>
         {(autoSaving || lastSavedAt) && (
           <div style={{ textAlign: 'center', fontSize: 12, color: '#999' }}>
             {autoSaving ? 'Автосохранение...' : `Сохранено ${dayjs(lastSavedAt).fromNow()}`}

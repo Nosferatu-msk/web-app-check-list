@@ -91,6 +91,27 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
       await prisma.photo.delete({ where: { id: existing.id } });
     }
 
+    // Проверка дубликатов: фото такого же размера не должно быть загружено для другой единицы в этой задаче
+    const siblingItems = await prisma.taskEquipmentItem.findMany({
+      where: { taskId: item.taskId, id: { not: itemId } },
+      select: { id: true },
+    });
+    const siblingItemIds = siblingItems.map(si => si.id);
+    if (siblingItemIds.length > 0) {
+      const duplicatePhoto = await prisma.photo.findFirst({
+        where: {
+          taskEquipmentItemId: { in: siblingItemIds },
+          moment,
+          fileSize: req.file.size,
+        },
+      });
+      if (duplicatePhoto) {
+        try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+        res.status(409).json({ error: 'Это фото уже загружено для другой единицы оборудования. Используйте другой файл.' });
+        return;
+      }
+    }
+
     const photo = await prisma.photo.create({
       data: {
         taskEquipmentItemId: itemId,
