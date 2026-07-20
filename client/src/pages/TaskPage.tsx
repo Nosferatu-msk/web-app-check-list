@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm } from 'antd';
+import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Tooltip } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -189,8 +189,11 @@ export default function TaskPage() {
   const [photoCount, setPhotoCount] = useState(0);
   const [formInitialValues, setFormInitialValues] = useState<Record<string, any> | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const loadedParamsRef = useRef<Record<string, any>>({});
   const location = useLocation();
+
+  const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs'];
 
   const handleAutoSave = useCallback(async () => {
     if (!visitId || !taskId || !task) return;
@@ -232,6 +235,21 @@ export default function TaskPage() {
         if (p.defaultValue !== undefined) defaults[p.key] = p.defaultValue;
       }
       const mergedParams = { ...defaults, ...rest };
+
+      // Автозаполнение полей счётчиков из связанного оборудования
+      const autofilled = new Set<string>();
+      if (METER_CODES.includes(eqCode) && t.objectEquipmentId) {
+        if (!mergedParams.model && (t.brand || t.model)) {
+          mergedParams.model = [t.brand, t.model].filter(Boolean).join(' ').trim();
+          autofilled.add('model');
+        }
+        if (!mergedParams.serial_number && t.serialNumber) {
+          mergedParams.serial_number = t.serialNumber;
+          autofilled.add('serial_number');
+        }
+      }
+      setAutoFilledFields(autofilled);
+
       loadedParamsRef.current = mergedParams;
       const conclusionValue = c || 'ok';
       setConclusion(conclusionValue);
@@ -349,7 +367,21 @@ export default function TaskPage() {
       <Card>
         <Form form={form} key={formKey} initialValues={formInitialValues} layout="vertical" onValuesChange={markAutoSaveDirty}>
           {paramConfig.map(p => (
-            <Form.Item key={p.key} label={p.label} name={p.key} rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}>
+            <Form.Item
+              key={p.key}
+              label={
+                autoFilledFields.has(p.key) ? (
+                  <span>
+                    {p.label}{' '}
+                    <Tooltip title="Автозаполнено из справочника объекта">
+                      <span style={{ cursor: 'help' }}>📋</span>
+                    </Tooltip>
+                  </span>
+                ) : p.label
+              }
+              name={p.key}
+              rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}
+            >
               {p.type === 'select' ? (
                 <Select options={p.options} placeholder="Выберите..." />
               ) : p.type === 'number' ? (
