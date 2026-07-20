@@ -15,6 +15,8 @@ QWEN.md
 .vscode/
 .git/
 autotest/
+copy_key.py
+check_server*.py
 
 # Зависимости
 node_modules/
