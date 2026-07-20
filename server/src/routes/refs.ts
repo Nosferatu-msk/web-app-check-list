@@ -57,9 +57,6 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/refs/object-equipment?address_id=...&specialization=vik|iszh
-// Уровни привязки оборудования
-const ROOM_BINDING_CODES = ['splitvn', 'splitnar', 'mssvn', 'mssnar', 'vrv_vn', 'vrv_nar', 'teplozavesa', 'pritochnaya', 'pritochno-vytyzhnaya', 'vytyzhnaya'];
-const OBJECT_BINDING_CODES = ['seti_vodosnab', 'teplovye_seti'];
 
 router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   const addressId = req.query.address_id as string;
@@ -97,13 +94,11 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
     where.equipmentTypeCode = { in: allowedCodes };
   }
 
-  // Фильтрация по уровню привязки
+  // Фильтрация по уровню привязки (определяется по наличию roomTypeCode)
   const bindingLevel = req.query.binding_level as string;
   if (bindingLevel === 'room') {
-    where.equipmentTypeCode = { in: allowedCodes ? allowedCodes.filter(c => ROOM_BINDING_CODES.includes(c)) : ROOM_BINDING_CODES };
+    where.roomTypeCode = { not: null };
   } else if (bindingLevel === 'object') {
-    const objCodes = allowedCodes ? allowedCodes.filter(c => OBJECT_BINDING_CODES.includes(c)) : OBJECT_BINDING_CODES;
-    where.equipmentTypeCode = { in: objCodes };
     where.roomTypeCode = null;
   }
 
@@ -140,12 +135,11 @@ router.get('/object-equipment/rooms', async (req: AuthRequest, res: Response) =>
 
   const excludeVisitId = req.query.exclude_visit_id as string;
 
-  // Получаем оборудование с привязкой к помещению
+  // Получаем всё оборудование с привязкой к помещению
   const equipment = await prisma.objectEquipment.findMany({
     where: {
       addressId,
       isActive: true,
-      equipmentTypeCode: { in: ROOM_BINDING_CODES },
       roomTypeCode: { not: null },
     },
     select: { roomTypeCode: true, id: true },
