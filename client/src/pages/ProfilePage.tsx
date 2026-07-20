@@ -345,6 +345,7 @@ function TmProfile() {
         title={<span><StarFilled style={{ color: '#faad14' }} /> Закреплённые объекты</span>}
         size="small"
         style={{ marginBottom: 16 }}
+        extra={<Text type="secondary">{tmObjects.length} объектов</Text>}
       >
         {objLoading ? <Spin /> : tmObjects.length === 0 ? (
           <Empty description="Нет закреплённых объектов" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -352,6 +353,13 @@ function TmProfile() {
           <List
             size="small"
             dataSource={tmObjects}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50'],
+              showTotal: (total, range) => `${range[0]}–${range[1]} из ${total}`,
+              size: 'small',
+            }}
             renderItem={(obj: any) => (
               <List.Item
                 onClick={() => navigate(`/visit/new?addressId=${obj.objectCode || obj.id}`)}
