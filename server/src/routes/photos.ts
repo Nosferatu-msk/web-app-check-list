@@ -76,7 +76,7 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
 
     const equipmentCode = item.objectEquipment.equipmentTypeCode;
     const roomCode = item.objectEquipment.roomTypeCode || 'object';
-    const serial = item.objectEquipment.serialNumber || 'nosn';
+    const serial = (item.objectEquipment.serialNumber || 'nosn').replace(/[\/\\]/g, '_');
     const fileName = `${num}_${equipmentCode}_${roomCode}_${serial}_${moment}.jpg`;
 
     const oldPath = req.file.path;
@@ -149,7 +149,7 @@ router.post('/:taskId/photos', upload.single('photo'), handleMulterError, async 
     const num = String(taskIndex + 1).padStart(2, '0');
 
     const equipmentCode = task.equipmentType.code;
-    const roomCode = task.roomType?.code || 'unknown';
+    const roomCode = (task.roomType?.code || 'unknown').replace(/[\/\\]/g, '_');
     const fileName = `${num}_${equipmentCode}_${roomCode}_${moment}.jpg`;
 
     const oldPath = req.file.path;
