@@ -68,12 +68,13 @@ export const api = {
   getRecommendations: (equipmentTypeId: string) =>
     request<any[]>(`/refs/recommendations?equipment_type_id=${equipmentTypeId}`),
   searchAddresses: (q: string) => request<any[]>(`/refs/addresses/search?q=${encodeURIComponent(q)}`),
-  getObjectEquipment: (addressId: string, params?: { exclude_visit_id?: string; specialization?: string; binding_level?: string; room_type_code?: string }) => {
+  getObjectEquipment: (addressId: string, params?: { exclude_visit_id?: string; specialization?: string; binding_level?: string; room_type_code?: string; is_outdoor_unit?: string }) => {
     const entries: Record<string, string> = { address_id: addressId };
     if (params?.exclude_visit_id) entries.exclude_visit_id = params.exclude_visit_id;
     if (params?.specialization) entries.specialization = params.specialization;
     if (params?.binding_level) entries.binding_level = params.binding_level;
     if (params?.room_type_code) entries.room_type_code = params.room_type_code;
+    if (params?.is_outdoor_unit !== undefined) entries.is_outdoor_unit = params.is_outdoor_unit;
     const qs = new URLSearchParams(entries).toString();
     return request<any[]>(`/refs/object-equipment?${qs}`);
   },
@@ -113,12 +114,30 @@ export const api = {
   resetTask: (visitId: string, taskId: string) =>
     request<any>(`/visits/${visitId}/tasks/${taskId}/reset`, { method: 'POST' }),
 
+  // Task Equipment Items (групповые задачи)
+  addTaskItem: (visitId: string, taskId: string, objectEquipmentId: string) =>
+    request<any>(`/visits/${visitId}/tasks/${taskId}/items`, {
+      method: 'POST', body: JSON.stringify({ objectEquipmentId }),
+    }),
+  updateTaskItem: (visitId: string, taskId: string, itemId: string, data: any) =>
+    request<any>(`/visits/${visitId}/tasks/${taskId}/items/${itemId}`, {
+      method: 'PUT', body: JSON.stringify(data),
+    }),
+  deleteTaskItem: (visitId: string, taskId: string, itemId: string) =>
+    request<any>(`/visits/${visitId}/tasks/${taskId}/items/${itemId}`, { method: 'DELETE' }),
+
   // Photos
   uploadPhoto: (taskId: string, file: File, moment: 'before' | 'after') => {
     const form = new FormData();
     form.append('photo', file);
     form.append('moment', moment);
     return request<any>(`/tasks/${taskId}/photos`, { method: 'POST', body: form });
+  },
+  uploadItemPhoto: (itemId: string, file: File, moment: 'before' | 'after') => {
+    const form = new FormData();
+    form.append('photo', file);
+    form.append('moment', moment);
+    return request<any>(`/tasks/items/${itemId}/photos`, { method: 'POST', body: form });
   },
   getPhotos: (taskId: string) => request<any[]>(`/tasks/${taskId}/photos`),
   deletePhoto: (photoId: string) => request<any>(`/photos/${photoId}`, { method: 'DELETE' }),
@@ -271,7 +290,9 @@ export const api = {
     const visit = await db.visits.get(visitId);
     await db.tasks.add({
       id, visitLocalId: visitId, visitServerId: visit?.serverId,
+      taskType: data.taskType || 'individual',
       equipmentTypeId: data.equipmentTypeId, roomTypeId: data.roomTypeId,
+      roomTypeCode: data.roomTypeCode,
       objectEquipmentId: data.objectEquipmentId,
       comment: data.comment, brand: data.brand, model: data.model, serialNumber: data.serialNumber, sortOrder: data.sortOrder || 0,
       status: 'not_started', selectedRecommendationIds: [],

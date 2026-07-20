@@ -67,7 +67,7 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
       assignedById: req.userRole !== 'engineer' && targetUserId ? req.userId : null,
       assignedAt: req.userRole !== 'engineer' && targetUserId ? new Date() : null,
     },
-    include: { address: true, tasks: { include: { equipmentType: true, roomType: true, photos: true } } },
+    include: { address: true, tasks: { include: taskInclude } },
   });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'visit', entityId: visit.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json(visit);
@@ -118,6 +118,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   res.json({ data, total, page, pageSize });
 });
 
+const taskInclude = {
+  equipmentType: true,
+  roomType: true,
+  photos: true,
+  equipmentItems: {
+    orderBy: { sortOrder: 'asc' as const },
+    include: {
+      objectEquipment: true,
+      photos: true,
+    },
+  },
+};
+
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({
     where: { id: req.params.id as string },
@@ -127,7 +140,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       assignedBy: { select: { id: true, fullName: true, email: true } },
       tasks: {
         orderBy: { sortOrder: 'asc' },
-        include: { equipmentType: true, roomType: true, photos: true },
+        include: taskInclude,
       },
     },
   });
@@ -183,7 +196,7 @@ router.put('/:id', validate(updateVisitSchema), async (req: AuthRequest, res: Re
       tmCorrected: isTmCorrection ? true : existing.tmCorrected,
       status: isTmCorrection && existing.status === 'completed' ? 'corrected_by_tm' : undefined,
     },
-    include: { address: true, tasks: { include: { equipmentType: true, roomType: true, photos: true } } },
+    include: { address: true, tasks: { include: taskInclude } },
   });
   await logAudit({ userId: req.userId, action: 'update', entityType: 'visit', entityId: visit.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(visit);
@@ -216,7 +229,7 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.update({
     where: { id: req.params.id as string },
     data: { status: 'completed', timeEnd },
-    include: { address: true, tasks: { include: { equipmentType: true, roomType: true, photos: true } } },
+    include: { address: true, tasks: { include: taskInclude } },
   });
   await logAudit({ userId: req.userId, action: 'complete', entityType: 'visit', entityId: visit.id, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(visit);
@@ -269,13 +282,16 @@ router.post('/:id/reassign', validate(reassignSchema), async (req: AuthRequest, 
 
 // ─── TASKS ───────────────────────────────────────────────────
 const createTaskSchema = z.object({
+  taskType: z.enum(['individual', 'group_climate']).optional(),
   equipmentTypeId: z.string().uuid(),
   roomTypeId: z.string().uuid().optional().or(z.literal('')),
+  roomTypeCode: z.string().optional(),
   objectEquipmentId: z.string().uuid().optional().or(z.literal('')),
   comment: z.string().optional(),
   brand: z.string().optional(),
   model: z.string().optional(),
   serialNumber: z.string().optional(),
+  equipmentItemIds: z.array(z.string().uuid()).optional(),
 });
 
 router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthRequest, res: Response) => {
@@ -288,19 +304,30 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
   if (data.roomTypeId === '') data.roomTypeId = undefined;
   if (data.objectEquipmentId === '') data.objectEquipmentId = undefined;
   const maxOrder = await prisma.task.aggregate({ where: { visitId }, _max: { sortOrder: true } });
+
   const task = await prisma.task.create({
     data: {
       visitId,
+      taskType: data.taskType || 'individual',
       equipmentTypeId: data.equipmentTypeId,
       roomTypeId: data.roomTypeId || null,
+      roomTypeCode: data.roomTypeCode || null,
       objectEquipmentId: data.objectEquipmentId || null,
       comment: data.comment || null,
       brand: data.brand || null,
       model: data.model || null,
       serialNumber: data.serialNumber || null,
       sortOrder: (maxOrder._max?.sortOrder ?? 0) + 1,
+      ...(data.taskType === 'group_climate' && data.equipmentItemIds?.length ? {
+        equipmentItems: {
+          create: data.equipmentItemIds.map((oeId: string, idx: number) => ({
+            objectEquipmentId: oeId,
+            sortOrder: idx + 1,
+          })),
+        },
+      } : {}),
     },
-    include: { equipmentType: true, roomType: true, photos: true },
+    include: taskInclude,
   });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'task', entityId: task.id, newValue: data, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json(task);
@@ -314,7 +341,7 @@ router.get('/:visitId/tasks', async (req: AuthRequest, res: Response) => {
   const tasks = await prisma.task.findMany({
     where: { visitId: req.params.visitId as string },
     orderBy: { sortOrder: 'asc' },
-    include: { equipmentType: true, roomType: true, photos: true },
+    include: taskInclude,
   });
   res.json(tasks);
 });
@@ -326,7 +353,7 @@ router.get('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
 
   const task = await prisma.task.findFirst({
     where: { id: req.params.id as string, visitId: req.params.visitId as string },
-    include: { equipmentType: true, roomType: true, photos: true },
+    include: taskInclude,
   });
   if (!task) { res.status(404).json({ error: 'Задача не найдена' }); return; }
   res.json(task);
@@ -340,6 +367,7 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   const data: Record<string, any> = {};
   if (req.body.equipmentTypeId !== undefined) data.equipmentTypeId = req.body.equipmentTypeId;
   if (req.body.roomTypeId !== undefined) data.roomTypeId = req.body.roomTypeId || null;
+  if (req.body.roomTypeCode !== undefined) data.roomTypeCode = req.body.roomTypeCode;
   if (req.body.comment !== undefined) data.comment = req.body.comment;
   if (req.body.brand !== undefined) data.brand = req.body.brand;
   if (req.body.model !== undefined) data.model = req.body.model;
@@ -353,7 +381,7 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   const task = await prisma.task.update({
     where: { id: req.params.id as string },
     data,
-    include: { equipmentType: true, roomType: true, photos: true },
+    include: taskInclude,
   });
   await logAudit({ userId: req.userId, action: 'update', entityType: 'task', entityId: task.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(task);
@@ -380,8 +408,13 @@ router.post('/:visitId/tasks/:id/reset', async (req: AuthRequest, res: Response)
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
-  const task = await prisma.task.update({
-    where: { id: req.params.id as string },
+  const taskId = req.params.id as string;
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) { res.status(404).json({ error: 'Задача не найдена' }); return; }
+
+  // Сброс параметров задачи
+  await prisma.task.update({
+    where: { id: taskId },
     data: {
       status: 'not_started',
       parameters: Prisma.JsonNull,
@@ -390,9 +423,105 @@ router.post('/:visitId/tasks/:id/reset', async (req: AuthRequest, res: Response)
       conclusion: null,
     },
   });
-  await prisma.photo.deleteMany({ where: { taskId: req.params.id as string } });
-  await logAudit({ userId: req.userId, action: 'reset', entityType: 'task', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
-  res.json(task);
+
+  // Удаление фото задачи (для индивидуальных)
+  await prisma.photo.deleteMany({ where: { taskId } });
+
+  // Для групповых задач — сброс статусов единиц и удаление их фото
+  if (task.taskType === 'group_climate') {
+    await prisma.taskEquipmentItem.updateMany({
+      where: { taskId },
+      data: { status: null },
+    });
+    const items = await prisma.taskEquipmentItem.findMany({ where: { taskId }, select: { id: true } });
+    for (const item of items) {
+      await prisma.photo.deleteMany({ where: { taskEquipmentItemId: item.id } });
+    }
+  }
+
+  await logAudit({ userId: req.userId, action: 'reset', entityType: 'task', entityId: taskId, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  const updated = await prisma.task.findUnique({ where: { id: taskId }, include: taskInclude });
+  res.json(updated);
+});
+
+// ─── TASK EQUIPMENT ITEMS (групповые задачи) ────────────────
+const addItemSchema = z.object({
+  objectEquipmentId: z.string().uuid(),
+});
+
+router.post('/:visitId/tasks/:taskId/items', validate(addItemSchema), async (req: AuthRequest, res: Response) => {
+  const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
+  if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
+  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+
+  const task = await prisma.task.findFirst({
+    where: { id: req.params.taskId as string, visitId: req.params.visitId as string },
+  });
+  if (!task || task.taskType !== 'group_climate') {
+    res.status(400).json({ error: 'Задача не является групповой' }); return;
+  }
+
+  const maxOrder = await prisma.taskEquipmentItem.aggregate({
+    where: { taskId: task.id },
+    _max: { sortOrder: true },
+  });
+
+  const item = await prisma.taskEquipmentItem.create({
+    data: {
+      taskId: task.id,
+      objectEquipmentId: req.body.objectEquipmentId,
+      sortOrder: (maxOrder._max?.sortOrder ?? 0) + 1,
+    },
+    include: { objectEquipment: true, photos: true },
+  });
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'task_equipment_item', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(item);
+});
+
+router.put('/:visitId/tasks/:taskId/items/:itemId', async (req: AuthRequest, res: Response) => {
+  const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
+  if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
+  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+
+  const data: Record<string, any> = {};
+  if (req.body.status !== undefined) data.status = req.body.status;
+  if (req.body.sortOrder !== undefined) data.sortOrder = req.body.sortOrder;
+
+  const item = await prisma.taskEquipmentItem.update({
+    where: { id: req.params.itemId as string },
+    data,
+    include: { objectEquipment: true, photos: true },
+  });
+  await logAudit({ userId: req.userId, action: 'update', entityType: 'task_equipment_item', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json(item);
+});
+
+router.delete('/:visitId/tasks/:taskId/items/:itemId', async (req: AuthRequest, res: Response) => {
+  const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
+  if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
+  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+
+  const itemId = req.params.itemId as string;
+  // Удаляем фото единицы
+  await prisma.photo.deleteMany({ where: { taskEquipmentItemId: itemId } });
+  await prisma.taskEquipmentItem.delete({ where: { id: itemId } });
+
+  // Пересчёт sortOrder
+  const taskId = req.params.taskId as string;
+  const remaining = await prisma.taskEquipmentItem.findMany({
+    where: { taskId },
+    orderBy: { sortOrder: 'asc' },
+  });
+  for (let i = 0; i < remaining.length; i++) {
+    if (remaining[i].sortOrder !== i + 1) {
+      await prisma.taskEquipmentItem.update({
+        where: { id: remaining[i].id },
+        data: { sortOrder: i + 1 },
+      });
+    }
+  }
+  await logAudit({ userId: req.userId, action: 'delete', entityType: 'task_equipment_item', entityId: itemId, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json({ message: 'Единица оборудования удалена' });
 });
 
 export default router;

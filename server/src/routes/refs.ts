@@ -102,6 +102,14 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
     where.roomTypeCode = null;
   }
 
+  // Фильтрация по типу блока (наружный/внутренний)
+  const isOutdoorParam = req.query.is_outdoor_unit as string;
+  if (isOutdoorParam === 'true') {
+    where.isOutdoorUnit = true;
+  } else if (isOutdoorParam === 'false') {
+    where.isOutdoorUnit = false;
+  }
+
   // Фильтрация по помещению
   const roomTypeCode = req.query.room_type_code as string;
   if (roomTypeCode) {
@@ -110,11 +118,20 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
 
   const excludeVisitId = req.query.exclude_visit_id as string;
   if (excludeVisitId) {
+    // Индивидуальные задачи — objectEquipmentId в task
     const usedEquipment = await prisma.task.findMany({
       where: { visitId: excludeVisitId, objectEquipmentId: { not: null } },
       select: { objectEquipmentId: true },
     });
-    const usedIds = usedEquipment.map(t => t.objectEquipmentId).filter(Boolean) as string[];
+    // Групповые задачи — objectEquipmentId в task_equipment_items
+    const usedItems = await prisma.taskEquipmentItem.findMany({
+      where: { task: { visitId: excludeVisitId } },
+      select: { objectEquipmentId: true },
+    });
+    const usedIds = [
+      ...usedEquipment.map(t => t.objectEquipmentId).filter(Boolean) as string[],
+      ...usedItems.map(i => i.objectEquipmentId),
+    ];
     if (usedIds.length > 0) {
       where.id = { notIn: usedIds };
     }

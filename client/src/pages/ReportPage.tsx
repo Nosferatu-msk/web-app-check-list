@@ -76,6 +76,7 @@ export default function ReportPage() {
 
       // 3. Download all photos
       for (const task of tasks) {
+        // Фото индивидуальных задач
         for (const photo of (task.photos || [])) {
           try {
             const photoUrl = `/api/photos/${photo.id}/file`;
@@ -83,6 +84,18 @@ export default function ReportPage() {
             photosFolder.file(photo.fileName, photoBlob);
           } catch (err) {
             console.warn(`Failed to download photo: ${photo.fileName}`, err);
+          }
+        }
+        // Фото единиц оборудования (групповые задачи)
+        for (const item of (task.equipmentItems || [])) {
+          for (const photo of (item.photos || [])) {
+            try {
+              const photoUrl = `/api/photos/${photo.id}/file`;
+              const photoBlob = await api.downloadFile(photoUrl);
+              photosFolder.file(photo.fileName, photoBlob);
+            } catch (err) {
+              console.warn(`Failed to download photo: ${photo.fileName}`, err);
+            }
           }
         }
       }

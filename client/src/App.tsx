@@ -10,7 +10,9 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import VisitListPage from './pages/VisitListPage';
 import VisitPage from './pages/VisitPage';
 import TaskPage from './pages/TaskPage';
+import GroupTaskPage from './pages/GroupTaskPage';
 import PhotoPage from './pages/PhotoPage';
+import ItemPhotoPage from './pages/ItemPhotoPage';
 import ReportPage from './pages/ReportPage';
 import SummaryReportPage from './pages/SummaryReportPage';
 import ProfilePage from './pages/ProfilePage';
@@ -69,7 +71,9 @@ export default function App() {
       <Route path="/visit/new" element={<ProtectedRoute><EngineerRoute><VisitPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/visit/:id" element={<ProtectedRoute><EngineerRoute><VisitPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/visit/:visitId/task/:taskId" element={<ProtectedRoute><EngineerRoute><TaskPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/visit/:visitId/task/:taskId/group" element={<ProtectedRoute><EngineerRoute><GroupTaskPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/visit/:visitId/task/:taskId/photos" element={<ProtectedRoute><EngineerRoute><PhotoPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/visit/:visitId/task/:taskId/item/:itemId/photos" element={<ProtectedRoute><EngineerRoute><ItemPhotoPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/visit/:id/report" element={<ProtectedRoute><EngineerRoute><ReportPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/reports/summary" element={<TmAdminRoute><ProtectedRoute><SummaryReportPage /></ProtectedRoute></TmAdminRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>

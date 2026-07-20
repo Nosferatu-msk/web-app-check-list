@@ -91,7 +91,18 @@ export async function generateReportHtml(visitId: string): Promise<string> {
       address: true,
       tasks: {
         orderBy: { sortOrder: 'asc' },
-        include: { equipmentType: true, roomType: true, photos: true },
+        include: {
+          equipmentType: true,
+          roomType: true,
+          photos: true,
+          equipmentItems: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              objectEquipment: true,
+              photos: true,
+            },
+          },
+        },
       },
     },
   });
@@ -100,67 +111,136 @@ export async function generateReportHtml(visitId: string): Promise<string> {
   const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
   const recMap = new Map(recommendations.map(r => [r.id, r.text]));
 
-  // Fetch engineer's specialization
   const visitUser = await prisma.user.findUnique({
     where: { id: visit.userId },
     select: { specializationVik: true, specializationIszh: true },
   });
   let specializationLabel = '';
   if (visitUser) {
-    if (visitUser.specializationVik && visitUser.specializationIszh) {
-      specializationLabel = 'ВиК + ИСЖ';
-    } else if (visitUser.specializationVik) {
-      specializationLabel = 'ВиК';
-    } else if (visitUser.specializationIszh) {
-      specializationLabel = 'ИСЖ';
-    }
+    if (visitUser.specializationVik && visitUser.specializationIszh) specializationLabel = 'ВиК + ИСЖ';
+    else if (visitUser.specializationVik) specializationLabel = 'ВиК';
+    else if (visitUser.specializationIszh) specializationLabel = 'ИСЖ';
   }
+
+  const ITEM_TYPE_NAMES: Record<string, string> = {
+    splitvn: 'Внутр. блок СС', mssvn: 'Внутр. блок МСС', vrv_vn: 'Внутр. блок VRV',
+    splitnar: 'Наружн. блок СС', mssnar: 'Наружн. блок МСС', vrv_nar: 'Наружн. блок VRV',
+  };
 
   let tasksHtml = '';
   for (let i = 0; i < visit.tasks.length; i++) {
     const task = visit.tasks[i];
     const params = (task.parameters || {}) as Record<string, unknown>;
-    let paramsHtml = '';
-    for (const [key, val] of Object.entries(params)) {
-      if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
-      const label = PARAM_LABELS[key] || key;
-      paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
-    }
-
-    let photosHtml = '';
-    for (const photo of task.photos) {
-      const photoPath = path.resolve(photo.filePath);
-      let photoData = '';
-      if (fs.existsSync(photoPath)) {
-        const buf = fs.readFileSync(photoPath);
-        photoData = `data:image/jpeg;base64,${buf.toString('base64')}`;
-      }
-      photosHtml += `<div style="margin:8px 0;"><strong>[ФОТО] ${photo.fileName}</strong><br><img src="${photoData}" style="max-width:400px;max-height:300px;" /></div>`;
-    }
-
     const selectedRecs = (task.selectedRecommendationIds || []).map(id => recMap.get(id)).filter(Boolean);
     let recsHtml = '';
-    for (const r of selectedRecs) {
-      recsHtml += `<li>${r}</li>`;
-    }
-    if (task.additionalRecommendations) {
-      recsHtml += `<li>${task.additionalRecommendations}</li>`;
-    }
+    for (const r of selectedRecs) { recsHtml += `<li>${r}</li>`; }
+    if (task.additionalRecommendations) { recsHtml += `<li>${task.additionalRecommendations}</li>`; }
 
-    const location = task.roomType ? task.roomType.name : (task.comment || '—');
-    const title = `${i + 1}. ${task.equipmentType.name}${task.comment ? ` (${task.comment})` : ''}`;
+    if (task.taskType === 'group_climate') {
+      // ─── ГРУППОВАЯ ЗАДАЧА ────────────────────────────────
+      const items = task.equipmentItems || [];
+      const isOutdoor = items.length > 0 && items[0].objectEquipment?.isOutdoorUnit;
+      const title = isOutdoor ? 'Наружные блоки кондиционеров' : `Климатическое оборудование (${task.roomType?.name || task.roomTypeCode || ''})`;
+      const location = isOutdoor ? 'Уровень объекта' : (task.roomType?.name || '—');
 
-    tasksHtml += `
-      <div style="margin:20px 0;padding:15px;border:1px solid #ccc;border-radius:4px;">
-        <h3 style="margin:0 0 10px;">${title}</h3>
-        <p><strong>📍 Местоположение:</strong> ${location}</p>
-        <p><strong>🔧 Контролируемые параметры:</strong></p>
-        <table style="width:100%;border-collapse:collapse;margin:8px 0;">${paramsHtml}</table>
-        <p><strong>📸 Фотофиксация:</strong></p>
-        ${photosHtml}
-        <p><strong>✅ Заключение:</strong> ${task.conclusion ? CONCLUSION_MAP[task.conclusion] || task.conclusion : '—'}</p>
-        ${recsHtml ? `<p><strong>📊 Рекомендации:</strong></p><ul>${recsHtml}</ul>` : ''}
-      </div>`;
+      // Таблица единиц оборудования
+      let equipTableHtml = '<table style="width:100%;border-collapse:collapse;margin:8px 0;"><thead><tr style="background:#f5f5f5;">';
+      equipTableHtml += '<th style="padding:4px 8px;border:1px solid #ddd;">№</th>';
+      equipTableHtml += '<th style="padding:4px 8px;border:1px solid #ddd;">Вид</th>';
+      equipTableHtml += '<th style="padding:4px 8px;border:1px solid #ddd;">Изготовитель</th>';
+      equipTableHtml += '<th style="padding:4px 8px;border:1px solid #ddd;">Модель</th>';
+      equipTableHtml += '<th style="padding:4px 8px;border:1px solid #ddd;">Сер. №</th>';
+      equipTableHtml += '<th style="padding:4px 8px;border:1px solid #ddd;">Статус</th>';
+      equipTableHtml += '</tr></thead><tbody>';
+      for (let j = 0; j < items.length; j++) {
+        const item = items[j];
+        const eq = item.objectEquipment;
+        const typeName = ITEM_TYPE_NAMES[eq?.equipmentTypeCode || ''] || eq?.equipmentTypeCode || '—';
+        const statusLabel = item.status === 'ok' ? '✅ Исправно' : item.status === 'not_ok' ? '⚠️ Неисправно' : '—';
+        equipTableHtml += `<tr>`;
+        equipTableHtml += `<td style="padding:4px 8px;border:1px solid #ddd;">${j + 1}</td>`;
+        equipTableHtml += `<td style="padding:4px 8px;border:1px solid #ddd;">${typeName}</td>`;
+        equipTableHtml += `<td style="padding:4px 8px;border:1px solid #ddd;">${eq?.brand || '—'}</td>`;
+        equipTableHtml += `<td style="padding:4px 8px;border:1px solid #ddd;">${eq?.model || '—'}</td>`;
+        equipTableHtml += `<td style="padding:4px 8px;border:1px solid #ddd;">${eq?.serialNumber || '—'}</td>`;
+        equipTableHtml += `<td style="padding:4px 8px;border:1px solid #ddd;">${statusLabel}</td>`;
+        equipTableHtml += `</tr>`;
+      }
+      equipTableHtml += '</tbody></table>';
+
+      // Фото по единицам
+      let photosHtml = '';
+      for (let j = 0; j < items.length; j++) {
+        const item = items[j];
+        const eq = item.objectEquipment;
+        for (const photo of item.photos) {
+          const photoPath = path.resolve(photo.filePath);
+          let photoData = '';
+          if (fs.existsSync(photoPath)) {
+            const buf = fs.readFileSync(photoPath);
+            photoData = `data:image/jpeg;base64,${buf.toString('base64')}`;
+          }
+          const num = String(j + 1).padStart(2, '0');
+          const momentLabel = photo.moment === 'before' ? 'до' : 'после';
+          photosHtml += `<div style="margin:8px 0;"><strong>[ФОТО ${num}] ${photo.fileName}</strong> (${momentLabel})<br><img src="${photoData}" style="max-width:400px;max-height:300px;" /></div>`;
+        }
+      }
+
+      // Общие параметры
+      let paramsHtml = '';
+      for (const [key, val] of Object.entries(params)) {
+        if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
+        const label = PARAM_LABELS[key] || key;
+        paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
+      }
+
+      tasksHtml += `
+        <div style="margin:20px 0;padding:15px;border:1px solid #ccc;border-radius:4px;">
+          <h3 style="margin:0 0 10px;">${i + 1}. ${title}</h3>
+          <p><strong>📍 Местоположение:</strong> ${location}</p>
+          ${paramsHtml ? `<p><strong>🔧 Общие параметры:</strong></p><table style="width:100%;border-collapse:collapse;margin:8px 0;">${paramsHtml}</table>` : ''}
+          <p><strong>📋 Единицы оборудования:</strong></p>
+          ${equipTableHtml}
+          <p><strong>📸 Фотофиксация:</strong></p>
+          ${photosHtml}
+          <p><strong>✅ Заключение:</strong> ${task.conclusion ? CONCLUSION_MAP[task.conclusion] || task.conclusion : '—'}</p>
+          ${recsHtml ? `<p><strong>📊 Рекомендации:</strong></p><ul>${recsHtml}</ul>` : ''}
+        </div>`;
+    } else {
+      // ─── ИНДИВИДУАЛЬНАЯ ЗАДАЧА (без изменений) ────────────
+      let paramsHtml = '';
+      for (const [key, val] of Object.entries(params)) {
+        if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
+        const label = PARAM_LABELS[key] || key;
+        paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
+      }
+
+      let photosHtml = '';
+      for (const photo of task.photos) {
+        const photoPath = path.resolve(photo.filePath);
+        let photoData = '';
+        if (fs.existsSync(photoPath)) {
+          const buf = fs.readFileSync(photoPath);
+          photoData = `data:image/jpeg;base64,${buf.toString('base64')}`;
+        }
+        photosHtml += `<div style="margin:8px 0;"><strong>[ФОТО] ${photo.fileName}</strong><br><img src="${photoData}" style="max-width:400px;max-height:300px;" /></div>`;
+      }
+
+      const location = task.roomType ? task.roomType.name : (task.comment || '—');
+      const taskTitle = `${i + 1}. ${task.equipmentType.name}${task.comment ? ` (${task.comment})` : ''}`;
+
+      tasksHtml += `
+        <div style="margin:20px 0;padding:15px;border:1px solid #ccc;border-radius:4px;">
+          <h3 style="margin:0 0 10px;">${taskTitle}</h3>
+          <p><strong>📍 Местоположение:</strong> ${location}</p>
+          <p><strong>🔧 Контролируемые параметры:</strong></p>
+          <table style="width:100%;border-collapse:collapse;margin:8px 0;">${paramsHtml}</table>
+          <p><strong>📸 Фотофиксация:</strong></p>
+          ${photosHtml}
+          <p><strong>✅ Заключение:</strong> ${task.conclusion ? CONCLUSION_MAP[task.conclusion] || task.conclusion : '—'}</p>
+          ${recsHtml ? `<p><strong>📊 Рекомендации:</strong></p><ul>${recsHtml}</ul>` : ''}
+        </div>`;
+    }
   }
 
   return `<!DOCTYPE html>

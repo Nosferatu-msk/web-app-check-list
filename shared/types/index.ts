@@ -4,6 +4,8 @@ export type VisitStatus = 'planned' | 'not_started' | 'in_progress' | 'completed
 export type TaskStatus = 'not_started' | 'in_progress' | 'completed';
 export type Conclusion = 'ok' | 'ok_with_notes' | 'faulty';
 export type PhotoMoment = 'before' | 'after';
+export type TaskType = 'group_climate' | 'individual';
+export type EquipmentItemStatus = 'ok' | 'not_ok';
 
 export interface User {
   id: string;
@@ -76,8 +78,11 @@ export interface Visit {
 export interface Task {
   id: string;
   visitId: string;
+  taskType: TaskType;
   equipmentTypeId: string;
   roomTypeId?: string;
+  roomTypeCode?: string;
+  objectEquipmentId?: string;
   comment?: string;
   brand?: string;
   model?: string;
@@ -91,11 +96,31 @@ export interface Task {
   equipmentType?: EquipmentType;
   roomType?: RoomType;
   photos?: Photo[];
+  equipmentItems?: TaskEquipmentItem[];
+}
+
+export interface TaskEquipmentItem {
+  id: string;
+  taskId: string;
+  objectEquipmentId: string;
+  status?: EquipmentItemStatus;
+  sortOrder: number;
+  objectEquipment?: {
+    id: string;
+    equipmentTypeCode: string;
+    brand?: string;
+    model?: string;
+    serialNumber?: string;
+    roomTypeCode?: string;
+    isOutdoorUnit: boolean;
+  };
+  photos?: Photo[];
 }
 
 export interface Photo {
   id: string;
-  taskId: string;
+  taskId?: string;
+  taskEquipmentItemId?: string;
   fileName: string;
   filePath: string;
   moment: PhotoMoment;
@@ -146,6 +171,18 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   in_progress: 'В работе',
   completed: 'Выполнено',
 };
+
+export const EQUIPMENT_ITEM_STATUS_LABELS: Record<EquipmentItemStatus, string> = {
+  ok: 'Исправно',
+  not_ok: 'Неисправно',
+};
+
+// Коды климатического оборудования (внутренние блоки) для группировки
+export const CLIMATE_INDOOR_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
+// Коды климатического оборудования (наружные блоки) для группировки
+export const CLIMATE_OUTDOOR_CODES = ['splitnar', 'mssnar', 'vrv_nar'];
+// Все коды климатического оборудования
+export const CLIMATE_CODES = [...CLIMATE_INDOOR_CODES, ...CLIMATE_OUTDOOR_CODES];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   engineer: 'Инженер',

@@ -40,7 +40,7 @@ router.post('/:id/report/generate', async (req: AuthRequest, res: Response) => {
 router.get('/:id/report/download', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({
     where: { id: req.params.id as string },
-    include: { address: true, tasks: { include: { photos: true } } },
+    include: { address: true, tasks: { include: { photos: true, equipmentItems: { include: { photos: true } } } } },
   });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
 

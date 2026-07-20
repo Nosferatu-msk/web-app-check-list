@@ -172,8 +172,10 @@ model Visit {
 model Task {
   id                        String      @id @default(uuid())
   visitId                   String      @map("visit_id")
+  taskType                  String      @default("individual") @map("task_type")
   equipmentTypeId           String      @map("equipment_type_id")
   roomTypeId                String?     @map("room_type_id")
+  roomTypeCode              String?     @map("room_type_code")
   objectEquipmentId         String?     @map("object_equipment_id")
   comment                   String?
   brand                     String?
@@ -188,31 +190,53 @@ model Task {
   createdAt                 DateTime    @default(now()) @map("created_at")
   updatedAt                 DateTime    @updatedAt @map("updated_at")
 
-  visit           Visit           @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  equipmentType   EquipmentType   @relation(fields: [equipmentTypeId], references: [id])
-  roomType        RoomType?       @relation(fields: [roomTypeId], references: [id])
-  objectEquipment ObjectEquipment? @relation(fields: [objectEquipmentId], references: [id])
-  photos          Photo[]
+  visit            Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  equipmentType    EquipmentType       @relation(fields: [equipmentTypeId], references: [id])
+  roomType         RoomType?           @relation(fields: [roomTypeId], references: [id])
+  objectEquipment  ObjectEquipment?    @relation(fields: [objectEquipmentId], references: [id])
+  photos           Photo[]
+  equipmentItems   TaskEquipmentItem[]
 
   @@index([visitId, status])
   @@map("tasks")
 }
 
 model Photo {
-  id        String      @id @default(uuid())
-  taskId    String      @map("task_id")
-  fileName  String      @map("file_name")
-  filePath  String      @map("file_path")
-  moment    PhotoMoment
-  fileSize  Int?        @map("file_size")
-  mimeType  String?     @map("mime_type")
-  createdAt DateTime    @default(now()) @map("created_at")
+  id                  String      @id @default(uuid())
+  taskId              String?     @map("task_id")
+  taskEquipmentItemId String?     @map("task_equipment_item_id")
+  fileName            String      @map("file_name")
+  filePath            String      @map("file_path")
+  moment              PhotoMoment
+  fileSize            Int?        @map("file_size")
+  mimeType            String?     @map("mime_type")
+  createdAt           DateTime    @default(now()) @map("created_at")
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task              Task?              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskEquipmentItem TaskEquipmentItem? @relation(fields: [taskEquipmentItemId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, moment])
+  @@unique([taskEquipmentItemId, moment])
   @@index([taskId, moment])
+  @@index([taskEquipmentItemId, moment])
   @@map("photos")
+}
+
+model TaskEquipmentItem {
+  id                String   @id @default(uuid())
+  taskId            String   @map("task_id")
+  objectEquipmentId String   @map("object_equipment_id")
+  status            String?
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  task            Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  objectEquipment ObjectEquipment   @relation(fields: [objectEquipmentId], references: [id])
+  photos          Photo[]
+
+  @@unique([taskId, objectEquipmentId])
+  @@index([taskId])
+  @@map("task_equipment_items")
 }
 
 model PasswordResetToken {
@@ -306,15 +330,17 @@ model ObjectEquipment {
   model               String?
   serialNumber        String?   @map("serial_number")
   locationDescription String?   @map("location_description")
+  isOutdoorUnit       Boolean   @default(false) @map("is_outdoor_unit")
   isActive            Boolean   @default(true) @map("is_active")
   roomConfirmedAt     DateTime? @map("room_confirmed_at")
   roomConfirmedBy     String?   @map("room_confirmed_by")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  address         Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
-  roomConfirmedByUser User? @relation("objectEquipmentRoomConfirm", fields: [roomConfirmedBy], references: [id])
-  tasks           Task[]
+  address             Address             @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  roomConfirmedByUser User?               @relation("objectEquipmentRoomConfirm", fields: [roomConfirmedBy], references: [id])
+  tasks               Task[]
+  taskEquipmentItems  TaskEquipmentItem[]
 
   @@unique([addressId, equipmentTypeCode, serialNumber])
   @@unique([addressId, equipmentTypeCode, locationDescription])

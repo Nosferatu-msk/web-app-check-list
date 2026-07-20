@@ -20,10 +20,12 @@ export interface LocalVisit {
 export interface LocalTask {
   id: string;
   serverId?: string;
-  visitLocalId: string; // references LocalVisit.id
+  visitLocalId: string;
   visitServerId?: string;
+  taskType: string;
   equipmentTypeId: string;
   roomTypeId?: string;
+  roomTypeCode?: string;
   objectEquipmentId?: string;
   comment?: string;
   brand?: string;
@@ -40,11 +42,25 @@ export interface LocalTask {
   dirty: boolean;
 }
 
+export interface LocalTaskEquipmentItem {
+  id: string;
+  serverId?: string;
+  taskLocalId: string;
+  taskServerId?: string;
+  objectEquipmentId: string;
+  status?: string;
+  sortOrder: number;
+  createdAt: string;
+  dirty: boolean;
+}
+
 export interface LocalPhoto {
   id: string;
   serverId?: string;
   taskLocalId: string;
   taskServerId?: string;
+  taskEquipmentItemLocalId?: string;
+  taskEquipmentItemServerId?: string;
   blob: Blob;
   fileName: string;
   moment: 'before' | 'after';
@@ -63,10 +79,10 @@ export interface LocalFavorite {
 }
 
 export interface SyncQueueItem {
-  id?: number; // auto-increment
+  id?: number;
   operation: 'create' | 'update' | 'delete' | 'upload_photo' | 'complete' | 'send_report' | 'reassign';
-  entityType: 'visit' | 'task' | 'photo' | 'report' | 'favorite';
-  entityId: string; // local ID
+  entityType: 'visit' | 'task' | 'task_equipment_item' | 'photo' | 'report' | 'favorite';
+  entityId: string;
   payload?: any;
   createdAt: string;
   retryCount: number;
@@ -82,6 +98,7 @@ export interface CachedRef {
 class ChecklistDB extends Dexie {
   visits!: Table<LocalVisit, string>;
   tasks!: Table<LocalTask, string>;
+  taskEquipmentItems!: Table<LocalTaskEquipmentItem, string>;
   photos!: Table<LocalPhoto, string>;
   syncQueue!: Table<SyncQueueItem, number>;
   cachedRefs!: Table<CachedRef, string>;
@@ -100,6 +117,15 @@ class ChecklistDB extends Dexie {
       visits: 'id, serverId, userId, status, dirty, isDeleted',
       tasks: 'id, serverId, visitLocalId, visitServerId, dirty',
       photos: 'id, serverId, taskLocalId, taskServerId, dirty',
+      syncQueue: '++id, entityType, entityId, createdAt',
+      cachedRefs: 'key',
+      favorites: 'id, userId, objectCode, addedAt',
+    });
+    this.version(3).stores({
+      visits: 'id, serverId, userId, status, dirty, isDeleted',
+      tasks: 'id, serverId, visitLocalId, visitServerId, dirty',
+      taskEquipmentItems: 'id, serverId, taskLocalId, taskServerId, dirty',
+      photos: 'id, serverId, taskLocalId, taskServerId, taskEquipmentItemLocalId, taskEquipmentItemServerId, dirty',
       syncQueue: '++id, entityType, entityId, createdAt',
       cachedRefs: 'key',
       favorites: 'id, userId, objectCode, addedAt',

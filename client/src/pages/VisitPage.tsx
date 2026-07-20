@@ -229,14 +229,45 @@ export default function VisitPage() {
     }
   }, [visit, loadRoomEquipment]);
 
+  const CLIMATE_INDOOR_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
+  const CLIMATE_OUTDOOR_CODES = ['splitnar', 'mssnar', 'vrv_nar'];
+
   const handleAddEquipmentBatch = useCallback(async (equipIds: string[], equipment: any[]) => {
     if (!visit?.id || equipIds.length === 0) return;
     setAddingEquipment(true);
     try {
+      // Разделяем оборудование на климатическое (внутренние блоки) и остальное
+      const climateIndoor: any[] = [];
+      const otherEquipment: any[] = [];
+
       for (const eqId of equipIds) {
         const eq = equipment.find(e => e.id === eqId);
         if (!eq) continue;
+        if (CLIMATE_INDOOR_CODES.includes(eq.equipmentTypeCode)) {
+          climateIndoor.push(eq);
+        } else {
+          otherEquipment.push(eq);
+        }
+      }
 
+      // Для климатического оборудования — одна групповая задача на помещение
+      if (climateIndoor.length > 0) {
+        const firstEq = climateIndoor[0];
+        const eqType = eqTypeMap.get(firstEq.equipmentTypeCode);
+        const rmType = firstEq.roomTypeCode ? rmTypeMap.get(firstEq.roomTypeCode) : null;
+
+        const taskData = {
+          taskType: 'group_climate' as const,
+          equipmentTypeId: eqType?.id || '',
+          roomTypeId: rmType?.id || '',
+          roomTypeCode: firstEq.roomTypeCode || '',
+          equipmentItemIds: climateIndoor.map(eq => eq.id),
+        };
+        await api.createTask(visit.id, taskData);
+      }
+
+      // Для остального оборудования — индивидуальные задачи
+      for (const eq of otherEquipment) {
         const eqType = eqTypeMap.get(eq.equipmentTypeCode);
         const rmType = eq.roomTypeCode ? rmTypeMap.get(eq.roomTypeCode) : null;
         const taskData = {
@@ -254,10 +285,12 @@ export default function VisitPage() {
           await api.createTask(visit.id, taskData);
         }
       }
+
       const v = await api.getVisit(visit.id);
       setTasks(v.tasks || []);
       setAddModalOpen(false);
-      message.success(`Добавлено задач: ${equipIds.length}`);
+      const totalTasks = (climateIndoor.length > 0 ? 1 : 0) + otherEquipment.length;
+      message.success(`Добавлено задач: ${totalTasks}`);
     } catch (err: any) {
       message.error(err.message || 'Ошибка добавления');
     }
@@ -341,6 +374,12 @@ export default function VisitPage() {
   };
 
   const getPhotoProgress = (task: any) => {
+    if (task.taskType === 'group_climate') {
+      const items = task.equipmentItems || [];
+      const totalPhotos = items.reduce((sum: number, item: any) => sum + (item.photos?.length || 0), 0);
+      const required = items.length * 2;
+      return `${totalPhotos}/${required}`;
+    }
     const photos = task.photos || [];
     const required = task.equipmentType?.photosRequired || 1;
     return `${photos.length}/${required}`;
@@ -351,7 +390,30 @@ export default function VisitPage() {
       title: 'Оборудование',
       dataIndex: ['equipmentType', 'name'],
       key: 'equipment',
-      render: (_: any, r: any) => <span style={{ fontWeight: 500 }}>{r.equipmentType?.name}</span>,
+      render: (_: any, r: any) => {
+        if (r.taskType === 'group_climate') {
+          const items = r.equipmentItems || [];
+          return (
+            <div>
+              <span style={{ fontWeight: 500 }}>🌡 Климатическое оборудование</span>
+              <div style={{ fontSize: 12, color: '#666' }}>
+                Единиц: {items.length}
+                {items.length > 0 && (() => {
+                  const okCount = items.filter((i: any) => i.status === 'ok').length;
+                  const notOkCount = items.filter((i: any) => i.status === 'not_ok').length;
+                  return (
+                    <>
+                      {okCount > 0 && <span style={{ color: '#52c41a' }}> · ✅ {okCount}</span>}
+                      {notOkCount > 0 && <span style={{ color: '#ff4d4f' }}> · ⚠️ {notOkCount}</span>}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          );
+        }
+        return <span style={{ fontWeight: 500 }}>{r.equipmentType?.name}</span>;
+      },
     },
     {
       title: 'Местоположение',
@@ -456,7 +518,11 @@ export default function VisitPage() {
         onRow={(record) => ({
           onClick: () => {
             if (visit?.id) {
-              navigate(`/visit/${visit.id}/task/${record.id}`);
+              if (record.taskType === 'group_climate') {
+                navigate(`/visit/${visit.id}/task/${record.id}/group`);
+              } else {
+                navigate(`/visit/${visit.id}/task/${record.id}`);
+              }
             }
           },
           style: { cursor: 'pointer' },

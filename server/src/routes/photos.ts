@@ -29,7 +29,82 @@ const upload = multer({
   },
 });
 
-// POST /api/tasks/:taskId/photos
+// POST /api/tasks/items/:itemId/photos — загрузка фото для единицы в групповой задаче
+// ВАЖНО: этот маршрут должен быть зарегистрирован ДО /:taskId/photos,
+// иначе Express перехватит "items" как :taskId
+router.post('/items/:itemId/photos', upload.single('photo'), async (req: AuthRequest, res: Response) => {
+  const itemId = req.params.itemId as string;
+  const moment = req.body.moment as 'before' | 'after';
+  if (!moment || !['before', 'after'].includes(moment)) {
+    res.status(400).json({ error: 'Укажите moment: before или after' });
+    return;
+  }
+  if (!req.file) {
+    res.status(400).json({ error: 'Файл не загружен' });
+    return;
+  }
+
+  const item = await prisma.taskEquipmentItem.findUnique({
+    where: { id: itemId },
+    include: {
+      task: { include: { visit: true, equipmentType: true } },
+      objectEquipment: true,
+    },
+  });
+  if (!item) { res.status(404).json({ error: 'Единица оборудования не найдена' }); return; }
+
+  const visit = item.task.visit;
+  const visitTasks = await prisma.task.findMany({
+    where: { visitId: visit.id },
+    orderBy: { sortOrder: 'asc' },
+  });
+  const taskIndex = visitTasks.findIndex(t => t.id === item.taskId);
+  const num = String(taskIndex + 1).padStart(2, '0');
+
+  const equipmentCode = item.objectEquipment.equipmentTypeCode;
+  const roomCode = item.objectEquipment.roomTypeCode || 'object';
+  const serial = item.objectEquipment.serialNumber || 'nosn';
+  const fileName = `${num}_${equipmentCode}_${roomCode}_${serial}_${moment}.jpg`;
+
+  const oldPath = req.file.path;
+  const newPath = path.join(path.dirname(oldPath), fileName);
+  fs.renameSync(oldPath, newPath);
+
+  const existing = await prisma.photo.findFirst({
+    where: { taskEquipmentItemId: itemId, moment },
+  });
+  if (existing) {
+    try { fs.unlinkSync(existing.filePath); } catch { /* ignore */ }
+    await prisma.photo.delete({ where: { id: existing.id } });
+  }
+
+  const photo = await prisma.photo.create({
+    data: {
+      taskEquipmentItemId: itemId,
+      fileName,
+      filePath: newPath,
+      moment,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+    },
+  });
+
+  if (!item.status) {
+    await prisma.taskEquipmentItem.update({
+      where: { id: itemId },
+      data: { status: 'ok' },
+    });
+  }
+  const task = await prisma.task.findUnique({ where: { id: item.taskId } });
+  if (task && task.status === 'not_started') {
+    await prisma.task.update({ where: { id: item.taskId }, data: { status: 'in_progress' } });
+  }
+
+  await logAudit({ userId: req.userId, action: 'upload_photo', entityType: 'photo', entityId: photo.id, newValue: { fileName, moment, taskEquipmentItemId: itemId }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(photo);
+});
+
+// POST /api/tasks/:taskId/photos — загрузка фото для индивидуальной задачи
 router.post('/:taskId/photos', upload.single('photo'), async (req: AuthRequest, res: Response) => {
   const taskId = req.params.taskId as string;
   const moment = req.body.moment as 'before' | 'after';
@@ -42,18 +117,12 @@ router.post('/:taskId/photos', upload.single('photo'), async (req: AuthRequest, 
     return;
   }
 
-  // Get task to build file name
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    include: {
-      visit: true,
-      equipmentType: true,
-      roomType: true,
-    },
+    include: { visit: true, equipmentType: true, roomType: true },
   });
   if (!task) { res.status(404).json({ error: 'Задача не найдена' }); return; }
 
-  // Calculate sort order within visit
   const visitTasks = await prisma.task.findMany({
     where: { visitId: task.visitId },
     orderBy: { sortOrder: 'asc' },
@@ -65,12 +134,10 @@ router.post('/:taskId/photos', upload.single('photo'), async (req: AuthRequest, 
   const roomCode = task.roomType?.code || 'unknown';
   const fileName = `${num}_${equipmentCode}_${roomCode}_${moment}.jpg`;
 
-  // Rename file
   const oldPath = req.file.path;
   const newPath = path.join(path.dirname(oldPath), fileName);
   fs.renameSync(oldPath, newPath);
 
-  // Delete existing photo for this moment if any
   const existing = await prisma.photo.findUnique({ where: { taskId_moment: { taskId, moment } } });
   if (existing) {
     try { fs.unlinkSync(existing.filePath); } catch { /* ignore */ }
@@ -78,17 +145,9 @@ router.post('/:taskId/photos', upload.single('photo'), async (req: AuthRequest, 
   }
 
   const photo = await prisma.photo.create({
-    data: {
-      taskId,
-      fileName,
-      filePath: newPath,
-      moment,
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype,
-    },
+    data: { taskId, fileName, filePath: newPath, moment, fileSize: req.file.size, mimeType: req.file.mimetype },
   });
 
-  // Update task status to in_progress if not_started
   if (task.status === 'not_started') {
     await prisma.task.update({ where: { id: taskId }, data: { status: 'in_progress' } });
   }
@@ -108,7 +167,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   const photo = await prisma.photo.findUnique({ where: { id: req.params.id as string } });
   if (photo) {
     try { fs.unlinkSync(photo.filePath); } catch { /* ignore */ }
-    await prisma.photo.delete({ where: { id: req.params.id as string } });
+    await prisma.photo.delete({ where: { id: photo.id } });
   }
   res.json({ message: 'Фото удалено' });
 });
