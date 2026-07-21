@@ -447,19 +447,15 @@ router.post('/tm-objects', upload.single('file'), async (req: AuthRequest, res: 
       const tm = await prisma.user.findUnique({ where: { email: tmEmail } });
       if (!tm || tm.role !== 'tm') { result.errors.push({ row: i + 2, message: `ТМ не найден: ${tmEmail}` }); continue; }
 
-      const address = await prisma.address.findFirst({ where: { fullAddress: { contains: objectCode } } });
-      if (!address) {
-        const addrByCode = await prisma.address.findFirst({ where: { fullAddress: objectCode } });
-        if (!addrByCode) { result.errors.push({ row: i + 2, message: `Адрес не найден по коду: ${objectCode}` }); continue; }
-      }
-      const addr = address || (await prisma.address.findFirst({ where: { fullAddress: objectCode } }))!;
+      const address = await prisma.address.findFirst({ where: { objectCode } });
+      if (!address) { result.errors.push({ row: i + 2, message: `Адрес не найден по коду: ${objectCode}` }); continue; }
 
-      const existing = await prisma.tmObject.findFirst({ where: { tmId: tm.id, addressId: addr.id } });
+      const existing = await prisma.tmObject.findFirst({ where: { tmId: tm.id, addressId: address.id } });
       if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
 
       if (isValidateMode(req)) continue;
 
-      await prisma.tmObject.create({ data: { tmId: tm.id, addressId: addr.id } });
+      await prisma.tmObject.create({ data: { tmId: tm.id, addressId: address.id } });
       result.success++;
     }
 
