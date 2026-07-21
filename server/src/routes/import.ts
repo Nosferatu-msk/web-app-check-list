@@ -148,7 +148,7 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const fullAddress = r.full_address || r.fullAddress || r['полный адрес'];
+      const fullAddress = (r.full_address || r.fullAddress || r['полный адрес'] || '').trim();
       if (!fullAddress) { result.errors.push({ row: i + 2, message: 'Не заполнен full_address' }); continue; }
 
       const existing = await prisma.address.findFirst({ where: { fullAddress } });
@@ -160,21 +160,37 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
         customerEmail = null;
       }
 
+      const objectCode = (r.object_code || r.objectCode || r['код объекта'] || '').trim() || null;
+
+      if (objectCode) {
+        const existingByCode = await prisma.address.findFirst({ where: { objectCode } });
+        if (existingByCode) { result.duplicates++; dupRows.push(i + 2); continue; }
+      }
+
       const validateMode = isValidateMode(req);
       if (validateMode) continue;
 
-      await prisma.address.create({
-        data: {
-          city: r.city || r['город'] || '',
-          street: r.street || r['улица'] || '',
-          house: r.house || r['дом'] || '',
-          building: r.building || r['строение'] || null,
-          fullAddress,
-          customerEmail,
-          objectCode: r.object_code || r.objectCode || r['код объекта'] || null,
-        },
-      });
-      result.success++;
+      try {
+        await prisma.address.create({
+          data: {
+            city: r.city || r['город'] || '',
+            street: r.street || r['улица'] || '',
+            house: r.house || r['дом'] || '',
+            building: r.building || r['строение'] || null,
+            fullAddress,
+            customerEmail,
+            objectCode,
+          },
+        });
+        result.success++;
+      } catch (createErr: any) {
+        if (createErr?.code === 'P2002') {
+          result.duplicates++;
+          dupRows.push(i + 2);
+        } else {
+          result.errors.push({ row: i + 2, message: createErr.message || 'Ошибка создания записи' });
+        }
+      }
     }
 
     if (isValidateMode(req)) {
