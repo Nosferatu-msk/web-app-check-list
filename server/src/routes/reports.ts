@@ -1,11 +1,15 @@
 import { Router, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import { authMiddleware, AuthRequest, tmOrAdmin } from '../middleware/auth.js';
 import prisma from '../models/prisma.js';
-import { generateReportHtml, generatePdf, buildReportFileName, generateSummaryReportHtml, generateObjectReportHtml } from '../services/report.js';
+import { generateReportHtml, generatePdf, buildReportFileName } from '../services/report.js';
+import { generateUnifiedReportHtml, UnifiedReportVisit } from '../services/unifiedReport.js';
+import { resizeForActScan } from '../services/imageProcessor.js';
 import { sendMail } from '../utils/email.js';
 import { logAudit } from '../middleware/audit.js';
+import { PDFDocument } from 'pdf-lib';
 
 const router = Router();
 router.use(authMiddleware);
@@ -117,181 +121,305 @@ async function getTmEngineerIds(tmId: string): Promise<string[]> {
   return assignments.map(a => a.engineerId);
 }
 
-function calculateDateRange(period: string, dateStr?: string): { from: Date; to: Date; label: string } {
-  const base = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
-  base.setHours(0, 0, 0, 0);
+const actScansDir = path.resolve('./uploads/act-scans');
+if (!fs.existsSync(actScansDir)) fs.mkdirSync(actScansDir, { recursive: true });
 
-  const from = new Date(base);
-  const to = new Date(base);
-  to.setHours(23, 59, 59, 999);
+// ─── POST /upload-act-scans — Загрузка сканов актов ────────────
 
-  const fmt = (d: Date) => d.toLocaleDateString('ru-RU');
+const ALLOWED_SCAN_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+const MAX_SCAN_SIZE = 50 * 1024 * 1024; // 50 MB total
+const MAX_SCAN_COUNT = 10;
 
-  switch (period) {
-    case 'day':
-      return { from, to, label: fmt(base) };
-    case 'week': {
-      const dayOfWeek = base.getDay() || 7; // Mon=1 .. Sun=7
-      from.setDate(base.getDate() - dayOfWeek + 1);
-      to.setDate(from.getDate() + 6);
-      to.setHours(23, 59, 59, 999);
-      return { from, to, label: `${fmt(from)} — ${fmt(to)}` };
-    }
-    case 'month': {
-      from.setDate(1);
-      const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-      to.setTime(lastDay.getTime());
-      to.setHours(23, 59, 59, 999);
-      return { from, to, label: `${fmt(from)} — ${fmt(to)}` };
-    }
-    default:
-      return { from, to, label: fmt(base) };
+router.post('/upload-act-scans', tmOrAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const multer = (await import('multer')).default;
+    const upload = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024, files: MAX_SCAN_COUNT },
+      fileFilter: (_req, file, cb) => {
+        if (ALLOWED_SCAN_TYPES.includes(file.mimetype)) cb(null, true);
+        else cb(new Error(`Недопустимый формат: ${file.mimetype}. Разрешены: JPG, PNG, PDF`));
+      },
+    }).array('files', MAX_SCAN_COUNT);
+
+    upload(req as any, res as any, async (err: any) => {
+      if (err) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+
+      const files = (req as any).files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        res.json({ scanIds: [] });
+        return;
+      }
+
+      let totalSize = 0;
+      const scanIds: string[] = [];
+
+      for (const file of files) {
+        totalSize += file.size;
+        if (totalSize > MAX_SCAN_SIZE) {
+          res.status(400).json({ error: 'Превышен максимальный размер (50 МБ). Удалите часть файлов.' });
+          return;
+        }
+
+        const isPdf = file.mimetype === 'application/pdf';
+        const uuid = crypto.randomUUID();
+        const ext = isPdf ? '.pdf' : '.jpg';
+        const savedName = `${uuid}_${file.originalname.replace(/[^a-zA-Zа-яА-Я0-9._\-]/g, '_').slice(0, 100)}${ext}`;
+        const savedPath = path.join(actScansDir, savedName);
+
+        if (isPdf) {
+          // Validate PDF
+          try {
+            await PDFDocument.load(file.buffer, { ignoreEncryption: false });
+          } catch {
+            res.status(400).json({ error: `Файл ${file.originalname} повреждён или защищён паролем.` });
+            return;
+          }
+          fs.writeFileSync(savedPath, file.buffer);
+        } else {
+          // Compress image
+          try {
+            const compressed = await resizeForActScanBuffer(file.buffer);
+            fs.writeFileSync(savedPath, compressed);
+          } catch {
+            res.status(400).json({ error: `Не удалось обработать изображение ${file.originalname}. Проверьте формат файла.` });
+            return;
+          }
+        }
+
+        const attachment = await prisma.reportAttachment.create({
+          data: {
+            filePath: savedPath,
+            fileType: isPdf ? 'pdf' : 'image',
+            originalName: file.originalname,
+            fileSize: fs.statSync(savedPath).size,
+            uploadedBy: req.userId!,
+          },
+        });
+        scanIds.push(attachment.id);
+      }
+
+      await logAudit({ userId: req.userId, action: 'upload_act_scans', entityType: 'report_attachment', ipAddress: req.ip, userAgent: req.headers['user-agent'], newValue: { count: scanIds.length } });
+      res.json({ scanIds });
+    });
+  } catch (err: any) {
+    console.error('Upload act scans error:', err);
+    res.status(500).json({ error: 'Ошибка загрузки сканов', details: err.message });
   }
+});
+
+async function resizeForActScanBuffer(buffer: Buffer): Promise<Buffer> {
+  const sharp = (await import('sharp')).default;
+  return sharp(buffer)
+    .resize({ width: 1200, withoutEnlargement: true })
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .jpeg({ quality: 80 })
+    .withMetadata({})
+    .toBuffer();
 }
 
-// ─── GET /summary — Сводный отчёт ──────────────────────────────
+// ─── POST /summary-generate — Унифицированный сводный отчёт ────
 
-router.get('/summary', tmOrAdmin, async (req: AuthRequest, res: Response) => {
+const summaryGenerateSchema = z.object({
+  type: z.enum(['period', 'objects']),
+  dateFrom: z.string(),
+  dateTo: z.string(),
+  addressIds: z.array(z.string().uuid()).optional(),
+  engineerId: z.string().uuid().optional(),
+  scanIds: z.array(z.string().uuid()).optional(),
+});
+
+router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const { period, date, engineerId, addressId } = req.query as Record<string, string>;
-    if (!period || !['day', 'week', 'month'].includes(period)) {
-      res.status(400).json({ error: 'Параметр period обязателен: day | week | month' });
+    const parsed = summaryGenerateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Ошибка валидации', details: parsed.error.flatten() });
+      return;
+    }
+    const { type, dateFrom, dateTo, addressIds, engineerId, scanIds } = parsed.data;
+
+    if (type === 'objects' && (!addressIds || addressIds.length === 0)) {
+      res.status(400).json({ error: 'Выберите хотя бы один объект' });
       return;
     }
 
-    const { from, to, label } = calculateDateRange(period, date);
+    const from = new Date(dateFrom + 'T00:00:00');
+    const to = new Date(dateTo + 'T23:59:59');
 
-    // Build where clause
     const where: any = {
       isDeleted: false,
       dateStart: { gte: from, lte: to },
       status: { in: ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'] },
     };
 
-    // Role-based filtering
+    if (type === 'objects') {
+      where.addressId = { in: addressIds };
+    }
     if (req.userRole === 'tm') {
       const engineerIds = await getTmEngineerIds(req.userId!);
       where.userId = { in: engineerIds };
     }
-
-    // Optional filters (admin or tm within their scope)
     if (engineerId) {
       where.userId = engineerId;
     }
-    if (addressId) {
-      where.addressId = addressId;
-    }
 
     const visits = await prisma.visit.findMany({
       where,
-      orderBy: { dateStart: 'desc' },
+      orderBy: { dateStart: 'asc' },
       include: {
         address: true,
+        user: { select: { specializationVik: true, specializationIszh: true } },
         tasks: {
           orderBy: { sortOrder: 'asc' },
-          include: { equipmentType: true, roomType: true },
+          include: {
+            equipmentType: true,
+            roomType: true,
+            photos: true,
+            equipmentItems: {
+              orderBy: { sortOrder: 'asc' },
+              include: {
+                objectEquipment: true,
+                photos: true,
+              },
+            },
+          },
         },
       },
     });
 
-    // Load recommendations for resolving IDs to text
     const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
     const recMap = new Map(recommendations.map(r => [r.id, r.text]));
 
-    // Fetch engineer specialization if report is filtered by a specific engineer
-    let engineerSpecialization: string | undefined;
-    if (engineerId) {
-      const engineer = await prisma.user.findUnique({
-        where: { id: engineerId },
-        select: { specializationVik: true, specializationIszh: true },
-      });
-      if (engineer) {
-        if (engineer.specializationVik && engineer.specializationIszh) {
-          engineerSpecialization = 'ВиК + ИСЖ';
-        } else if (engineer.specializationVik) {
-          engineerSpecialization = 'ВиК';
-        } else if (engineer.specializationIszh) {
-          engineerSpecialization = 'ИСЖ';
+    const user = await prisma.user.findUnique({ where: { id: req.userId! }, select: { fullName: true, role: true } });
+
+    const unifiedVisits: UnifiedReportVisit[] = visits.map(v => ({
+      id: v.id,
+      dateStart: v.dateStart,
+      timeStart: v.timeStart,
+      timeEnd: v.timeEnd,
+      engineerName: v.engineerName,
+      season: v.season,
+      status: v.status,
+      address: { fullAddress: v.address.fullAddress },
+      engineerSpec: v.user ? { specializationVik: v.user.specializationVik, specializationIszh: v.user.specializationIszh } : undefined,
+      tasks: v.tasks.map(t => ({
+        id: t.id,
+        taskType: t.taskType,
+        conclusion: t.conclusion,
+        comment: t.comment,
+        parameters: t.parameters,
+        selectedRecommendationIds: t.selectedRecommendationIds || undefined,
+        additionalRecommendations: t.additionalRecommendations || undefined,
+        equipmentType: t.equipmentType ? { name: t.equipmentType.name } : undefined,
+        roomType: t.roomType ? { name: t.roomType.name } : undefined,
+        photos: t.photos.map(p => ({ fileName: p.fileName, filePath: p.filePath, moment: p.moment })),
+        equipmentItems: t.equipmentItems?.map(ei => ({
+          id: ei.id,
+          status: ei.status,
+          objectEquipment: ei.objectEquipment ? {
+            equipmentTypeCode: ei.objectEquipment.equipmentTypeCode,
+            brand: ei.objectEquipment.brand,
+            model: ei.objectEquipment.model,
+            serialNumber: ei.objectEquipment.serialNumber,
+            isOutdoorUnit: ei.objectEquipment.isOutdoorUnit,
+          } : undefined,
+          photos: ei.photos.map(p => ({ fileName: p.fileName, filePath: p.filePath, moment: p.moment })),
+        })),
+      })),
+    }));
+
+    const html = await generateUnifiedReportHtml(unifiedVisits, {
+      type,
+      dateFrom: from.toLocaleDateString('ru-RU'),
+      dateTo: to.toLocaleDateString('ru-RU'),
+      generatedBy: { fullName: user?.fullName || 'Неизвестно', role: user?.role || 'unknown' },
+      recMap,
+    });
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const safePrefix = type === 'period' ? 'summary' : 'objects';
+    const pdfPath = path.join(reportsDir, `${safePrefix}_unified_${dateStr}_${Date.now()}.pdf`);
+    await generatePdf(html, pdfPath);
+
+    // Merge act scans if provided
+    if (scanIds && scanIds.length > 0) {
+      const attachments = await prisma.reportAttachment.findMany({ where: { id: { in: scanIds } } });
+
+      const pdfBuffers: Buffer[] = [fs.readFileSync(pdfPath)];
+      const pdfAttachments = attachments.filter(a => a.fileType === 'pdf');
+      const imageAttachments = attachments.filter(a => a.fileType === 'image');
+
+      // Add image scans as pages (already compressed)
+      if (imageAttachments.length > 0) {
+        const { PDFDocument: PDFDoc } = await import('pdf-lib');
+        const mainDoc = await PDFDoc.load(pdfBuffers[0]);
+
+        for (const att of imageAttachments) {
+          const imgBuf = fs.readFileSync(att.filePath);
+          const jpgImage = await mainDoc.embedJpg(imgBuf);
+          const page = mainDoc.addPage([595.28, 841.89]); // A4
+          const { width, height } = jpgImage.scale(1);
+          const maxWidth = 595.28 - 60;
+          const maxHeight = 841.89 - 60;
+          const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+          page.drawImage(jpgImage, {
+            x: (595.28 - width * scale) / 2,
+            y: (841.89 - height * scale) / 2,
+            width: width * scale,
+            height: height * scale,
+          });
         }
+
+        // Merge PDF attachments
+        for (const att of pdfAttachments) {
+          const attBuf = fs.readFileSync(att.filePath);
+          const attDoc = await PDFDoc.load(attBuf);
+          const pages = await mainDoc.copyPages(attDoc, attDoc.getPageIndices());
+          pages.forEach(p => mainDoc.addPage(p));
+        }
+
+        const finalPdf = await mainDoc.save();
+        fs.writeFileSync(pdfPath, finalPdf);
+      } else if (pdfAttachments.length > 0) {
+        // Only PDF attachments, no images
+        const mainPdf = fs.readFileSync(pdfPath);
+        const mainDoc = await PDFDocument.load(mainPdf);
+        for (const att of pdfAttachments) {
+          const attBuf = fs.readFileSync(att.filePath);
+          const attDoc = await PDFDocument.load(attBuf);
+          const pages = await mainDoc.copyPages(attDoc, attDoc.getPageIndices());
+          pages.forEach(p => mainDoc.addPage(p));
+        }
+        fs.writeFileSync(pdfPath, await mainDoc.save());
       }
-    }
 
-    const html = generateSummaryReportHtml(visits, period, label, recMap, engineerSpecialization);
-
-    const pdfPath = path.join(reportsDir, `summary_${period}_${from.toISOString().slice(0, 10)}.pdf`);
-    await generatePdf(html, pdfPath);
-
-    await logAudit({ userId: req.userId, action: 'generate_summary_report', entityType: 'report', ipAddress: req.ip, userAgent: req.headers['user-agent'], newValue: { period, date, label } });
-
-    res.download(pdfPath, `summary_${period}_${from.toISOString().slice(0, 10)}.pdf`);
-  } catch (err: any) {
-    console.error('Summary report error:', err);
-    res.status(500).json({ error: 'Ошибка формирования сводного отчёта', details: err.message });
-  }
-});
-
-// ─── GET /by-object — Отчёт по объекту ─────────────────────────
-
-router.get('/by-object', tmOrAdmin, async (req: AuthRequest, res: Response) => {
-  try {
-    const { addressId, dateFrom, dateTo } = req.query as Record<string, string>;
-    if (!addressId) {
-      res.status(400).json({ error: 'Параметр addressId обязателен' });
-      return;
-    }
-
-    const to = dateTo ? new Date(dateTo + 'T23:59:59') : new Date();
-    to.setHours(23, 59, 59, 999);
-    const from = dateFrom ? new Date(dateFrom + 'T00:00:00') : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    from.setHours(0, 0, 0, 0);
-
-    // Verify address exists
-    const address = await prisma.address.findUnique({ where: { id: addressId } });
-    if (!address) {
-      res.status(404).json({ error: 'Адрес не найден' });
-      return;
-    }
-
-    const where: any = {
-      isDeleted: false,
-      addressId,
-      dateStart: { gte: from, lte: to },
-    };
-
-    // TM can only see their engineers' visits
-    if (req.userRole === 'tm') {
-      const engineerIds = await getTmEngineerIds(req.userId!);
-      where.userId = { in: engineerIds };
-    }
-
-    const visits = await prisma.visit.findMany({
-      where,
-      orderBy: { dateStart: 'desc' },
-      include: {
-        address: true,
-        tasks: {
-          orderBy: { sortOrder: 'asc' },
-          include: { equipmentType: true, roomType: true, photos: true },
+      // Link scans to a report task record
+      await prisma.reportTask.create({
+        data: {
+          type,
+          params: { dateFrom, dateTo, addressIds },
+          status: 'ready',
+          pdfPath,
+          createdBy: req.userId!,
+          completedAt: new Date(),
+          attachments: { connect: scanIds.map(id => ({ id })) },
         },
-      },
-    });
+      });
+    }
 
-    const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
-    const recMap = new Map(recommendations.map(r => [r.id, r.text]));
+    await logAudit({ userId: req.userId, action: 'generate_unified_report', entityType: 'report', ipAddress: req.ip, userAgent: req.headers['user-agent'], newValue: { type, dateFrom, dateTo, addressIds } });
 
-    const dateRangeLabel = `${from.toLocaleDateString('ru-RU')} — ${to.toLocaleDateString('ru-RU')}`;
-    const html = generateObjectReportHtml(visits, address, dateRangeLabel, recMap);
+    const downloadName = type === 'period'
+      ? `Svodnyj_otchet_${dateFrom.replace(/\./g, '-')}_${dateTo.replace(/\./g, '-')}.pdf`
+      : `Otchet_po_obektam_${dateFrom.replace(/\./g, '-')}_${dateTo.replace(/\./g, '-')}.pdf`;
 
-    const safeAddr = address.fullAddress.replace(/[^a-zA-Zа-яА-Я0-9_\-]/g, '_').replace(/_+/g, '_').slice(0, 50);
-    const pdfPath = path.join(reportsDir, `object_${safeAddr}_${from.toISOString().slice(0, 10)}.pdf`);
-    await generatePdf(html, pdfPath);
-
-    await logAudit({ userId: req.userId, action: 'generate_object_report', entityType: 'report', ipAddress: req.ip, userAgent: req.headers['user-agent'], newValue: { addressId, dateFrom, dateTo } });
-
-    res.download(pdfPath, `object_${safeAddr}.pdf`);
+    res.download(pdfPath, downloadName);
   } catch (err: any) {
-    console.error('Object report error:', err);
-    res.status(500).json({ error: 'Ошибка формирования отчёта по объекту', details: err.message });
+    console.error('Unified report generation error:', err);
+    res.status(500).json({ error: 'Ошибка формирования сводного отчёта', details: err.message });
   }
 });
 

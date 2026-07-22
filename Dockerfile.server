@@ -9,7 +9,7 @@ RUN npm run build
 
 FROM node:20-alpine
 WORKDIR /app
-RUN apk add --no-cache chromium && rm -rf /var/cache/apk/*
+RUN apk add --no-cache chromium vips && rm -rf /var/cache/apk/*
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 COPY --from=builder /app/node_modules ./node_modules
@@ -18,6 +18,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY server/package*.json ./
-RUN mkdir -p uploads reports
+RUN mkdir -p uploads/act-scans reports
 EXPOSE 3001
 CMD ["node", "dist/index.js"]

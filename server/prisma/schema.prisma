@@ -71,6 +71,8 @@ model User {
   reviewedProposals        EquipmentProposal[]  @relation("reviewedBy")
   favoriteObjects          UserFavoriteObject[]
   confirmedObjectEquipment ObjectEquipment[]    @relation("objectEquipmentRoomConfirm")
+  reportAttachments        ReportAttachment[]   @relation("ReportAttachmentUploader")
+  reportTasks              ReportTask[]         @relation("ReportTaskCreator")
 
   @@map("users")
 }
@@ -385,4 +387,39 @@ model UserFavoriteObject {
   @@unique([userId, objectCode])
   @@index([userId])
   @@map("user_favorite_objects")
+}
+
+model ReportAttachment {
+  id           String   @id @default(uuid())
+  reportTaskId String?  @map("report_task_id")
+  filePath     String   @map("file_path")
+  fileType     String   @map("file_type")
+  originalName String?  @map("original_name")
+  fileSize     Int?     @map("file_size")
+  uploadedBy   String   @map("uploaded_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  reportTask ReportTask? @relation(fields: [reportTaskId], references: [id], onDelete: SetNull)
+  uploader   User        @relation("ReportAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([reportTaskId])
+  @@map("report_attachments")
+}
+
+model ReportTask {
+  id            String    @id @default(uuid())
+  type          String
+  params        Json
+  status        String    @default("processing")
+  pdfPath       String?   @map("pdf_path")
+  photosZipPath String?   @map("photos_zip_path")
+  errorMessage  String?   @map("error_message")
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  completedAt   DateTime? @map("completed_at")
+
+  creator     User               @relation("ReportTaskCreator", fields: [createdBy], references: [id])
+  attachments ReportAttachment[]
+
+  @@map("report_tasks")
 }

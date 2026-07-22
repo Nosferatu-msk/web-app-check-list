@@ -187,38 +187,69 @@ const userSchema = z.object({
   role: z.enum(['engineer', 'tm', 'admin']),
   isActive: z.boolean().optional(),
   mustChangePassword: z.boolean().optional(),
+  specializationVik: z.boolean().optional(),
+  specializationIszh: z.boolean().optional(),
 });
 
-router.get('/users', async (_req: AuthRequest, res: Response) => {
-  const data = await prisma.user.findMany({ select: { id: true, fullName: true, email: true, role: true, isActive: true, createdAt: true }, orderBy: { fullName: 'asc' } });
+router.get('/users', async (req: AuthRequest, res: Response) => {
+  const search = req.query.search as string;
+  const where: any = {};
+  if (search) {
+    where.OR = [
+      { fullName: { contains: search, mode: 'insensitive' as const } },
+      { email: { contains: search, mode: 'insensitive' as const } },
+    ];
+  }
+  const data = await prisma.user.findMany({
+    where,
+    select: { id: true, fullName: true, email: true, role: true, isActive: true, specializationVik: true, specializationIszh: true, createdAt: true },
+    orderBy: { fullName: 'asc' },
+    take: 50,
+  });
   res.json(data);
 });
 
 router.post('/users', validate(userSchema), async (req: AuthRequest, res: Response) => {
-  const { password, ...rest } = req.body;
+  const { password, role, specializationVik, specializationIszh, ...rest } = req.body;
+  if (role === 'engineer' && !specializationVik && !specializationIszh) {
+    res.status(400).json({ error: 'Выберите хотя бы одну специализацию (ВиК или ИСЖ)' });
+    return;
+  }
   const passwordHash = await bcrypt.hash(password || 'default123', 12);
   const item = await prisma.user.create({
     data: {
       ...rest,
+      role,
       passwordHash,
-      specializationVik: rest.role === 'engineer' ? false : false,
-      specializationIszh: rest.role === 'engineer' ? true : false,
+      specializationVik: role === 'engineer' ? (specializationVik ?? false) : false,
+      specializationIszh: role === 'engineer' ? (specializationIszh ?? true) : false,
     },
   });
-  await logAudit({ userId: req.userId, action: 'create', entityType: 'user', entityId: item.id, newValue: { fullName: rest.fullName, email: rest.email, role: rest.role }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
-  res.status(201).json({ id: item.id, fullName: item.fullName, email: item.email, role: item.role, isActive: item.isActive });
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'user', entityId: item.id, newValue: { fullName: rest.fullName, email: rest.email, role, specializationVik: item.specializationVik, specializationIszh: item.specializationIszh }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json({ id: item.id, fullName: item.fullName, email: item.email, role: item.role, isActive: item.isActive, specializationVik: item.specializationVik, specializationIszh: item.specializationIszh });
 });
 
-router.put('/users/:id', async (req: AuthRequest, res: Response) => {
-  const { password, ...rest } = req.body;
-  const data: any = { ...rest };
+router.put('/users/:id', validate(userSchema), async (req: AuthRequest, res: Response) => {
+  const { password, role, specializationVik, specializationIszh, ...rest } = req.body;
+  if (role === 'engineer' && !specializationVik && !specializationIszh) {
+    res.status(400).json({ error: 'Выберите хотя бы одну специализацию (ВиК или ИСЖ)' });
+    return;
+  }
+  const data: any = { ...rest, role };
   if (password) data.passwordHash = await bcrypt.hash(password, 12);
+  if (role === 'engineer') {
+    data.specializationVik = specializationVik ?? false;
+    data.specializationIszh = specializationIszh ?? false;
+  } else {
+    data.specializationVik = false;
+    data.specializationIszh = false;
+  }
   const item = await prisma.user.update({
     where: { id: req.params.id as string },
     data,
     select: { id: true, fullName: true, email: true, role: true, isActive: true, specializationVik: true, specializationIszh: true },
   });
-  await logAudit({ userId: req.userId, action: 'update', entityType: 'user', entityId: item.id, newValue: rest, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  await logAudit({ userId: req.userId, action: 'update', entityType: 'user', entityId: item.id, newValue: { ...rest, role, specializationVik: item.specializationVik, specializationIszh: item.specializationIszh }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(item);
 });
 

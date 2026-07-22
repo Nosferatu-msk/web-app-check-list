@@ -160,7 +160,7 @@ export const api = {
   sendReport: (visitId: string, data: { email: string; cc?: string; comment?: string }) =>
     request<any>(`/reports/${visitId}/report/send`, { method: 'POST', body: JSON.stringify(data) }),
 
-  // Summary & Object reports
+  // Summary & Object reports (legacy — kept for backward compatibility)
   downloadSummaryReport: async (params: { period: string; date?: string; engineerId?: string; addressId?: string }): Promise<void> => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
@@ -204,6 +204,58 @@ export const api = {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  },
+
+  // Unified summary report (new)
+  generateUnifiedReport: async (data: {
+    type: 'period' | 'objects';
+    dateFrom: string;
+    dateTo: string;
+    addressIds?: string[];
+    engineerId?: string;
+    scanIds?: string[];
+  }): Promise<void> => {
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${API_BASE}/reports/summary-generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || res.statusText);
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition') || '';
+    const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)/i);
+    const fileName = match ? decodeURIComponent(match[1]) : (data.type === 'period' ? 'svodnyj_otchet.pdf' : 'otchet_po_obektam.pdf');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  uploadActScans: async (files: File[]): Promise<{ scanIds: string[] }> => {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${API_BASE}/reports/upload-act-scans`, {
+      method: 'POST',
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || res.statusText);
+    }
+    return res.json();
   },
 
   // Admin
