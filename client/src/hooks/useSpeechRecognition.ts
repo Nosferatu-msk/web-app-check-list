@@ -22,6 +22,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoppedByUserRef = useRef(false);
+  const accumulatedRef = useRef('');
+  const lastProcessedIndexRef = useRef(0);
 
   const SpeechRecognitionAPI = typeof window !== 'undefined'
     ? (window.SpeechRecognition || window.webkitSpeechRecognition)
@@ -54,6 +56,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     setError(null);
     setInterimTranscript('');
     setFinalTranscript('');
+    accumulatedRef.current = '';
+    lastProcessedIndexRef.current = 0;
     stoppedByUserRef.current = false;
 
     const recognition = new SpeechRecognitionAPI();
@@ -70,29 +74,32 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       resetSilenceTimer();
 
       let interim = '';
-      let final = '';
+      let newFinal = '';
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = lastProcessedIndexRef.current; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          final += result[0].transcript;
+          newFinal += result[0].transcript;
+          lastProcessedIndexRef.current = i + 1;
         } else {
           interim += result[0].transcript;
         }
       }
 
-      if (final) {
-        setFinalTranscript(prev => prev + final);
+      if (newFinal) {
+        accumulatedRef.current += newFinal;
+        setFinalTranscript(accumulatedRef.current);
       }
       setInterimTranscript(interim);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (event.error === 'aborted') return;
+
       const ERROR_MESSAGES: Record<string, string> = {
         'not-allowed': 'Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.',
         'no-speech': 'Речь не обнаружена. Попробуйте ещё раз.',
         'network': 'Ошибка сети. Проверьте подключение к интернету.',
-        'aborted': 'Распознавание прервано.',
         'audio-capture': 'Микрофон не найден.',
       };
       setError(ERROR_MESSAGES[event.error] || 'Не удалось распознать речь. Попробуйте ещё раз.');
@@ -128,6 +135,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const resetTranscript = useCallback(() => {
     setFinalTranscript('');
     setInterimTranscript('');
+    accumulatedRef.current = '';
+    lastProcessedIndexRef.current = 0;
   }, []);
 
   useEffect(() => {
