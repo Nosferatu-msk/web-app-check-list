@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { Input, Tooltip, App } from 'antd';
-import { AudioOutlined, LoadingOutlined, SoundOutlined } from '@ant-design/icons';
+import { AudioOutlined } from '@ant-design/icons';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 const { TextArea } = Input;
@@ -21,25 +21,23 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
     isListening,
     isSupported,
     interimTranscript,
-    finalTranscript,
+    newFinalText,
     startListening,
     stopListening,
-    resetTranscript,
+    clearNewText,
     error,
   } = useSpeechRecognition();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const cursorPosRef = useRef<number | null>(null);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
-  // When finalTranscript arrives, insert it into the field
+  // Insert only the NEW chunk of recognized text
   useEffect(() => {
-    if (!finalTranscript) return;
+    if (!newFinalText) return;
 
-    const trimmed = finalTranscript.trim();
+    const trimmed = newFinalText.trim();
     if (!trimmed) {
-      resetTranscript();
+      clearNewText();
       return;
     }
 
@@ -47,21 +45,22 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
     const pos = cursorPosRef.current;
 
     let newValue: string;
-    if (pos !== null && pos >= 0) {
+    if (pos !== null && pos >= 0 && pos <= currentValue.length) {
       const before = currentValue.slice(0, pos);
       const after = currentValue.slice(pos);
-      const separator = before.endsWith(' ') || after.startsWith(' ') ? '' : ' ';
-      newValue = before + separator + trimmed + (after.startsWith(' ') ? '' : ' ') + after;
+      const sepBefore = before.endsWith(' ') ? '' : ' ';
+      const sepAfter = after.startsWith(' ') ? '' : ' ';
+      newValue = before + sepBefore + trimmed + sepAfter + after;
+      cursorPosRef.current = (before + sepBefore + trimmed + sepAfter).length;
     } else {
       newValue = currentValue ? currentValue.trimEnd() + ' ' + trimmed : trimmed;
+      cursorPosRef.current = newValue.length;
     }
 
     onChange?.(newValue);
-    resetTranscript();
-    cursorPosRef.current = null;
-  }, [finalTranscript]);
+    clearNewText();
+  }, [newFinalText]);
 
-  // Show error messages
   useEffect(() => {
     if (error) {
       if (error.includes('запрещён')) {
@@ -73,21 +72,18 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
   }, [error]);
 
   const handleClick = () => {
-    if (!isOnline) return;
+    if (!isOnline()) return;
 
     if (isListening) {
       stopListening();
       return;
     }
 
-    // Privacy notice on first use
     if (!localStorage.getItem(PRIVACY_KEY)) {
-      setShowPrivacy(true);
       antMessage.info('Голосовой ввод использует сервисы распознавания речи вашего браузера. Не диктуйте конфиденциальную информацию.');
       localStorage.setItem(PRIVACY_KEY, 'true');
     }
 
-    // Save cursor position before starting
     const ta = textareaRef.current;
     if (ta) {
       cursorPosRef.current = ta.selectionStart ?? value.length;
@@ -97,6 +93,8 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
 
     startListening();
   };
+
+  const isOnline = () => typeof navigator !== 'undefined' ? navigator.onLine : true;
 
   if (!isSupported) {
     return (
@@ -111,23 +109,19 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
     );
   }
 
-  const isDisabled = disabled || !isOnline;
+  const isDisabled = disabled || !isOnline();
 
   let micColor = '#94A3B8';
-  let micIcon = <AudioOutlined />;
   let tooltipText = 'Нажмите для голосового ввода';
 
-  if (!isOnline) {
+  if (!isOnline()) {
     micColor = '#d1d5db80';
-    micIcon = <AudioOutlined />;
-    tooltipText = 'Голосовой ввод недоступен без подключения к интернету. Используйте текстовый ввод.';
+    tooltipText = 'Голосовой ввод недоступен без подключения к интернету';
   } else if (isListening) {
     micColor = '#ef4444';
-    micIcon = <AudioOutlined />;
     tooltipText = 'Идёт запись… Нажмите для остановки';
   } else if (error) {
     micColor = '#ef4444';
-    micIcon = <AudioOutlined />;
     tooltipText = error;
   }
 
@@ -135,7 +129,7 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
     <div style={{ position: 'relative' }}>
       <TextArea
         ref={textareaRef as any}
-        value={isListening && interimTranscript ? value : value}
+        value={value}
         onChange={(e) => onChange?.(e.target.value)}
         rows={rows}
         placeholder={placeholder}
@@ -143,7 +137,6 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
         style={{ paddingRight: 36 }}
       />
 
-      {/* Interim transcript overlay */}
       {isListening && interimTranscript && (
         <div style={{
           position: 'absolute',
@@ -162,7 +155,6 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
         </div>
       )}
 
-      {/* Mic button */}
       <Tooltip title={tooltipText} placement="left">
         <button
           type="button"
@@ -188,11 +180,10 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
             animation: isListening ? 'pulse-mic 1.5s ease-in-out infinite' : 'none',
           }}
         >
-          {micIcon}
+          <AudioOutlined />
         </button>
       </Tooltip>
 
-      {/* Pulse animation */}
       <style>{`
         @keyframes pulse-mic {
           0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }

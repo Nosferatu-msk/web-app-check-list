@@ -4,10 +4,10 @@ interface UseSpeechRecognitionReturn {
   isListening: boolean;
   isSupported: boolean;
   interimTranscript: string;
-  finalTranscript: string;
+  newFinalText: string;
   startListening: () => void;
   stopListening: () => void;
-  resetTranscript: () => void;
+  clearNewText: () => void;
   error: string | null;
 }
 
@@ -16,14 +16,13 @@ const SILENCE_TIMEOUT_MS = 5000;
 export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState('');
-  const [finalTranscript, setFinalTranscript] = useState('');
+  const [newFinalText, setNewFinalText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoppedByUserRef = useRef(false);
-  const accumulatedRef = useRef('');
-  const lastProcessedIndexRef = useRef(0);
+  const lastResultCountRef = useRef(0);
 
   const SpeechRecognitionAPI = typeof window !== 'undefined'
     ? (window.SpeechRecognition || window.webkitSpeechRecognition)
@@ -55,9 +54,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
     setError(null);
     setInterimTranscript('');
-    setFinalTranscript('');
-    accumulatedRef.current = '';
-    lastProcessedIndexRef.current = 0;
+    setNewFinalText('');
+    lastResultCountRef.current = 0;
     stoppedByUserRef.current = false;
 
     const recognition = new SpeechRecognitionAPI();
@@ -74,21 +72,21 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       resetSilenceTimer();
 
       let interim = '';
-      let newFinal = '';
+      let chunk = '';
 
-      for (let i = lastProcessedIndexRef.current; i < event.results.length; i++) {
+      for (let i = lastResultCountRef.current; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          newFinal += result[0].transcript;
-          lastProcessedIndexRef.current = i + 1;
+          chunk += result[0].transcript;
         } else {
           interim += result[0].transcript;
         }
       }
 
-      if (newFinal) {
-        accumulatedRef.current += newFinal;
-        setFinalTranscript(accumulatedRef.current);
+      lastResultCountRef.current = event.results.length;
+
+      if (chunk) {
+        setNewFinalText(prev => prev + chunk);
       }
       setInterimTranscript(interim);
     };
@@ -132,11 +130,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     setIsListening(false);
   }, [clearSilenceTimer]);
 
-  const resetTranscript = useCallback(() => {
-    setFinalTranscript('');
-    setInterimTranscript('');
-    accumulatedRef.current = '';
-    lastProcessedIndexRef.current = 0;
+  const clearNewText = useCallback(() => {
+    setNewFinalText('');
   }, []);
 
   useEffect(() => {
@@ -153,10 +148,10 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     isListening,
     isSupported,
     interimTranscript,
-    finalTranscript,
+    newFinalText,
     startListening,
     stopListening,
-    resetTranscript,
+    clearNewText,
     error,
   };
 }
