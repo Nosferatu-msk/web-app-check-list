@@ -59,6 +59,81 @@ const PARAM_LABELS: Record<string, string> = {
   air_locks: 'Наличие завоздушивания системы',
   instruments_ok: 'Контрольно-измерительные приборы исправны',
   heating_temperature: 'Температуры приборов отопления',
+  // ДГУ / МКГУ
+  engine_condition: 'Состояние двигателя',
+  oil_level: 'Уровень масла',
+  fuel_level: 'Уровень топлива',
+  air_filter: 'Состояние воздушного фильтра',
+  battery_condition: 'Состояние АКБ',
+  manual_start: 'Ручной запуск исправен',
+  runtime_hours: 'Наработка, моточасы',
+  spark_plug: 'Состояние свечи зажигания',
+  // ИБП
+  battery_capacity: 'Ёмкость батарей, %',
+  ventilation: 'Вентиляция в помещении',
+  error_indicators: 'Индикаторы ошибок',
+  temperature: 'Температура в помещении, °C',
+  // Лифты
+  cabin_condition: 'Состояние кабины',
+  door_mechanism: 'Механизм дверей',
+  guide_rails: 'Состояние направляющих рельсов',
+  emergency_phone: 'Телефон аварийной связи',
+  lighting: 'Освещение кабины',
+  floor_leveling: 'Точность остановки (выравнивание пола)',
+  // Подъёмные платформы
+  platform_condition: 'Состояние платформы',
+  limit_switches: 'Концевые выключатели',
+  presence_sensors: 'Датчики присутствия',
+  emergency_lowering: 'Механизм аварийного опускания',
+  surface_condition: 'Состояние поверхности платформы',
+  // ИТП / Котлы
+  heat_exchangers: 'Состояние теплообменников',
+  circulation_pumps: 'Циркуляционные насосы',
+  safety_automation: 'Автоматика безопасности',
+  filters_condition: 'Состояние фильтров/грязевиков',
+  system_pressure: 'Давление в системе, бар',
+  heat_exchanger: 'Состояние теплообменника',
+  combustion_chamber: 'Герметичность камеры сгорания',
+  chimney_draft: 'Тяга в дымоходе',
+  safety_valves: 'Предохранительные клапаны',
+  water_temperature: 'Температура теплоносителя, °C',
+  body_integrity: 'Целостность корпуса',
+  // Сололифт
+  chamber_condition: 'Состояние внутренней камеры',
+  check_valve: 'Обратный клапан',
+  float_sensor: 'Поплавковый датчик уровня',
+  auto_start: 'Автоматическое включение',
+  // Мобильный кондиционер
+  duct_condition: 'Состояние гофрированного воздуховода',
+  remote_control: 'Пульт ДУ исправен',
+  // Шлагбаумы / Автодвери
+  mechanism_condition: 'Состояние механизмов',
+  photoelements: 'Фотоэлементы/датчики препятствий',
+  manual_release: 'Ручной разблокировочный механизм',
+  anchor_fastening: 'Крепление анкеров',
+  gearbox_play: 'Люфт редуктора',
+  lubrication: 'Смазка механизмов',
+  // Кофе машина
+  brewing_unit: 'Состояние заварочного блока',
+  descaling: 'Необходимость декальцинации',
+  water_filters: 'Водяные фильтры',
+  cappuccinator: 'Капучинатор',
+  display_errors: 'Ошибки на дисплее',
+  // Пурифаер
+  pre_filter: 'Фильтр предварительной очистки',
+  hepa_filter: 'HEPA-фильтр',
+  air_quality_sensor: 'Датчик качества воздуха',
+  fan_operation: 'Работа вентилятора',
+  // Куллер
+  hot_water_temp: 'Температура горячей воды, °C',
+  cold_water_temp: 'Температура холодной воды, °C',
+  tank_condition: 'Состояние баков',
+  // Аквариум / Пузырьковая панель
+  glass_condition: 'Состояние стёкол',
+  compressor: 'Компрессор/аэратор',
+  hose_integrity: 'Герметичность шлангов',
+  water_condition: 'Состояние воды',
+  air_intensity: 'Интенсивность подачи воздуха',
 };
 
 const SEASON_MAP: Record<string, string> = { summer: 'Лето', winter: 'Зима' };
@@ -68,13 +143,32 @@ function formatBool(val: unknown): string { return val ? 'Да' : 'Нет'; }
 function formatParamValue(key: string, val: unknown): string {
   if (val === null || val === undefined) return '—';
   if (typeof val === 'boolean') return formatBool(val);
-  if (val === 'satisfactory') return 'Удовлетворительно';
-  if (val === 'unsatisfactory') return 'Неудовлетворительно';
-  if (val === 'clean') return 'Чистый';
-  if (val === 'needs_replacement') return 'Требует замену';
-  if (val === 'needs_cleaning') return 'Необходима очистка';
-  if (val === 'on') return 'Включена';
-  if (val === 'off') return 'Выключена';
+  const VALUE_MAP: Record<string, string> = {
+    satisfactory: 'Удовлетворительно',
+    unsatisfactory: 'Неудовлетворительно',
+    clean: 'Чистый',
+    needs_replacement: 'Требует замены',
+    needs_cleaning: 'Необходима очистка',
+    needs_topup: 'Требуется доливка',
+    on: 'Включена',
+    off: 'Выключена',
+    normal: 'В норме',
+    below_normal: 'Ниже нормы',
+    full: 'Полный',
+    medium: 'Средний',
+    low: 'Низкий',
+    ok: 'Исправно',
+    defective: 'Дефекты',
+    damaged: 'Повреждён',
+    sufficient: 'Достаточная',
+    needed: 'Требуется',
+    weak: 'Слабая',
+    none: 'Отсутствует',
+    mains: 'От сети',
+    battery: 'От батарей',
+    bypass: 'Байпас',
+  };
+  if (typeof val === 'string' && VALUE_MAP[val]) return VALUE_MAP[val];
   return String(val);
 }
 
