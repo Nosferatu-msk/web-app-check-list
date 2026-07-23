@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Collapse, Tag, Modal, List, Empty } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined, DeleteOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
+import VoiceInput from '../components/VoiceInput';
 import { useAutoSave } from '../hooks/useAutoSave';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -298,7 +299,7 @@ export default function GroupTaskPage() {
                   name="additionalRecommendations"
                   rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
                 >
-                  <TextArea rows={3} placeholder="Опишите проблему или рекомендации..." />
+                  <VoiceInput rows={3} placeholder="Опишите проблему или рекомендации..." />
                 </Form.Item>
               );
             }}
