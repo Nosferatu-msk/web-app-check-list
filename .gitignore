@@ -23,6 +23,7 @@ node_modules/
 # Сборка
 dist/
 build/
+*.tsbuildinfo
 
 # Переменные окружения
 .env
