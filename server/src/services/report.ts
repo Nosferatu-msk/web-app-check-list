@@ -113,14 +113,17 @@ export async function generateReportHtml(visitId: string): Promise<string> {
 
   const visitUser = await prisma.user.findUnique({
     where: { id: visit.userId },
-    select: { specializationVik: true, specializationIszh: true },
+    select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
   });
-  let specializationLabel = '';
+  const specParts: string[] = [];
   if (visitUser) {
-    if (visitUser.specializationVik && visitUser.specializationIszh) specializationLabel = 'ВиК + ИСЖ';
-    else if (visitUser.specializationVik) specializationLabel = 'ВиК';
-    else if (visitUser.specializationIszh) specializationLabel = 'ИСЖ';
+    if (visitUser.specializationVik) specParts.push('ВиК');
+    if (visitUser.specializationIszh) specParts.push('ИСЖ');
+    if (visitUser.specializationGpm) specParts.push('ГПМ');
+    if (visitUser.specializationDgu) specParts.push('ДГУ');
+    if (visitUser.specializationIbp) specParts.push('ИБП');
   }
+  const specializationLabel = specParts.join(' + ');
 
   const ITEM_TYPE_NAMES: Record<string, string> = {
     splitvn: 'Внутр. блок СС', mssvn: 'Внутр. блок МСС', vrv_vn: 'Внутр. блок VRV',

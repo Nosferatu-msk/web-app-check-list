@@ -15,6 +15,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     select: {
       id: true, fullName: true, email: true, role: true,
       specializationVik: true, specializationIszh: true,
+      specializationGpm: true, specializationDgu: true, specializationIbp: true,
       mustChangePassword: true, isActive: true,
     },
   });
@@ -24,10 +25,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
 // PATCH /api/profile/specialization — update specialization
 router.patch('/specialization', async (req: AuthRequest, res: Response) => {
-  const { specializationVik, specializationIszh } = req.body;
+  const { specializationVik, specializationIszh, specializationGpm, specializationDgu, specializationIbp } = req.body;
 
-  // At least one must be true
-  if (!specializationVik && !specializationIszh) {
+  if (!specializationVik && !specializationIszh && !specializationGpm && !specializationDgu && !specializationIbp) {
     res.status(400).json({ error: 'Необходимо выбрать хотя бы одну специализацию' });
     return;
   }
@@ -37,11 +37,14 @@ router.patch('/specialization', async (req: AuthRequest, res: Response) => {
     data: {
       specializationVik: !!specializationVik,
       specializationIszh: !!specializationIszh,
+      specializationGpm: !!specializationGpm,
+      specializationDgu: !!specializationDgu,
+      specializationIbp: !!specializationIbp,
     },
-    select: { id: true, fullName: true, specializationVik: true, specializationIszh: true },
+    select: { id: true, fullName: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
   });
 
-  await logAudit({ userId: req.userId, action: 'update', entityType: 'user', entityId: user.id, newValue: { specializationVik: user.specializationVik, specializationIszh: user.specializationIszh }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  await logAudit({ userId: req.userId, action: 'update', entityType: 'user', entityId: user.id, newValue: { specializationVik: user.specializationVik, specializationIszh: user.specializationIszh, specializationGpm: user.specializationGpm, specializationDgu: user.specializationDgu, specializationIbp: user.specializationIbp }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(user);
 });
 
@@ -163,7 +166,7 @@ router.get('/objects', async (req: AuthRequest, res: Response) => {
 
 // POST /api/profile/engineers — TM creates engineer linked to themselves
 router.post('/engineers', async (req: AuthRequest, res: Response) => {
-  const { fullName, email, specializationVik, specializationIszh } = req.body;
+  const { fullName, email, specializationVik, specializationIszh, specializationGpm, specializationDgu, specializationIbp } = req.body;
   if (!fullName || !email) {
     res.status(400).json({ error: 'Укажите ФИО и email' });
     return;
@@ -187,7 +190,10 @@ router.post('/engineers', async (req: AuthRequest, res: Response) => {
       role: 'engineer',
       mustChangePassword: true,
       specializationVik: !!specializationVik,
-      specializationIszh: specializationIszh !== undefined ? !!specializationIszh : true,
+      specializationIszh: !!specializationIszh,
+      specializationGpm: !!specializationGpm,
+      specializationDgu: !!specializationDgu,
+      specializationIbp: !!specializationIbp,
     },
   });
 

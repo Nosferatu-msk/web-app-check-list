@@ -6,6 +6,9 @@ import { api } from '../../api/client';
 const SPEC_LABELS: Record<string, string> = {
   vik: 'ВиК (Вентиляция и Кондиционирование)',
   iszh: 'ИСЖ (Инженерные Сети и Электрика)',
+  gpm: 'ГПМ (Грузоподъёмные механизмы)',
+  dgu: 'ДГУ (Дизель-генераторные установки)',
+  ibp: 'ИБП (Источники бесперебойного питания)',
 };
 
 function getSpecDisplay(record: any): string {
@@ -13,6 +16,9 @@ function getSpecDisplay(record: any): string {
   const parts: string[] = [];
   if (record.specializationVik) parts.push('ВиК');
   if (record.specializationIszh) parts.push('ИСЖ');
+  if (record.specializationGpm) parts.push('ГПМ');
+  if (record.specializationDgu) parts.push('ДГУ');
+  if (record.specializationIbp) parts.push('ИБП');
   return parts.length ? parts.join(' + ') : '—';
 }
 
@@ -52,19 +58,22 @@ export default function AdminUsers() {
   const handleRoleChange = (value: string) => {
     setRoleValue(value);
     if (value !== 'engineer') {
-      form.setFieldsValue({ specializationVik: false, specializationIszh: false });
+      form.setFieldsValue({ specializationVik: false, specializationIszh: false, specializationGpm: false, specializationDgu: false, specializationIbp: false });
     }
   };
 
   const handleSave = async () => {
     const values = await form.validateFields();
-    if (values.role === 'engineer' && !values.specializationVik && !values.specializationIszh) {
-      message.error('Выберите хотя бы одну специализацию (ВиК или ИСЖ)');
+    if (values.role === 'engineer' && !values.specializationVik && !values.specializationIszh && !values.specializationGpm && !values.specializationDgu && !values.specializationIbp) {
+      message.error('Выберите хотя бы одну специализацию');
       return;
     }
     if (values.role !== 'engineer') {
       values.specializationVik = false;
       values.specializationIszh = false;
+      values.specializationGpm = false;
+      values.specializationDgu = false;
+      values.specializationIbp = false;
     }
     try {
       if (editing) {
@@ -98,6 +107,9 @@ export default function AdminUsers() {
       password: '',
       specializationVik: record.specializationVik ?? false,
       specializationIszh: record.specializationIszh ?? false,
+      specializationGpm: record.specializationGpm ?? false,
+      specializationDgu: record.specializationDgu ?? false,
+      specializationIbp: record.specializationIbp ?? false,
     });
     setRoleValue(record.role);
     setModalOpen(true);
@@ -152,7 +164,7 @@ export default function AdminUsers() {
       ]} />
 
       <Modal title={editing ? `Редактировать: ${editing.fullName}` : 'Новый пользователь'} open={modalOpen} onOk={handleSave} onCancel={() => { setModalOpen(false); setRoleValue(undefined); }}>
-        <Form form={form} layout="vertical" initialValues={{ role: 'engineer', isActive: true, specializationVik: false, specializationIszh: true }}>
+        <Form form={form} layout="vertical" initialValues={{ role: 'engineer', isActive: true, specializationVik: false, specializationIszh: false, specializationGpm: false, specializationDgu: false, specializationIbp: false }}>
           <Form.Item name="fullName" label="ФИО" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>
           <Form.Item name="password" label={editing ? 'Новый пароль (оставьте пустым)' : 'Пароль'} rules={editing ? [] : [{ required: true, min: 6 }]}><Input.Password /></Form.Item>
@@ -168,9 +180,15 @@ export default function AdminUsers() {
               <Form.Item name="specializationIszh" valuePropName="checked" noStyle>
                 <Checkbox>{SPEC_LABELS.iszh}</Checkbox>
               </Form.Item>
-              <div style={{ marginTop: 8 }}>
-                <Checkbox disabled><LockOutlined /> ГПМ (Скоро будет доступно)</Checkbox>
-              </div>
+              <Form.Item name="specializationGpm" valuePropName="checked" noStyle>
+                <Checkbox>{SPEC_LABELS.gpm}</Checkbox>
+              </Form.Item>
+              <Form.Item name="specializationDgu" valuePropName="checked" noStyle>
+                <Checkbox>{SPEC_LABELS.dgu}</Checkbox>
+              </Form.Item>
+              <Form.Item name="specializationIbp" valuePropName="checked" noStyle>
+                <Checkbox>{SPEC_LABELS.ibp}</Checkbox>
+              </Form.Item>
               <div style={{ marginTop: 8 }}>
                 <Checkbox disabled><LockOutlined /> Газ (Скоро будет доступно)</Checkbox>
               </div>

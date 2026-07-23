@@ -40,6 +40,9 @@ function EngineerProfile() {
   // Specialization
   const [vik, setVik] = useState(user?.specializationVik ?? false);
   const [iszh, setIszh] = useState(user?.specializationIszh ?? false);
+  const [gpm, setGpm] = useState(user?.specializationGpm ?? false);
+  const [dgu, setDgu] = useState(user?.specializationDgu ?? false);
+  const [ibp, setIbp] = useState(user?.specializationIbp ?? false);
   const [specLoading, setSpecLoading] = useState(false);
 
   // Favorites
@@ -73,7 +76,7 @@ function EngineerProfile() {
   const handleSpecChange = async () => {
     setSpecLoading(true);
     try {
-      await updateSpecialization({ specializationVik: vik, specializationIszh: iszh });
+      await updateSpecialization({ specializationVik: vik, specializationIszh: iszh, specializationGpm: gpm, specializationDgu: dgu, specializationIbp: ibp });
       message.success('Специализация обновлена');
     } catch (err: any) {
       message.error(err.message || 'Ошибка сохранения');
@@ -148,6 +151,21 @@ function EngineerProfile() {
         <div style={{ marginBottom: 12 }}>
           <Checkbox checked={iszh} onChange={(e) => setIszh(e.target.checked)}>
             <Text strong>ИСЖ</Text> <Text type="secondary">(Инженерные Сети и Электрика)</Text>
+          </Checkbox>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <Checkbox checked={gpm} onChange={(e) => setGpm(e.target.checked)}>
+            <Text strong>ГПМ</Text> <Text type="secondary">(Грузоподъёмные механизмы)</Text>
+          </Checkbox>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <Checkbox checked={dgu} onChange={(e) => setDgu(e.target.checked)}>
+            <Text strong>ДГУ</Text> <Text type="secondary">(Дизель-генераторные установки)</Text>
+          </Checkbox>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <Checkbox checked={ibp} onChange={(e) => setIbp(e.target.checked)}>
+            <Text strong>ИБП</Text> <Text type="secondary">(Источники бесперебойного питания)</Text>
           </Checkbox>
         </div>
         <Button size="small" loading={specLoading} onClick={handleSpecChange}>
@@ -330,7 +348,10 @@ function TmProfile() {
                     <Space size={4}>
                       {eng.specializationVik && <Tag color="blue">ВиК</Tag>}
                       {eng.specializationIszh && <Tag color="green">ИСЖ</Tag>}
-                      {!eng.specializationVik && !eng.specializationIszh && <Text type="secondary">Специализация не выбрана</Text>}
+                      {eng.specializationGpm && <Tag color="purple">ГПМ</Tag>}
+                      {eng.specializationDgu && <Tag color="orange">ДГУ</Tag>}
+                      {eng.specializationIbp && <Tag color="red">ИБП</Tag>}
+                      {!eng.specializationVik && !eng.specializationIszh && !eng.specializationGpm && !eng.specializationDgu && !eng.specializationIbp && <Text type="secondary">Специализация не выбрана</Text>}
                     </Space>
                   }
                 />
@@ -398,12 +419,21 @@ function TmProfile() {
             <Input placeholder="engineer@example.com" />
           </Form.Item>
           <Form.Item label="Специализация">
-            <Space>
+            <Space wrap>
               <Form.Item name="specializationVik" valuePropName="checked" noStyle>
                 <Checkbox>ВиК</Checkbox>
               </Form.Item>
-              <Form.Item name="specializationIszh" valuePropName="checked" noStyle initialValue={true}>
+              <Form.Item name="specializationIszh" valuePropName="checked" noStyle>
                 <Checkbox>ИСЖ</Checkbox>
+              </Form.Item>
+              <Form.Item name="specializationGpm" valuePropName="checked" noStyle>
+                <Checkbox>ГПМ</Checkbox>
+              </Form.Item>
+              <Form.Item name="specializationDgu" valuePropName="checked" noStyle>
+                <Checkbox>ДГУ</Checkbox>
+              </Form.Item>
+              <Form.Item name="specializationIbp" valuePropName="checked" noStyle>
+                <Checkbox>ИБП</Checkbox>
               </Form.Item>
             </Space>
           </Form.Item>

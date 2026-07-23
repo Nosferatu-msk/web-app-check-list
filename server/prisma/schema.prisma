@@ -56,6 +56,9 @@ model User {
   mustChangePassword Boolean  @default(false) @map("must_change_password")
   specializationVik  Boolean  @default(false) @map("specialization_vik")
   specializationIszh Boolean  @default(true)  @map("specialization_iszh")
+  specializationGpm  Boolean  @default(false) @map("specialization_gpm")
+  specializationDgu  Boolean  @default(false) @map("specialization_dgu")
+  specializationIbp  Boolean  @default(false) @map("specialization_ibp")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 

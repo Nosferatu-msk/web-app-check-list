@@ -53,7 +53,7 @@ router.post('/login', authLimiter, validate(loginSchema), async (req: Request, r
   res.json({
     accessToken,
     refreshToken,
-    user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, isActive: user.isActive, specializationVik: user.specializationVik, specializationIszh: user.specializationIszh },
+    user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, isActive: user.isActive, specializationVik: user.specializationVik, specializationIszh: user.specializationIszh, specializationGpm: user.specializationGpm, specializationDgu: user.specializationDgu, specializationIbp: user.specializationIbp },
   });
 });
 
@@ -76,7 +76,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
 // GET /api/auth/me
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { id: true, fullName: true, email: true, role: true, isActive: true, specializationVik: true, specializationIszh: true, mustChangePassword: true } });
+  const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { id: true, fullName: true, email: true, role: true, isActive: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true, mustChangePassword: true } });
   if (!user) {
     res.status(404).json({ error: 'Пользователь не найден' });
     return;

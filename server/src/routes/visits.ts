@@ -151,19 +151,20 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   if (req.userRole === 'engineer') {
     const engineer = await prisma.user.findUnique({
       where: { id: req.userId as string },
-      select: { specializationVik: true, specializationIszh: true },
+      select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
     });
     if (engineer) {
-      const hasVik = engineer.specializationVik;
-      const hasIszh = engineer.specializationIszh;
-      if (hasVik && !hasIszh) {
-        const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar', 'teplozavesa', 'pritochnaya', 'pritochno-vytyzhnaya', 'vytyzhnaya'];
-        visit.tasks = visit.tasks.filter(t => t.equipmentType && VIK_CODES.includes(t.equipmentType.code));
-      } else if (hasIszh && !hasVik) {
-        const ISZH_CODES = ['rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc', 'seti_vodosnab', 'teplovye_seti'];
-        visit.tasks = visit.tasks.filter(t => t.equipmentType && ISZH_CODES.includes(t.equipmentType.code));
+      const activeSpecs: string[] = [];
+      if (engineer.specializationVik) activeSpecs.push('vik');
+      if (engineer.specializationIszh) activeSpecs.push('iszh');
+      if (engineer.specializationGpm) activeSpecs.push('gpm');
+      if (engineer.specializationDgu) activeSpecs.push('dgu');
+      if (engineer.specializationIbp) activeSpecs.push('ibp');
+
+      // Only filter if engineer has some but not all specializations
+      if (activeSpecs.length > 0 && activeSpecs.length < 5) {
+        visit.tasks = visit.tasks.filter(t => t.equipmentType && activeSpecs.includes(t.equipmentType.specializationReq || ''));
       }
-      // If both or neither — no filtering
     }
   }
 

@@ -374,9 +374,12 @@ router.post('/users', upload.single('file'), async (req: AuthRequest, res: Respo
 
       const mustChange = !r.password;
       const specVik = r.specialization_vik !== undefined ? r.specialization_vik.toLowerCase() === 'true' : false;
-      const specIszh = r.specialization_iszh !== undefined ? r.specialization_iszh.toLowerCase() === 'true' : true;
+      const specIszh = r.specialization_iszh !== undefined ? r.specialization_iszh.toLowerCase() === 'true' : false;
+      const specGpm = r.specialization_gpm !== undefined ? r.specialization_gpm.toLowerCase() === 'true' : false;
+      const specDgu = r.specialization_dgu !== undefined ? r.specialization_dgu.toLowerCase() === 'true' : false;
+      const specIbp = r.specialization_ibp !== undefined ? r.specialization_ibp.toLowerCase() === 'true' : false;
       await prisma.user.create({
-        data: { fullName, email, passwordHash, role: role as any, mustChangePassword: mustChange, specializationVik: specVik, specializationIszh: specIszh },
+        data: { fullName, email, passwordHash, role: role as any, mustChangePassword: mustChange, specializationVik: specVik, specializationIszh: specIszh, specializationGpm: specGpm, specializationDgu: specDgu, specializationIbp: specIbp },
       });
       result.success++;
 

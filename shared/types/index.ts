@@ -15,6 +15,9 @@ export interface User {
   isActive: boolean;
   specializationVik?: boolean;
   specializationIszh?: boolean;
+  specializationGpm?: boolean;
+  specializationDgu?: boolean;
+  specializationIbp?: boolean;
 }
 
 export interface Address {

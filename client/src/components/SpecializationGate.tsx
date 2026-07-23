@@ -5,25 +5,45 @@ import { useAuthStore } from '../store/authStore';
 
 const { Title, Text } = Typography;
 
+const SPEC_OPTIONS = [
+  { key: 'vik' as const, short: 'ВиК', full: 'Вентиляция и Кондиционирование' },
+  { key: 'iszh' as const, short: 'ИСЖ', full: 'Инженерные Сети и Электрика' },
+  { key: 'gpm' as const, short: 'ГПМ', full: 'Грузоподъёмные механизмы' },
+  { key: 'dgu' as const, short: 'ДГУ', full: 'Дизель-генераторные установки' },
+  { key: 'ibp' as const, short: 'ИБП', full: 'Источники бесперебойного питания' },
+];
+
 export default function SpecializationGate({ children }: { children: React.ReactNode }) {
   const { user, updateSpecialization } = useAuthStore();
   const { message } = App.useApp();
-  const [vik, setVik] = useState(user?.specializationVik ?? false);
-  const [iszh, setIszh] = useState(user?.specializationIszh ?? false);
+  const [selected, setSelected] = useState<Record<string, boolean>>({
+    vik: user?.specializationVik ?? false,
+    iszh: user?.specializationIszh ?? false,
+    gpm: user?.specializationGpm ?? false,
+    dgu: user?.specializationDgu ?? false,
+    ibp: user?.specializationIbp ?? false,
+  });
   const [loading, setLoading] = useState(false);
 
-  // If user is not an engineer, or already has at least one specialization — pass through
   if (user?.role !== 'engineer') return <>{children}</>;
-  if (user?.specializationVik || user?.specializationIszh) return <>{children}</>;
+  if (user?.specializationVik || user?.specializationIszh || user?.specializationGpm || user?.specializationDgu || user?.specializationIbp) return <>{children}</>;
+
+  const hasAny = Object.values(selected).some(Boolean);
 
   const handleSubmit = async () => {
-    if (!vik && !iszh) {
+    if (!hasAny) {
       message.warning('Выберите хотя бы одну специализацию');
       return;
     }
     setLoading(true);
     try {
-      await updateSpecialization({ specializationVik: vik, specializationIszh: iszh });
+      await updateSpecialization({
+        specializationVik: selected.vik,
+        specializationIszh: selected.iszh,
+        specializationGpm: selected.gpm,
+        specializationDgu: selected.dgu,
+        specializationIbp: selected.ibp,
+      });
       message.success('Специализация сохранена');
     } catch (err: any) {
       message.error(err.message || 'Ошибка сохранения');
@@ -58,26 +78,18 @@ export default function SpecializationGate({ children }: { children: React.React
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <div style={{ marginBottom: 12 }}>
-            <Checkbox
-              checked={vik}
-              onChange={(e) => setVik(e.target.checked)}
-              style={{ fontSize: 16 }}
-            >
-              <Text strong>ВиК</Text>
-              <Text type="secondary"> (Вентиляция и Кондиционирование)</Text>
-            </Checkbox>
-          </div>
-          <div>
-            <Checkbox
-              checked={iszh}
-              onChange={(e) => setIszh(e.target.checked)}
-              style={{ fontSize: 16 }}
-            >
-              <Text strong>ИСЖ</Text>
-              <Text type="secondary"> (Инженерные Сети и Электрика)</Text>
-            </Checkbox>
-          </div>
+          {SPEC_OPTIONS.map((spec, idx) => (
+            <div key={spec.key} style={{ marginBottom: idx < SPEC_OPTIONS.length - 1 ? 12 : 0 }}>
+              <Checkbox
+                checked={selected[spec.key]}
+                onChange={(e) => setSelected(prev => ({ ...prev, [spec.key]: e.target.checked }))}
+                style={{ fontSize: 16 }}
+              >
+                <Text strong>{spec.short}</Text>
+                <Text type="secondary"> ({spec.full})</Text>
+              </Checkbox>
+            </div>
+          ))}
         </div>
 
         <Button
@@ -85,7 +97,7 @@ export default function SpecializationGate({ children }: { children: React.React
           block
           size="large"
           loading={loading}
-          disabled={!vik && !iszh}
+          disabled={!hasAny}
           onClick={handleSubmit}
         >
           Продолжить

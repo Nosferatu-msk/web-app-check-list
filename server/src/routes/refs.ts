@@ -62,31 +62,40 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   const addressId = req.query.address_id as string;
   if (!addressId) { res.json([]); return; }
 
-  const VIK_CODES = ['vent', 'vrv_vn', 'vrv_nar', 'mssvn', 'mssnar', 'splitvn', 'splitnar', 'teplozavesa', 'pritochnaya', 'pritochno-vytyzhnaya', 'vytyzhnaya'];
-  const ISZH_CODES = ['rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc', 'seti_vodosnab', 'teplovye_seti'];
+  const SPEC_CODE_MAP: Record<string, string> = { vik: 'vik', iszh: 'iszh', gpm: 'gpm', dgu: 'dgu', ibp: 'ibp' };
 
-  // Determine which codes to filter by
-  let allowedCodes: string[] | null = null;
+  // Determine which specialization codes to filter by
+  let allowedSpecs: string[] | null = null;
   const specParam = req.query.specialization as string;
 
-  if (specParam === 'vik') {
-    allowedCodes = VIK_CODES;
-  } else if (specParam === 'iszh') {
-    allowedCodes = ISZH_CODES;
+  if (specParam && SPEC_CODE_MAP[specParam]) {
+    allowedSpecs = [SPEC_CODE_MAP[specParam]];
   } else if (req.userRole === 'engineer') {
     const engineer = await prisma.user.findUnique({
       where: { id: req.userId as string },
-      select: { specializationVik: true, specializationIszh: true },
+      select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
     });
     if (engineer) {
-      const hasVik = engineer.specializationVik;
-      const hasIszh = engineer.specializationIszh;
-      if (hasVik && !hasIszh) {
-        allowedCodes = VIK_CODES;
-      } else if (hasIszh && !hasVik) {
-        allowedCodes = ISZH_CODES;
+      const activeSpecs: string[] = [];
+      if (engineer.specializationVik) activeSpecs.push('vik');
+      if (engineer.specializationIszh) activeSpecs.push('iszh');
+      if (engineer.specializationGpm) activeSpecs.push('gpm');
+      if (engineer.specializationDgu) activeSpecs.push('dgu');
+      if (engineer.specializationIbp) activeSpecs.push('ibp');
+      if (activeSpecs.length > 0 && activeSpecs.length < 5) {
+        allowedSpecs = activeSpecs;
       }
     }
+  }
+
+  // Resolve allowed equipment type codes from specialization
+  let allowedCodes: string[] | null = null;
+  if (allowedSpecs) {
+    const eqTypes = await prisma.equipmentType.findMany({
+      where: { specializationReq: { in: allowedSpecs }, isActive: true },
+      select: { code: true },
+    });
+    allowedCodes = eqTypes.map(e => e.code);
   }
 
   const where: any = { addressId, isActive: true };

@@ -88,11 +88,14 @@ function conclusionBadge(conclusion?: string | null): string {
   return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;color:#fff;background:${color};font-size:10pt;">${label}</span>`;
 }
 
-function getSpecLabel(vik?: boolean, iszh?: boolean): string {
-  if (vik && iszh) return 'ВиК + ИСЖ';
-  if (vik) return 'ВиК';
-  if (iszh) return 'ИСЖ';
-  return '';
+function getSpecLabel(spec: { specializationVik?: boolean; specializationIszh?: boolean; specializationGpm?: boolean; specializationDgu?: boolean; specializationIbp?: boolean }): string {
+  const parts: string[] = [];
+  if (spec.specializationVik) parts.push('ВиК');
+  if (spec.specializationIszh) parts.push('ИСЖ');
+  if (spec.specializationGpm) parts.push('ГПМ');
+  if (spec.specializationDgu) parts.push('ДГУ');
+  if (spec.specializationIbp) parts.push('ИБП');
+  return parts.join(' + ');
 }
 
 export interface UnifiedReportVisit {
@@ -104,7 +107,7 @@ export interface UnifiedReportVisit {
   season?: string | null;
   status: string;
   address: { fullAddress: string };
-  engineerSpec?: { specializationVik: boolean; specializationIszh: boolean };
+  engineerSpec?: { specializationVik: boolean; specializationIszh: boolean; specializationGpm: boolean; specializationDgu: boolean; specializationIbp: boolean };
   tasks: UnifiedReportTask[];
 }
 
@@ -312,7 +315,7 @@ export async function generateUnifiedReportHtml(
 
     for (let vi = 0; vi < addrVisits.length; vi++) {
       const v = addrVisits[vi];
-      const specLabel = v.engineerSpec ? getSpecLabel(v.engineerSpec.specializationVik, v.engineerSpec.specializationIszh) : '';
+      const specLabel = v.engineerSpec ? getSpecLabel(v.engineerSpec) : '';
 
       sectionsHtml += `
         <div style="margin:12px 0;padding:10px;border:1px solid #ccc;border-radius:6px;">

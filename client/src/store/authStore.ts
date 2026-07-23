@@ -8,6 +8,9 @@ interface User {
   role: 'engineer' | 'tm' | 'admin';
   specializationVik?: boolean;
   specializationIszh?: boolean;
+  specializationGpm?: boolean;
+  specializationDgu?: boolean;
+  specializationIbp?: boolean;
 }
 
 interface AuthState {
@@ -17,7 +20,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
-  updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean }) => Promise<void>;
+  updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean; specializationGpm: boolean; specializationDgu: boolean; specializationIbp: boolean }) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -54,11 +57,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  updateSpecialization: async (data: { specializationVik: boolean; specializationIszh: boolean }) => {
+  updateSpecialization: async (data: { specializationVik: boolean; specializationIszh: boolean; specializationGpm: boolean; specializationDgu: boolean; specializationIbp: boolean }) => {
     const updated = await api.updateSpecialization(data);
     const currentUser = get().user;
     if (currentUser) {
-      set({ user: { ...currentUser, specializationVik: data.specializationVik, specializationIszh: data.specializationIszh } });
+      set({ user: { ...currentUser, specializationVik: data.specializationVik, specializationIszh: data.specializationIszh, specializationGpm: data.specializationGpm, specializationDgu: data.specializationDgu, specializationIbp: data.specializationIbp } });
     }
   },
 }));

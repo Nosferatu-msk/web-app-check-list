@@ -271,7 +271,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       orderBy: { dateStart: 'asc' },
       include: {
         address: true,
-        user: { select: { specializationVik: true, specializationIszh: true } },
+        user: { select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } },
         tasks: {
           orderBy: { sortOrder: 'asc' },
           include: {
@@ -304,7 +304,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       season: v.season,
       status: v.status,
       address: { fullAddress: v.address.fullAddress },
-      engineerSpec: v.user ? { specializationVik: v.user.specializationVik, specializationIszh: v.user.specializationIszh } : undefined,
+      engineerSpec: v.user ? { specializationVik: v.user.specializationVik, specializationIszh: v.user.specializationIszh, specializationGpm: v.user.specializationGpm, specializationDgu: v.user.specializationDgu, specializationIbp: v.user.specializationIbp } : undefined,
       tasks: v.tasks.map(t => ({
         id: t.id,
         taskType: t.taskType,

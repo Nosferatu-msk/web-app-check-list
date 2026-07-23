@@ -303,7 +303,7 @@ export const api = {
 
   // Profile
   getProfile: () => request<any>('/profile'),
-  updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean }) =>
+  updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean; specializationGpm: boolean; specializationDgu: boolean; specializationIbp: boolean }) =>
     request<any>('/profile/specialization', { method: 'PATCH', body: JSON.stringify(data) }),
   getFavorites: () => request<any[]>('/profile/favorites'),
   addFavorite: (addressIdOrCode: string) =>
@@ -312,7 +312,7 @@ export const api = {
     request<any>(`/profile/favorites/${objectCode}`, { method: 'DELETE' }),
   getProfileStats: () => request<any>('/profile/stats'),
   getTmObjects: () => request<any[]>('/profile/objects'),
-  createEngineer: (data: { fullName: string; email: string; specializationVik?: boolean; specializationIszh?: boolean }) =>
+  createEngineer: (data: { fullName: string; email: string; specializationVik?: boolean; specializationIszh?: boolean; specializationGpm?: boolean; specializationDgu?: boolean; specializationIbp?: boolean }) =>
     request<any>('/profile/engineers', { method: 'POST', body: JSON.stringify(data) }),
 
   // ─── OFFLINE-AWARE METHODS ────────────────────────────────────
