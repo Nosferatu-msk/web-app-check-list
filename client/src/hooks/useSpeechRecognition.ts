@@ -19,6 +19,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFinalRef = useRef<((text: string) => void) | null>(null);
+  const activeRef = useRef(false);
+  const pendingFinalRef = useRef('');
 
   const SpeechAPI = typeof window !== 'undefined'
     ? (window.SpeechRecognition || window.webkitSpeechRecognition)
@@ -40,67 +42,88 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     }
   }, []);
 
-  const start = useCallback((onFinal: (text: string) => void) => {
-    if (!SpeechAPI) {
-      setError('Голосовой ввод не поддерживается вашим браузером');
-      return;
-    }
-
-    setError(null);
-    setInterimText('');
-    onFinalRef.current = onFinal;
+  const createRecognition = useCallback((onFinal: (text: string) => void) => {
+    if (!SpeechAPI) return null;
 
     const recognition = new SpeechAPI();
     recognition.lang = 'ru-RU';
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      resetTimer();
-    };
+    pendingFinalRef.current = '';
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       resetTimer();
       let interim = '';
+      let final = '';
 
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) {
-          onFinalRef.current?.(r[0].transcript.trim());
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          final += e.results[i][0].transcript;
         } else {
-          interim += r[0].transcript;
+          interim += e.results[i][0].transcript;
         }
       }
 
+      if (final) pendingFinalRef.current = final.trim();
       setInterimText(interim);
     };
 
     recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
-      if (e.error === 'aborted') return;
+      if (e.error === 'aborted' || e.error === 'no-speech') return;
       const msgs: Record<string, string> = {
-        'not-allowed': 'Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.',
-        'no-speech': 'Речь не обнаружена. Попробуйте ещё раз.',
-        'network': 'Ошибка сети. Проверьте подключение к интернету.',
+        'not-allowed': 'Доступ к микрофону запрещён.',
+        'network': 'Ошибка сети.',
         'audio-capture': 'Микрофон не найден.',
       };
       setError(msgs[e.error] || 'Не удалось распознать речь.');
+      activeRef.current = false;
       setIsListening(false);
       clearTimer();
     };
 
     recognition.onend = () => {
-      setIsListening(false);
-      setInterimText('');
       clearTimer();
-      onFinalRef.current = null;
+      setInterimText('');
+
+      // Insert the final text from this segment
+      if (pendingFinalRef.current) {
+        onFinal(pendingFinalRef.current);
+        pendingFinalRef.current = '';
+      }
+
+      // Auto-restart if still active
+      if (activeRef.current) {
+        const next = createRecognition(onFinal);
+        if (next) {
+          recognitionRef.current = next;
+          try { next.start(); } catch { activeRef.current = false; setIsListening(false); }
+        }
+      } else {
+        setIsListening(false);
+        recognitionRef.current = null;
+      }
     };
 
-    recognitionRef.current = recognition;
-    try { recognition.start(); } catch { setError('Не удалось запустить распознавание.'); }
+    return recognition;
   }, [SpeechAPI, resetTimer, clearTimer]);
 
+  const start = useCallback((onFinal: (text: string) => void) => {
+    if (!SpeechAPI) { setError('Голосовой ввод не поддерживается'); return; }
+
+    setError(null);
+    setInterimText('');
+    activeRef.current = true;
+    onFinalRef.current = onFinal;
+
+    const recognition = createRecognition(onFinal);
+    if (!recognition) return;
+
+    recognitionRef.current = recognition;
+    try { recognition.start(); setIsListening(true); } catch { setError('Не удалось запустить распознавание.'); }
+  }, [SpeechAPI, createRecognition]);
+
   const stop = useCallback(() => {
+    activeRef.current = false;
     clearTimer();
     recognitionRef.current?.stop();
     recognitionRef.current = null;
@@ -108,6 +131,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   }, [clearTimer]);
 
   useEffect(() => () => {
+    activeRef.current = false;
     clearTimer();
     recognitionRef.current?.abort();
   }, [clearTimer]);
