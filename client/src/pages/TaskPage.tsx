@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Tooltip } from 'antd';
+import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Tooltip, AutoComplete } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -371,6 +371,36 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
   ],
 };
 
+function ModelAutocomplete({ equipmentTypeId, value, onChange }: { equipmentTypeId?: string; value?: string; onChange?: (v: string) => void }) {
+  const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
+
+  const handleSearch = useCallback(async (query: string) => {
+    if (!equipmentTypeId) return;
+    try {
+      const results = await api.searchModels({ equipment_type_id: equipmentTypeId, query });
+      setOptions(results.map((m: any) => ({
+        value: m.fullModelName || m.modelName,
+        label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+      })));
+    } catch {
+      setOptions([]);
+    }
+  }, [equipmentTypeId]);
+
+  return (
+    <AutoComplete
+      value={value}
+      options={options}
+      onSearch={handleSearch}
+      onSelect={onChange}
+      onChange={onChange}
+      placeholder="Начните вводить для поиска..."
+      filterOption={false}
+      allowClear
+    />
+  );
+}
+
 export default function TaskPage() {
   const { message } = App.useApp();
   const { visitId, taskId } = useParams();
@@ -582,6 +612,8 @@ export default function TaskPage() {
                 <Select options={p.options} placeholder="Выберите..." />
               ) : p.type === 'number' ? (
                 <Input type="number" placeholder="Введите значение" />
+              ) : p.key === 'model' ? (
+                <ModelAutocomplete equipmentTypeId={task?.equipmentType?.id} />
               ) : (
                 <Input placeholder="Введите значение" />
               )}
