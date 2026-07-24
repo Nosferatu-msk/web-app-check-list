@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty } from 'antd';
+import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -53,6 +53,8 @@ export default function VisitPage() {
   const [addingEquipment, setAddingEquipment] = useState(false);
   const [proposeEquipment, setProposeEquipment] = useState(false);
   const [newTaskForm] = Form.useForm();
+  const [mfrOptions, setMfrOptions] = useState<{ value: string; label: string }[]>([]);
+  const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
 
   const handleAutoSave = useCallback(async () => {
     if (isNew) return;
@@ -715,11 +717,46 @@ export default function VisitPage() {
                 <Form.Item name="comment" label="Комментарий">
                   <Input placeholder="Необязательно" />
                 </Form.Item>
-                <Form.Item name="brand" label="Марка">
-                  <Input placeholder="Необязательно" />
+                <Form.Item name="brand" label="Производитель">
+                  <AutoComplete
+                    placeholder="Начните вводить..."
+                    options={mfrOptions}
+                    onSearch={async (q) => {
+                      try {
+                        const list = await api.getManufacturersList();
+                        const filtered = list.filter((m: any) => m.name.toLowerCase().includes(q.toLowerCase()));
+                        setMfrOptions(filtered.map((m: any) => ({ value: m.name, label: m.name })));
+                      } catch { setMfrOptions([]); }
+                    }}
+                    onFocus={async () => {
+                      if (mfrOptions.length === 0) {
+                        try {
+                          const list = await api.getManufacturersList();
+                          setMfrOptions(list.map((m: any) => ({ value: m.name, label: m.name })));
+                        } catch { /* ignore */ }
+                      }
+                    }}
+                    filterOption={false}
+                    allowClear
+                  />
                 </Form.Item>
                 <Form.Item name="model" label="Модель">
-                  <Input placeholder="Необязательно" />
+                  <AutoComplete
+                    placeholder="Начните вводить..."
+                    options={modelOptions}
+                    onSearch={async (q) => {
+                      const eqTypeId = newTaskForm.getFieldValue('equipmentTypeId');
+                      try {
+                        const results = await api.searchModels({ equipment_type_id: eqTypeId, query: q });
+                        setModelOptions(results.map((m: any) => ({
+                          value: m.fullModelName || m.modelName,
+                          label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+                        })));
+                      } catch { setModelOptions([]); }
+                    }}
+                    filterOption={false}
+                    allowClear
+                  />
                 </Form.Item>
                 <Form.Item name="serialNumber" label="Серийный номер">
                   <Input placeholder="Необязательно" />
