@@ -6,6 +6,7 @@ export type Conclusion = 'ok' | 'ok_with_notes' | 'faulty';
 export type PhotoMoment = 'before' | 'after';
 export type TaskType = 'group_climate' | 'individual';
 export type EquipmentItemStatus = 'ok' | 'not_ok';
+export type ModelStatus = 'approved' | 'pending' | 'rejected';
 
 export interface User {
   id: string;
@@ -51,6 +52,31 @@ export interface Recommendation {
   text: string;
   sortOrder: number;
   isActive: boolean;
+}
+
+export interface Manufacturer {
+  id: string;
+  name: string;
+  country?: string | null;
+  isActive: boolean;
+}
+
+export interface Model {
+  id: string;
+  equipmentTypeId: string;
+  manufacturerId: string;
+  modelName: string;
+  fullModelName?: string | null;
+  status: ModelStatus;
+  submittedById?: string | null;
+  submittedAt?: string | null;
+  reviewedById?: string | null;
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+  equipmentType?: EquipmentType;
+  manufacturer?: Manufacturer;
+  submittedBy?: { id: string; fullName: string; email: string };
+  reviewedBy?: { id: string; fullName: string; email: string };
 }
 
 export interface Visit {
@@ -178,6 +204,12 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 export const EQUIPMENT_ITEM_STATUS_LABELS: Record<EquipmentItemStatus, string> = {
   ok: 'Исправно',
   not_ok: 'Неисправно',
+};
+
+export const MODEL_STATUS_LABELS: Record<ModelStatus, string> = {
+  approved: 'Утверждена',
+  pending: 'На модерации',
+  rejected: 'Отклонена',
 };
 
 // Коды климатического оборудования (внутренние блоки) для группировки

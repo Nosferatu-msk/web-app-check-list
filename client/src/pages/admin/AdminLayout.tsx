@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 
 const { Content } = Layout;
@@ -9,6 +9,8 @@ const { Content } = Layout;
 const menuItems = [
   { key: '/admin/addresses', icon: <EnvironmentOutlined />, label: 'Адреса' },
   { key: '/admin/equipment', icon: <ToolOutlined />, label: 'Оборудование' },
+  { key: '/admin/manufacturers', icon: <ShopOutlined />, label: 'Производители' },
+  { key: '/admin/models', icon: <AppstoreOutlined />, label: 'Модели' },
   { key: '/admin/rooms', icon: <HomeOutlined />, label: 'Помещения' },
   { key: '/admin/recommendations', icon: <FileTextOutlined />, label: 'Рекомендации' },
   { key: '/admin/users', icon: <UserOutlined />, label: 'Пользователи' },

@@ -257,4 +257,37 @@ router.patch('/object-equipment/:id/room', async (req: AuthRequest, res: Respons
   res.json(item);
 });
 
+// GET /api/refs/manufacturers — список активных производителей
+router.get('/manufacturers', async (_req: AuthRequest, res: Response) => {
+  const data = await prisma.manufacturer.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' },
+  });
+  res.json(data);
+});
+
+// GET /api/refs/models/search?equipment_type_id=...&query=... — поиск моделей с автодополнением
+router.get('/models/search', async (req: AuthRequest, res: Response) => {
+  const equipmentTypeId = req.query.equipment_type_id as string;
+  const query = (req.query.query as string) || '';
+
+  const where: any = { status: 'approved' };
+  if (equipmentTypeId) where.equipmentTypeId = equipmentTypeId;
+  if (query) {
+    where.OR = [
+      { modelName: { contains: query, mode: 'insensitive' } },
+      { fullModelName: { contains: query, mode: 'insensitive' } },
+    ];
+  }
+
+  const data = await prisma.model.findMany({
+    where,
+    include: { manufacturer: true },
+    orderBy: { modelName: 'asc' },
+    take: 50,
+  });
+
+  res.json(data);
+});
+
 export default router;

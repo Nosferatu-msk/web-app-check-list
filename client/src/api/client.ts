@@ -441,4 +441,56 @@ export const api = {
     const { db } = await import('../db/index');
     return db.favorites.toArray();
   },
+
+  // ─── MANUFACTURERS ──────────────────────────────────────────
+  getManufacturers: async (params?: { page?: number; pageSize?: number; q?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params?.q) qs.set('q', params.q);
+    return request<{ data: any[]; total: number; page: number; pageSize: number }>(`/admin/manufacturers?${qs}`);
+  },
+
+  createManufacturer: (data: { name: string; country?: string }) =>
+    request('/admin/manufacturers', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateManufacturer: (id: string, data: { name?: string; country?: string; isActive?: boolean }) =>
+    request(`/admin/manufacturers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteManufacturer: (id: string) =>
+    request(`/admin/manufacturers/${id}`, { method: 'DELETE' }),
+
+  // ─── MODELS ─────────────────────────────────────────────────
+  getModels: async (params?: { page?: number; pageSize?: number; q?: string; status?: string; equipment_type_id?: string; manufacturer_id?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params?.q) qs.set('q', params.q);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.equipment_type_id) qs.set('equipment_type_id', params.equipment_type_id);
+    if (params?.manufacturer_id) qs.set('manufacturer_id', params.manufacturer_id);
+    return request<{ data: any[]; total: number; page: number; pageSize: number }>(`/admin/models?${qs}`);
+  },
+
+  createModel: (data: { equipmentTypeId: string; manufacturerId: string; modelName: string; fullModelName?: string }) =>
+    request('/admin/models', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateModel: (id: string, data: { equipmentTypeId?: string; manufacturerId?: string; modelName?: string; fullModelName?: string }) =>
+    request(`/admin/models/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  approveModel: (id: string) =>
+    request(`/admin/models/${id}/approve`, { method: 'PUT' }),
+
+  rejectModel: (id: string, reason?: string) =>
+    request(`/admin/models/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+
+  searchModels: async (params: { equipment_type_id?: string; query?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.equipment_type_id) qs.set('equipment_type_id', params.equipment_type_id);
+    if (params.query) qs.set('query', params.query);
+    return request<any[]>(`/refs/models/search?${qs}`);
+  },
+
+  getManufacturersList: async () =>
+    request<any[]>('/refs/manufacturers'),
 };

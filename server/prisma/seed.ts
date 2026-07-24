@@ -415,6 +415,74 @@ async function main() {
   }
   console.log('Recommendations created');
 
+  // ─── MANUFACTURERS ──────────────────────────────────────
+  const manufacturers = [
+    { name: 'Daikin', country: 'Япония' },
+    { name: 'Ballu', country: 'Россия' },
+    { name: 'ABB', country: 'Швеция' },
+    { name: 'Schneider Electric', country: 'Франция' },
+    { name: 'Тайпит', country: 'Россия' },
+    { name: 'Энергомера', country: 'Россия' },
+    { name: 'Инкотекс', country: 'Россия' },
+    { name: 'F.G.Wilson', country: 'Великобритания' },
+    { name: 'APC', country: 'США' },
+    { name: 'KONE', country: 'Финляндия' },
+  ];
+
+  for (const m of manufacturers) {
+    await prisma.manufacturer.upsert({
+      where: { name: m.name },
+      update: {},
+      create: m,
+    });
+  }
+  console.log('Manufacturers created');
+
+  // ─── MODELS ─────────────────────────────────────────────
+  const mfrMap = new Map((await prisma.manufacturer.findMany()).map(m => [m.name, m.id]));
+
+  const modelsData = [
+    { eqCode: 'schetchik_electroshc', mfr: 'Тайпит', model: 'НЕВА СТ231' },
+    { eqCode: 'schetchik_electroshc', mfr: 'Энергомера', model: 'СЕ101 R5 145 M6' },
+    { eqCode: 'schetchik_electroshc', mfr: 'Инкотекс', model: 'Меркурий 230 ART-00 CN' },
+    { eqCode: 'schetchik_hvs', mfr: 'Тайпит', model: 'НЕВА 103 1SO' },
+    { eqCode: 'schetchik_gvs', mfr: 'Тайпит', model: 'НЕВА 103 1SO' },
+    { eqCode: 'rsch', mfr: 'ABB', model: 'GS420' },
+    { eqCode: 'rsch', mfr: 'Schneider Electric', model: 'Prisma iPM' },
+    { eqCode: 'splitvn', mfr: 'Daikin', model: 'FTXS35K' },
+    { eqCode: 'splitnar', mfr: 'Daikin', model: 'RXS35K' },
+    { eqCode: 'splitvn', mfr: 'Ballu', model: 'BSW/in-07HN1_24Y' },
+    { eqCode: 'splitnar', mfr: 'Ballu', model: 'BSW/out-07HN1_24Y' },
+    { eqCode: 'dgu', mfr: 'F.G.Wilson', model: 'P1000E1' },
+    { eqCode: 'ibp', mfr: 'APC', model: 'Smart-UPS 3000VA' },
+    { eqCode: 'lift_pass', mfr: 'KONE', model: 'MiniSpace' },
+    { eqCode: 'itp', mfr: 'Danfoss', model: 'Теплобак 50' },
+  ];
+
+  for (const md of modelsData) {
+    const eqId = eqMap.get(md.eqCode);
+    const mfrId = mfrMap.get(md.mfr);
+    if (!eqId || !mfrId) continue;
+    await prisma.model.upsert({
+      where: {
+        equipment_type_id_manufacturer_id_model_name: {
+          equipmentTypeId: eqId,
+          manufacturerId: mfrId,
+          modelName: md.model,
+        },
+      },
+      update: {},
+      create: {
+        equipmentTypeId: eqId,
+        manufacturerId: mfrId,
+        modelName: md.model,
+        fullModelName: `${md.mfr} ${md.model}`,
+        status: 'approved',
+      },
+    });
+  }
+  console.log('Models created');
+
   // ─── ADDRESSES ───────────────────────────────────────────
   const addresses = [
     { city: 'Москва', street: 'ул. 1-ая Мясниковская', house: '2', building: null, fullAddress: 'г. Москва, ул. 1-ая Мясниковская, д.2' },

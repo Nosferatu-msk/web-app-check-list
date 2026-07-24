@@ -19,6 +19,8 @@ import ProfilePage from './pages/ProfilePage';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminAddresses from './pages/admin/AdminAddresses';
 import AdminEquipment from './pages/admin/AdminEquipment';
+import AdminManufacturers from './pages/admin/AdminManufacturers';
+import AdminModels from './pages/admin/AdminModels';
 import AdminRoomTypes from './pages/admin/AdminRoomTypes';
 import AdminRecommendations from './pages/admin/AdminRecommendations';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -80,6 +82,8 @@ export default function App() {
         <Route index element={<Navigate to="/admin/addresses" />} />
         <Route path="addresses" element={<AdminAddresses />} />
         <Route path="equipment" element={<AdminEquipment />} />
+        <Route path="manufacturers" element={<AdminManufacturers />} />
+        <Route path="models" element={<AdminModels />} />
         <Route path="rooms" element={<AdminRoomTypes />} />
         <Route path="recommendations" element={<AdminRecommendations />} />
         <Route path="users" element={<AdminUsers />} />
