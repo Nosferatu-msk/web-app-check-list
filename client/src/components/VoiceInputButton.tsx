@@ -1,6 +1,6 @@
 import { Tooltip, App } from 'antd';
 import { AudioOutlined, AudioMutedOutlined } from '@ant-design/icons';
-import { useSpeechRecognition, VoiceState } from '../hooks/useSpeechRecognition';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 interface VoiceInputButtonProps {
   onResult: (text: string) => void;
@@ -14,44 +14,34 @@ export default function VoiceInputButton({ onResult }: VoiceInputButtonProps) {
 
   const isActive = state === 'listening';
   const isDisabled = state === 'disabled';
-  const isRequesting = state === 'requesting';
 
   const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (isDisabled) {
-      message.info('Голосовой ввод недоступен без подключения к интернету');
+      message.info('Голосовой ввод недоступен без интернета');
       return;
-    }
-    if (state === 'error') {
-      // Clear error, will restart on next press
     }
     start();
   };
 
   const handlePressEnd = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (isActive) {
       stop();
     }
   };
 
-  const getIconColor = (): string => {
-    switch (state) {
-      case 'listening': return '#EF4444';
-      case 'error': return '#EF4444';
-      case 'disabled': return '#CBD5E1';
-      case 'requesting': return '#94A3B8';
-      default: return '#94A3B8';
-    }
-  };
+  const bgColor = isActive ? '#FEE2E2' : (state === 'error' ? '#FEE2E2' : '#F1F5F9');
+  const iconColor = isActive ? '#DC2626' : (state === 'error' ? '#DC2626' : '#64748B');
 
   const getTooltip = (): string => {
     switch (state) {
       case 'idle': return 'Удерживайте для голосового ввода';
-      case 'requesting': return 'Запрос доступа к микрофону...';
-      case 'listening': return 'Идет запись... Отпустите для остановки';
+      case 'listening': return 'Запись... Отпустите для остановки';
       case 'error': return error || 'Ошибка';
-      case 'disabled': return 'Голосовой ввод недоступен без интернета';
+      case 'disabled': return 'Недоступно без интернета';
       default: return '';
     }
   };
@@ -68,27 +58,26 @@ export default function VoiceInputButton({ onResult }: VoiceInputButtonProps) {
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          backgroundColor: bgColor,
           cursor: isDisabled ? 'not-allowed' : 'pointer',
           opacity: isDisabled ? 0.5 : 1,
-          fontSize: 18,
-          color: getIconColor(),
-          transition: 'all 0.2s ease',
+          fontSize: 20,
+          color: iconColor,
+          transition: 'all 0.15s ease',
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          touchAction: 'none',
           ...(isActive ? {
-            animation: 'voicePulse 1s ease-in-out infinite',
+            backgroundColor: '#FECACA',
+            transform: 'scale(1.1)',
+            boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.3)',
           } : {}),
         }}
       >
         {state === 'error' ? <AudioMutedOutlined /> : <AudioOutlined />}
-        {isActive && (
-          <style>{`
-            @keyframes voicePulse {
-              0%, 100% { transform: scale(1); opacity: 1; }
-              50% { transform: scale(1.15); opacity: 0.7; }
-            }
-          `}</style>
-        )}
       </span>
     </Tooltip>
   );
