@@ -643,9 +643,13 @@ export default function TaskPage() {
               const isRequired = currentConclusion === 'ok_with_notes' || currentConclusion === 'faulty';
               return (
                 <Form.Item
-                  label={
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      Дополнительные рекомендации
+                  label="Дополнительные рекомендации"
+                  name="additionalRecommendations"
+                  rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
+                >
+                  <div style={{ position: 'relative' }}>
+                    <TextArea rows={3} placeholder="Опишите проблему или рекомендации..." style={{ paddingRight: 32 }} />
+                    <div style={{ position: 'absolute', right: 8, bottom: 8 }}>
                       <VoiceInputButton
                         onResult={(text) => {
                           const current = form.getFieldValue('additionalRecommendations') || '';
@@ -654,12 +658,8 @@ export default function TaskPage() {
                           markAutoSaveDirty();
                         }}
                       />
-                    </span>
-                  }
-                  name="additionalRecommendations"
-                  rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
-                >
-                  <TextArea rows={3} placeholder="Опишите проблему или рекомендации..." />
+                    </div>
+                  </div>
                 </Form.Item>
               );
             }}

@@ -4,7 +4,6 @@ export type VoiceState = 'idle' | 'requesting' | 'listening' | 'error' | 'disabl
 
 interface UseSpeechRecognitionOptions {
   onResult: (text: string) => void;
-  silenceTimeout?: number;
 }
 
 interface UseSpeechRecognitionReturn {
@@ -13,33 +12,21 @@ interface UseSpeechRecognitionReturn {
   isSupported: boolean;
   start: () => void;
   stop: () => void;
-  toggle: () => void;
 }
 
 export function useSpeechRecognition({
   onResult,
-  silenceTimeout = 5000,
 }: UseSpeechRecognitionOptions): UseSpeechRecognitionReturn {
   const [state, setState] = useState<VoiceState>('idle');
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListeningRef = useRef(false);
+  const accumulatedRef = useRef('');
 
   const isSupported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
-  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-
-  // Update disabled state based on network
-  useEffect(() => {
-    if (!isOnline && state === 'idle') {
-      setState('disabled');
-    } else if (isOnline && state === 'disabled') {
-      setState('idle');
-    }
-  }, [isOnline, state]);
-
+  // Network state tracking
   useEffect(() => {
     const handleOnline = () => { if (state === 'disabled') setState('idle'); };
     const handleOffline = () => {
@@ -56,23 +43,8 @@ export function useSpeechRecognition({
     };
   }, [state]);
 
-  const resetSilenceTimer = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-    }
-    silenceTimerRef.current = setTimeout(() => {
-      if (isListeningRef.current) {
-        stopRecognition();
-      }
-    }, silenceTimeout);
-  }, [silenceTimeout]);
-
   const stopRecognition = useCallback(() => {
     isListeningRef.current = false;
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -80,7 +52,6 @@ export function useSpeechRecognition({
         // ignore
       }
     }
-    setState('idle');
   }, []);
 
   const startRecognition = useCallback(() => {
@@ -97,71 +68,67 @@ export function useSpeechRecognition({
 
     setError(null);
     setState('requesting');
+    accumulatedRef.current = '';
 
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = 'ru-RU';
-    recognition.interimResults = true;
+    recognition.interimResults = false;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setState('listening');
       isListeningRef.current = true;
-      resetSilenceTimer();
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      resetSilenceTimer();
-      let transcript = '';
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      const trimmed = transcript.trim();
-      if (trimmed) {
-        onResult(trimmed);
+      // Accumulate only final results
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          const text = event.results[i][0].transcript.trim();
+          if (text) {
+            accumulatedRef.current = accumulatedRef.current
+              ? `${accumulatedRef.current} ${text}`
+              : text;
+          }
+        }
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       isListeningRef.current = false;
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
 
       switch (event.error) {
         case 'not-allowed':
           setError('Доступ к микрофону запрещен. Разрешите доступ в настройках браузера.');
           break;
         case 'no-speech':
-          setError('Речь не обнаружена. Попробуйте еще раз.');
+          // No speech detected, just go idle
           break;
         case 'network':
           setError('Связь потеряна. Голосовой ввод остановлен.');
           break;
         case 'aborted':
-          // Normal stop, no error
           break;
         default:
-          setError('Не удалось распознать речь. Попробуйте еще раз или введите текст вручную.');
+          setError('Не удалось распознать речь. Попробуйте еще раз.');
       }
 
-      if (event.error !== 'aborted') {
+      if (event.error !== 'aborted' && event.error !== 'no-speech') {
         setState('error');
-      } else {
-        setState('idle');
       }
     };
 
     recognition.onend = () => {
       isListeningRef.current = false;
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
+      // Deliver accumulated text
+      const text = accumulatedRef.current.trim();
+      accumulatedRef.current = '';
+      if (text) {
+        onResult(text);
       }
-      // Only set idle if not already in error state
-      setState(prev => prev === 'error' ? prev : 'idle');
+      setState(prev => (prev === 'error' ? prev : 'idle'));
     };
 
     recognitionRef.current = recognition;
@@ -172,24 +139,13 @@ export function useSpeechRecognition({
       setError('Не удалось запустить распознавание речи.');
       setState('error');
     }
-  }, [isSupported, onResult, resetSilenceTimer]);
-
-  const toggle = useCallback(() => {
-    if (isListeningRef.current) {
-      stopRecognition();
-    } else {
-      startRecognition();
-    }
-  }, [startRecognition, stopRecognition]);
+  }, [isSupported, onResult]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch { /* ignore */ }
-      }
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
       }
     };
   }, []);
@@ -200,6 +156,5 @@ export function useSpeechRecognition({
     isSupported,
     start: startRecognition,
     stop: stopRecognition,
-    toggle,
   };
 }
