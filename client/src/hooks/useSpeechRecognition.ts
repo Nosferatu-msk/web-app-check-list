@@ -12,6 +12,7 @@ interface UseSpeechRecognitionReturn {
   isSupported: boolean;
   start: () => void;
   stop: () => void;
+  toggle: () => void;
 }
 
 export function useSpeechRecognition({
@@ -141,6 +142,14 @@ export function useSpeechRecognition({
     }
   }, [isSupported, onResult]);
 
+  const toggle = useCallback(() => {
+    if (isListeningRef.current) {
+      stopRecognition();
+    } else {
+      startRecognition();
+    }
+  }, [startRecognition, stopRecognition]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -156,5 +165,6 @@ export function useSpeechRecognition({
     isSupported,
     start: startRecognition,
     stop: stopRecognition,
+    toggle,
   };
 }

@@ -642,25 +642,26 @@ export default function TaskPage() {
               const currentConclusion = getFieldValue('conclusion');
               const isRequired = currentConclusion === 'ok_with_notes' || currentConclusion === 'faulty';
               return (
-                <Form.Item
-                  label="Дополнительные рекомендации"
-                  name="additionalRecommendations"
-                  rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
-                >
-                  <div style={{ position: 'relative' }}>
-                    <TextArea rows={3} placeholder="Опишите проблему или рекомендации..." style={{ paddingRight: 32 }} />
-                    <div style={{ position: 'absolute', right: 8, bottom: 8 }}>
-                      <VoiceInputButton
-                        onResult={(text) => {
-                          const current = form.getFieldValue('additionalRecommendations') || '';
-                          const updated = current ? `${current} ${text}` : text;
-                          form.setFieldValue('additionalRecommendations', updated);
-                          markAutoSaveDirty();
-                        }}
-                      />
-                    </div>
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 500 }}>Дополнительные рекомендации</span>
+                    <VoiceInputButton
+                      onResult={(text) => {
+                        const current = form.getFieldValue('additionalRecommendations') || '';
+                        const updated = current ? `${current} ${text}` : text;
+                        form.setFieldValue('additionalRecommendations', updated);
+                        markAutoSaveDirty();
+                      }}
+                    />
                   </div>
-                </Form.Item>
+                  <Form.Item
+                    name="additionalRecommendations"
+                    style={{ marginBottom: 0 }}
+                    rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
+                  >
+                    <TextArea rows={3} placeholder="Опишите проблему или рекомендации..." />
+                  </Form.Item>
+                </>
               );
             }}
           </Form.Item>

@@ -8,29 +8,19 @@ interface VoiceInputButtonProps {
 
 export default function VoiceInputButton({ onResult }: VoiceInputButtonProps) {
   const { message } = App.useApp();
-  const { state, error, isSupported, start, stop } = useSpeechRecognition({ onResult });
+  const { state, error, isSupported, toggle } = useSpeechRecognition({ onResult });
 
   if (!isSupported) return null;
 
   const isActive = state === 'listening';
   const isDisabled = state === 'disabled';
 
-  const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleClick = () => {
     if (isDisabled) {
       message.info('Голосовой ввод недоступен без интернета');
       return;
     }
-    start();
-  };
-
-  const handlePressEnd = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isActive) {
-      stop();
-    }
+    toggle();
   };
 
   const bgColor = isActive ? '#FEE2E2' : (state === 'error' ? '#FEE2E2' : '#F1F5F9');
@@ -38,8 +28,8 @@ export default function VoiceInputButton({ onResult }: VoiceInputButtonProps) {
 
   const getTooltip = (): string => {
     switch (state) {
-      case 'idle': return 'Удерживайте для голосового ввода';
-      case 'listening': return 'Запись... Отпустите для остановки';
+      case 'idle': return 'Нажмите для голосового ввода';
+      case 'listening': return 'Запись... Нажмите для остановки';
       case 'error': return error || 'Ошибка';
       case 'disabled': return 'Недоступно без интернета';
       default: return '';
@@ -49,11 +39,7 @@ export default function VoiceInputButton({ onResult }: VoiceInputButtonProps) {
   return (
     <Tooltip title={getTooltip()}>
       <span
-        onMouseDown={handlePressStart}
-        onMouseUp={handlePressEnd}
-        onMouseLeave={handlePressEnd}
-        onTouchStart={handlePressStart}
-        onTouchEnd={handlePressEnd}
+        onClick={handleClick}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -68,8 +54,6 @@ export default function VoiceInputButton({ onResult }: VoiceInputButtonProps) {
           color: iconColor,
           transition: 'all 0.15s ease',
           userSelect: 'none',
-          WebkitUserSelect: 'none',
-          touchAction: 'none',
           ...(isActive ? {
             backgroundColor: '#FECACA',
             transform: 'scale(1.1)',
