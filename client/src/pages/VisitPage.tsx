@@ -5,6 +5,7 @@ import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOut
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
+import TorchButton from '../components/TorchButton';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ru';
@@ -457,7 +458,8 @@ export default function VisitPage() {
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
-        <div className="page-title" style={{ margin: 0 }}>{isNew ? 'Новый визит' : 'Визит'}</div>
+        <div className="page-title" style={{ margin: 0, flex: 1 }}>{isNew ? 'Новый визит' : 'Визит'}</div>
+        <TorchButton />
       </div>
 
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
