@@ -4,6 +4,7 @@ import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfi
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import { useAutoSave } from '../hooks/useAutoSave';
+import VoiceInputButton from '../components/VoiceInputButton';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ru';
@@ -642,7 +643,19 @@ export default function TaskPage() {
               const isRequired = currentConclusion === 'ok_with_notes' || currentConclusion === 'faulty';
               return (
                 <Form.Item
-                  label="Дополнительные рекомендации"
+                  label={
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      Дополнительные рекомендации
+                      <VoiceInputButton
+                        onResult={(text) => {
+                          const current = form.getFieldValue('additionalRecommendations') || '';
+                          const updated = current ? `${current} ${text}` : text;
+                          form.setFieldValue('additionalRecommendations', updated);
+                          markAutoSaveDirty();
+                        }}
+                      />
+                    </span>
+                  }
                   name="additionalRecommendations"
                   rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
                 >
