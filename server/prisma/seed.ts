@@ -465,7 +465,7 @@ async function main() {
     if (!eqId || !mfrId) continue;
     await prisma.model.upsert({
       where: {
-        equipment_type_id_manufacturer_id_model_name: {
+        equipmentTypeId_manufacturerId_modelName: {
           equipmentTypeId: eqId,
           manufacturerId: mfrId,
           modelName: md.model,
