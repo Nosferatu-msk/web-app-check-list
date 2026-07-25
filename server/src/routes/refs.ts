@@ -264,7 +264,7 @@ router.get('/object-equipment/other-rooms', async (req: AuthRequest, res: Respon
     const excludeIds = [
       ...visitItems.map((i) => i.objectEquipmentId),
       ...taskRecords.map((t) => t.objectEquipmentId!),
-    ];
+    ].filter(Boolean);
     if (excludeIds.length > 0) where.id = { notIn: excludeIds };
   }
 
