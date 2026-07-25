@@ -142,7 +142,10 @@ export default function VisitListPage() {
                 <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/my-requests')} aria-label="Мои заявки" />
               )}
               {isManager && (
-                <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/requests')} aria-label="Заявки" />
+                <>
+                  <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/requests')} aria-label="Заявки" />
+                  <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')} aria-label="Сводные отчёты" />
+                </>
               )}
               {isAdmin && (
                 <Button type="text" size="small" icon={<SettingOutlined />} onClick={() => navigate('/admin')} aria-label="Админ" />

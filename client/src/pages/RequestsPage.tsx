@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Table, Tag, Space, Select, Card, Modal, Upload, App, Tabs, Input, Badge } from 'antd';
-import { UploadOutlined, UserAddOutlined, UserDeleteOutlined, LinkOutlined } from '@ant-design/icons';
+import { UploadOutlined, UserAddOutlined, UserDeleteOutlined, LinkOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -263,6 +263,7 @@ export default function RequestsPage() {
         extra={
           <Space>
             <NotificationBell />
+            <Button icon={<UnorderedListOutlined />} onClick={() => navigate('/')}>К визитам</Button>
             {(isTm || isAdmin) && (
               <Upload
                 accept=".xlsx"
