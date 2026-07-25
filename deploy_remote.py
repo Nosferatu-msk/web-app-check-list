@@ -8,12 +8,8 @@ PROJECT = '/opt/checklist'
 
 commands = [
     f'cd {PROJECT} && git pull',
-    # Resolve failed migration
-    f'cd {PROJECT} && docker compose -f docker-compose.prod.yml exec -T server npx prisma migrate resolve --rolled-back 20260725000000_add_moderation_fields_and_notifications',
-    # Rebuild and restart
     f'cd {PROJECT} && docker compose -f docker-compose.prod.yml build',
     f'cd {PROJECT} && docker compose -f docker-compose.prod.yml up -d',
-    # Apply migration
     f'cd {PROJECT} && sleep 5 && docker compose -f docker-compose.prod.yml exec -T server npx prisma migrate deploy',
 ]
 
