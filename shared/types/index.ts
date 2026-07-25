@@ -1,6 +1,6 @@
 export type UserRole = 'engineer' | 'tm' | 'admin';
 export type Season = 'summer' | 'winter';
-export type VisitStatus = 'planned' | 'not_started' | 'in_progress' | 'completed' | 'sent' | 'sent_by_engineer' | 'sent_by_tm' | 'corrected_by_tm';
+export type VisitStatus = 'planned' | 'not_started' | 'in_progress' | 'completed' | 'sent' | 'sent_by_engineer' | 'sent_by_tm' | 'corrected_by_tm' | 'awaiting_assignment';
 export type TaskStatus = 'not_started' | 'in_progress' | 'completed';
 export type Conclusion = 'ok' | 'ok_with_notes' | 'faulty';
 export type PhotoMoment = 'before' | 'after';
@@ -16,7 +16,14 @@ export type NotificationType =
   | 'proposal_rejected'
   | 'proposal_expiring_soon'
   | 'proposal_expired'
-  | 'equipment_removed';
+  | 'equipment_removed'
+  | 'request_assigned'
+  | 'request_unassigned'
+  | 'request_declined'
+  | 'request_imported';
+
+export type ImportStatus = 'new' | 'matched' | 'created' | 'error' | 'skipped';
+export type AssignmentAction = 'assigned' | 'unassigned' | 'declined';
 
 export interface User {
   id: string;
@@ -91,7 +98,7 @@ export interface Model {
 
 export interface Visit {
   id: string;
-  userId: string;
+  userId: string | null;
   addressId: string;
   engineerName: string;
   dateStart: string;
@@ -104,14 +111,16 @@ export interface Visit {
   sentByEngineerAt?: string;
   sentByTmAt?: string;
   tmCorrected: boolean;
+  isMultiSpecialist: boolean;
   isDeleted: boolean;
   deletedById?: string;
   deletedAt?: string;
   address?: Address;
   tasks?: Task[];
-  user?: { id: string; fullName: string; email: string };
+  user?: { id: string; fullName: string; email: string } | null;
   assignedBy?: { id: string; fullName: string; email: string };
   deletedBy?: { id: string; fullName: string; email: string };
+  visitEngineers?: VisitEngineer[];
 }
 
 export interface Task {
@@ -122,6 +131,7 @@ export interface Task {
   roomTypeId?: string;
   roomTypeCode?: string;
   objectEquipmentId?: string;
+  externalRequestId?: string;
   comment?: string;
   brand?: string;
   model?: string;
@@ -262,6 +272,15 @@ export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
   sent_by_engineer: 'Отправлен инженером',
   sent_by_tm: 'Отправлен ТМ',
   corrected_by_tm: 'Откорректирован ТМ',
+  awaiting_assignment: 'Ожидает назначения',
+};
+
+export const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
+  new: 'Новая',
+  matched: 'Сопоставлена',
+  created: 'Создана',
+  error: 'Ошибка',
+  skipped: 'Пропущена',
 };
 
 export interface TmAssignment {
@@ -354,6 +373,58 @@ export interface Notification {
   entityId?: string;
   isRead: boolean;
   createdAt: string;
+}
+
+export interface ImportedRequest {
+  id: string;
+  externalRequestId: string;
+  externalStatus?: string;
+  equipmentTypeId: string;
+  equipmentTypeCode?: string;
+  objectCode: string;
+  addressRaw?: string;
+  matchedAddressId?: string;
+  visitId?: string;
+  importStatus: ImportStatus;
+  errorMessage?: string;
+  importedBy?: string;
+  importedAt: string;
+  createdAt: string;
+  equipmentType?: EquipmentType;
+  matchedAddress?: Address;
+  visit?: Visit;
+}
+
+export interface VisitEngineer {
+  id: string;
+  visitId: string;
+  engineerId: string;
+  isPrimary: boolean;
+  assignedBy?: string;
+  assignedAt: string;
+  engineer?: { id: string; fullName: string; email: string };
+}
+
+export interface RequestAssignmentLogEntry {
+  id: string;
+  importedRequestId: string;
+  action: AssignmentAction;
+  engineerId?: string;
+  performedBy?: string;
+  reason?: string;
+  createdAt: string;
+  engineer?: { id: string; fullName: string; email: string };
+  performer?: { id: string; fullName: string; email: string };
+}
+
+export interface ImportRequestsResult {
+  importLogId: string;
+  total: number;
+  created: number;
+  matched: number;
+  skipped: number;
+  errors: number;
+  errorDetails: { row: number; externalRequestId: string; message: string }[];
 }
 
 export function determineSeason(date: Date): Season {

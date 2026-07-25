@@ -521,4 +521,47 @@ export const api = {
 
   getManufacturersList: async () =>
     request<any[]>('/refs/manufacturers'),
+
+  // ─── ЗАЯВКИ (REQUESTS) ───────────────────────────────────────
+  importRequests: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<any>('/requests/import', { method: 'POST', body: formData });
+  },
+
+  validateRequestsFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<any>('/requests/import?mode=validate', { method: 'POST', body: formData });
+  },
+
+  getImportStatus: async (id: string) =>
+    request<any>(`/requests/import/${id}`),
+
+  getRequests: async (params?: { page?: number; pageSize?: number; importStatus?: string; objectCode?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params?.importStatus) qs.set('importStatus', params.importStatus);
+    if (params?.objectCode) qs.set('objectCode', params.objectCode);
+    return request<any>(`/requests?${qs}`);
+  },
+
+  getRequest: async (id: string) =>
+    request<any>(`/requests/${id}`),
+
+  bindRequest: async (id: string, addressId: string) =>
+    request<any>(`/requests/${id}/bind`, { method: 'POST', body: JSON.stringify({ addressId }) }),
+
+  assignEngineer: async (requestId: string, engineerId: string) =>
+    request<any>('/requests/assign', { method: 'POST', body: JSON.stringify({ requestId, engineerId }) }),
+
+  unassignEngineer: async (visitId: string, engineerId: string, requestId?: string, reason?: string) =>
+    request<any>('/requests/unassign', { method: 'POST', body: JSON.stringify({ visitId, engineerId, requestId, reason }) }),
+
+  declineRequest: async (requestId: string, reason: string) =>
+    request<any>('/requests/decline', { method: 'POST', body: JSON.stringify({ requestId, reason }) }),
+
+  searchRequestsByNumbers: async (externalRequestIds: string[]) =>
+    request<any[]>('/requests/search-by-numbers', { method: 'POST', body: JSON.stringify({ externalRequestIds }) }),
 };

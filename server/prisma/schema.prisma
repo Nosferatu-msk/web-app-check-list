@@ -27,6 +27,7 @@ enum VisitStatus {
   sent_by_engineer
   sent_by_tm
   corrected_by_tm
+  awaiting_assignment
 }
 
 enum TaskStatus {
@@ -80,6 +81,11 @@ model User {
   submittedModels          Model[]              @relation("ModelSubmittedBy")
   reviewedModels           Model[]              @relation("ModelReviewedBy")
   notifications            Notification[]
+  importedRequests         ImportedRequest[]    @relation("ImportedBy")
+  visitEngineers           VisitEngineer[]      @relation("VisitEngineerRelation")
+  assignedVisitEngineers   VisitEngineer[]      @relation("VisitEngineerAssigner")
+  assignmentLogsEngineer   RequestAssignmentLog[] @relation("AssignmentLogEngineer")
+  assignmentLogsPerformer  RequestAssignmentLog[] @relation("AssignmentLogPerformer")
 
   @@map("users")
 }
@@ -102,6 +108,7 @@ model Address {
   objectEquipment    ObjectEquipment[]
   equipmentProposals EquipmentProposal[]
   favoriteObjects    UserFavoriteObject[]
+  importedRequests   ImportedRequest[]  @relation("matchedAddress")
 
   @@index([city, street])
   @@map("addresses")
@@ -115,9 +122,10 @@ model EquipmentType {
   isActive          Boolean @default(true) @map("is_active")
   specializationReq String? @map("specialization_req")
 
-  tasks           Task[]
-  recommendations Recommendation[]
-  models          Model[]
+  tasks             Task[]
+  recommendations   Recommendation[]
+  models            Model[]
+  importedRequests  ImportedRequest[]
 
   @@map("equipment_types")
 }
@@ -146,31 +154,34 @@ model Recommendation {
 }
 
 model Visit {
-  id               String      @id @default(uuid())
-  userId           String      @map("user_id")
-  addressId        String      @map("address_id")
-  engineerName     String      @map("engineer_name")
-  dateStart        DateTime    @map("date_start")
-  timeStart        String      @map("time_start")
-  timeEnd          String?     @map("time_end")
-  season           Season
-  status           VisitStatus @default(in_progress)
-  assignedById     String?     @map("assigned_by_id")
-  assignedAt       DateTime?   @map("assigned_at")
-  sentByEngineerAt DateTime?   @map("sent_by_engineer_at")
-  sentByTmAt       DateTime?   @map("sent_by_tm_at")
-  tmCorrected      Boolean     @default(false) @map("tm_corrected")
-  isDeleted        Boolean     @default(false) @map("is_deleted")
-  deletedById      String?     @map("deleted_by_id")
-  deletedAt        DateTime?   @map("deleted_at")
-  createdAt        DateTime    @default(now()) @map("created_at")
-  updatedAt        DateTime    @updatedAt @map("updated_at")
+  id                 String      @id @default(uuid())
+  userId             String?     @map("user_id")
+  addressId          String      @map("address_id")
+  engineerName       String      @map("engineer_name") @default("")
+  dateStart          DateTime    @map("date_start")
+  timeStart          String      @map("time_start")
+  timeEnd            String?     @map("time_end")
+  season             Season
+  status             VisitStatus @default(in_progress)
+  assignedById       String?     @map("assigned_by_id")
+  assignedAt         DateTime?   @map("assigned_at")
+  sentByEngineerAt   DateTime?   @map("sent_by_engineer_at")
+  sentByTmAt         DateTime?   @map("sent_by_tm_at")
+  tmCorrected        Boolean     @default(false) @map("tm_corrected")
+  isMultiSpecialist  Boolean     @default(false) @map("is_multi_specialist")
+  isDeleted          Boolean     @default(false) @map("is_deleted")
+  deletedById        String?     @map("deleted_by_id")
+  deletedAt          DateTime?   @map("deleted_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
 
-  user       User    @relation("UserVisits", fields: [userId], references: [id])
-  assignedBy User?   @relation("AssignedVisits", fields: [assignedById], references: [id])
-  deletedBy  User?   @relation("DeletedBy", fields: [deletedById], references: [id])
-  address    Address @relation(fields: [addressId], references: [id])
-  tasks      Task[]
+  user             User?            @relation("UserVisits", fields: [userId], references: [id])
+  assignedBy       User?            @relation("AssignedVisits", fields: [assignedById], references: [id])
+  deletedBy        User?            @relation("DeletedBy", fields: [deletedById], references: [id])
+  address          Address          @relation(fields: [addressId], references: [id])
+  tasks            Task[]
+  visitEngineers   VisitEngineer[]
+  importedRequests ImportedRequest[]
 
   @@index([userId, dateStart])
   @@index([status])
@@ -187,6 +198,7 @@ model Task {
   roomTypeId                String?     @map("room_type_id")
   roomTypeCode              String?     @map("room_type_code")
   objectEquipmentId         String?     @map("object_equipment_id")
+  externalRequestId         String?     @map("external_request_id")
   comment                   String?
   brand                     String?
   model                     String?
@@ -506,4 +518,69 @@ model Notification {
   @@index([userId, isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+model ImportedRequest {
+  id                String   @id @default(uuid())
+  externalRequestId String   @unique @map("external_request_id")
+  externalStatus    String?  @map("external_status")
+  equipmentTypeId   String   @map("equipment_type_id")
+  equipmentTypeCode String?  @map("equipment_type_code")
+  objectCode        String   @map("object_code")
+  addressRaw        String?  @map("address_raw")
+  matchedAddressId  String?  @map("matched_address_id")
+  visitId           String?  @map("visit_id")
+  importStatus      String   @default("new") @map("import_status")
+  errorMessage      String?  @map("error_message")
+  importedBy        String?  @map("imported_by")
+  importedAt        DateTime @default(now()) @map("imported_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  equipmentType  EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  matchedAddress Address?      @relation("matchedAddress", fields: [matchedAddressId], references: [id])
+  visit          Visit?        @relation(fields: [visitId], references: [id])
+  importedByUser User?         @relation("ImportedBy", fields: [importedBy], references: [id])
+  assignmentLogs RequestAssignmentLog[]
+
+  @@index([importStatus])
+  @@index([objectCode])
+  @@index([visitId])
+  @@map("imported_requests")
+}
+
+model VisitEngineer {
+  id         String   @id @default(uuid())
+  visitId    String   @map("visit_id")
+  engineerId String   @map("engineer_id")
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  assignedBy String?  @map("assigned_by")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  visit    Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  engineer User  @relation("VisitEngineerRelation", fields: [engineerId], references: [id])
+  assigner User? @relation("VisitEngineerAssigner", fields: [assignedBy], references: [id])
+
+  @@unique([visitId, engineerId])
+  @@index([visitId])
+  @@index([engineerId])
+  @@map("visit_engineers")
+}
+
+model RequestAssignmentLog {
+  id              String   @id @default(uuid())
+  importedRequestId String  @map("imported_request_id")
+  action          String
+  engineerId      String?  @map("engineer_id")
+  performedBy     String?  @map("performed_by")
+  reason          String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  importedRequest ImportedRequest @relation(fields: [importedRequestId], references: [id], onDelete: Cascade)
+  engineer        User?           @relation("AssignmentLogEngineer", fields: [engineerId], references: [id])
+  performer       User?           @relation("AssignmentLogPerformer", fields: [performedBy], references: [id])
+
+  @@index([importedRequestId])
+  @@index([createdAt])
+  @@map("request_assignment_log")
 }

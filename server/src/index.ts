@@ -13,6 +13,7 @@ import importRoutes from './routes/import.js';
 import proposalRoutes from './routes/proposals.js';
 import notificationRoutes from './routes/notifications.js';
 import profileRoutes from './routes/profile.js';
+import requestRoutes from './routes/requests.js';
 import { startCronJobs } from './services/cron.js';
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/admin/import', importRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/requests', requestRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

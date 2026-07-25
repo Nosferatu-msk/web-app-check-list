@@ -224,10 +224,11 @@ async function resizeForActScanBuffer(buffer: Buffer): Promise<Buffer> {
 // ─── POST /summary-generate — Унифицированный сводный отчёт ────
 
 const summaryGenerateSchema = z.object({
-  type: z.enum(['period', 'objects']),
+  type: z.enum(['period', 'objects', 'requests']),
   dateFrom: z.string(),
   dateTo: z.string(),
   addressIds: z.array(z.string().uuid()).optional(),
+  requestIds: z.array(z.string().uuid()).optional(),
   engineerId: z.string().uuid().optional(),
   scanIds: z.array(z.string().uuid()).optional(),
 });
@@ -239,10 +240,14 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       res.status(400).json({ error: 'Ошибка валидации', details: parsed.error.flatten() });
       return;
     }
-    const { type, dateFrom, dateTo, addressIds, engineerId, scanIds } = parsed.data;
+    const { type, dateFrom, dateTo, addressIds, requestIds, engineerId, scanIds } = parsed.data;
 
     if (type === 'objects' && (!addressIds || addressIds.length === 0)) {
       res.status(400).json({ error: 'Выберите хотя бы один объект' });
+      return;
+    }
+    if (type === 'requests' && (!requestIds || requestIds.length === 0)) {
+      res.status(400).json({ error: 'Выберите хотя бы одну заявку' });
       return;
     }
 
@@ -252,11 +257,24 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
     const where: any = {
       isDeleted: false,
       dateStart: { gte: from, lte: to },
-      status: { in: ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'] },
+      status: { in: ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm', 'awaiting_assignment', 'planned', 'not_started', 'in_progress'] },
     };
 
     if (type === 'objects') {
       where.addressId = { in: addressIds };
+    }
+    if (type === 'requests') {
+      // Находим визиты через imported_requests
+      const importedRequests = await prisma.importedRequest.findMany({
+        where: { id: { in: requestIds }, visitId: { not: null } },
+        select: { visitId: true },
+      });
+      const visitIds = [...new Set(importedRequests.map(r => r.visitId!).filter(Boolean))];
+      if (visitIds.length === 0) {
+        res.status(400).json({ error: 'По указанным заявкам не найдено визитов' });
+        return;
+      }
+      where.id = { in: visitIds };
     }
     if (req.userRole === 'tm') {
       const engineerIds = await getTmEngineerIds(req.userId!);
@@ -414,7 +432,9 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
 
     const downloadName = type === 'period'
       ? `Svodnyj_otchet_${dateFrom.replace(/\./g, '-')}_${dateTo.replace(/\./g, '-')}.pdf`
-      : `Otchet_po_obektam_${dateFrom.replace(/\./g, '-')}_${dateTo.replace(/\./g, '-')}.pdf`;
+      : type === 'requests'
+        ? `Otchet_po_zayavkam_${dateFrom.replace(/\./g, '-')}_${dateTo.replace(/\./g, '-')}.pdf`
+        : `Otchet_po_obektam_${dateFrom.replace(/\./g, '-')}_${dateTo.replace(/\./g, '-')}.pdf`;
 
     res.download(pdfPath, downloadName);
   } catch (err: any) {

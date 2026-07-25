@@ -16,6 +16,8 @@ import ItemPhotoPage from './pages/ItemPhotoPage';
 import ReportPage from './pages/ReportPage';
 import SummaryReportPage from './pages/SummaryReportPage';
 import ProfilePage from './pages/ProfilePage';
+import RequestsPage from './pages/RequestsPage';
+import MyRequestsPage from './pages/MyRequestsPage';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminAddresses from './pages/admin/AdminAddresses';
 import AdminEquipment from './pages/admin/AdminEquipment';
@@ -69,6 +71,7 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/" element={<ProtectedRoute><EngineerRoute><VisitListPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/my-requests" element={<ProtectedRoute><EngineerRoute><MyRequestsPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/visit/new" element={<ProtectedRoute><EngineerRoute><VisitPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/visit/:id" element={<ProtectedRoute><EngineerRoute><VisitPage /></EngineerRoute></ProtectedRoute>} />
@@ -78,6 +81,7 @@ export default function App() {
       <Route path="/visit/:visitId/task/:taskId/item/:itemId/photos" element={<ProtectedRoute><EngineerRoute><ItemPhotoPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/visit/:id/report" element={<ProtectedRoute><EngineerRoute><ReportPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/reports/summary" element={<TmAdminRoute><ProtectedRoute><SummaryReportPage /></ProtectedRoute></TmAdminRoute>} />
+      <Route path="/requests" element={<TmAdminRoute><ProtectedRoute><RequestsPage /></ProtectedRoute></TmAdminRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
         <Route index element={<Navigate to="/admin/addresses" />} />
         <Route path="addresses" element={<AdminAddresses />} />

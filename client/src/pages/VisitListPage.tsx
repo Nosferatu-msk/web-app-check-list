@@ -105,8 +105,14 @@ export default function VisitListPage() {
         </div>
         <Space>
           <NotificationBell />
+          {!isManager && (
+            <Button icon={<BarChartOutlined />} onClick={() => navigate('/my-requests')}>Мои заявки</Button>
+          )}
           {isManager && (
-            <Button icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')}>Сводные отчёты</Button>
+            <>
+              <Button icon={<BarChartOutlined />} onClick={() => navigate('/requests')}>Заявки</Button>
+              <Button icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')}>Сводные отчёты</Button>
+            </>
           )}
           {isAdmin && (
             <Button icon={<SettingOutlined />} onClick={() => navigate('/admin')}>Админ</Button>

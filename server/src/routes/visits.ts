@@ -14,8 +14,12 @@ async function getTmEngineerIds(tmId: string): Promise<string[]> {
   return assignments.map(a => a.engineerId);
 }
 
-async function canAccessVisit(visitUserId: string, req: AuthRequest): Promise<boolean> {
+async function canAccessVisit(visitUserId: string | null, req: AuthRequest): Promise<boolean> {
   if (req.userRole === 'admin') return true;
+  if (!visitUserId) {
+    // Визит без инженера (awaiting_assignment) — доступен ТМ и админу
+    return req.userRole === 'tm' || req.userRole === 'admin';
+  }
   if (visitUserId === req.userId) return true;
   if (req.userRole === 'tm') {
     const engineerIds = await getTmEngineerIds(req.userId!);
