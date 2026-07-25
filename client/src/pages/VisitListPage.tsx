@@ -172,7 +172,10 @@ export default function VisitListPage() {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600 }}>{v.address?.fullAddress || 'Адрес'}</div>
+                    <div style={{ fontWeight: 600 }}>
+                      {v.address?.objectCode && <Tag color="blue" style={{ marginRight: 4 }}>{v.address.objectCode}</Tag>}
+                      {v.address?.fullAddress || 'Адрес'}
+                    </div>
                     <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
                       {new Date(v.dateStart).toLocaleDateString('ru-RU')} в {v.timeStart}
                       {' · '}Задач: {v._count?.tasks || 0}

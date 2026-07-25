@@ -169,7 +169,7 @@ export default function SummaryReportPage() {
                 onChange={setSelectedAddressIds}
                 options={addressOptions.map((a: any) => ({
                   value: a.id,
-                  label: a.fullAddress,
+                  label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress,
                 }))}
                 notFoundContent="Адрес не найден"
                 style={{ width: '100%' }}

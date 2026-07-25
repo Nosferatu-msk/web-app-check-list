@@ -30,6 +30,7 @@ router.get('/addresses', async (req: AuthRequest, res: Response) => {
       OR: [
         { fullAddress: { contains: search, mode: 'insensitive' as const } },
         { street: { contains: search, mode: 'insensitive' as const } },
+        { objectCode: { contains: search, mode: 'insensitive' as const } },
       ],
     } : {}),
   };
@@ -44,7 +45,7 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
   const data = await prisma.address.findMany({
-    where: { isDeleted: false, OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] },
+    where: { isDeleted: false, OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }, { objectCode: { contains: q, mode: 'insensitive' } }] },
     take: 20,
   });
   res.json(data);

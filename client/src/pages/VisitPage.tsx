@@ -516,7 +516,7 @@ export default function VisitPage() {
               onChange={(v: string) => {
                 form.setFieldValue('addressId', v);
               }}
-              options={addressOptions.map((a: any) => ({ label: a.fullAddress, value: a.id, dataId: a.id }))}
+              options={addressOptions.map((a: any) => ({ label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress, value: a.id, dataId: a.id }))}
               notFoundContent="Адрес не найден"
             />
           </Form.Item>

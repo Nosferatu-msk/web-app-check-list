@@ -70,7 +70,7 @@ export default function AdminObjectEquipment() {
             onSearch={searchAddresses}
             onChange={(v) => setSelectedAddressId(v || '')}
             filterOption={false}
-            options={addresses.map((a: any) => ({ value: a.id, label: a.fullAddress }))}
+            options={addresses.map((a: any) => ({ value: a.id, label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress }))}
             notFoundContent="Введите минимум 2 символа"
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
@@ -99,7 +99,7 @@ export default function AdminObjectEquipment() {
               showSearch
               onSearch={searchAddresses}
               filterOption={false}
-              options={addresses.map((a: any) => ({ value: a.id, label: a.fullAddress }))}
+              options={addresses.map((a: any) => ({ value: a.id, label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress }))}
               notFoundContent="Введите минимум 2 символа"
             />
           </Form.Item>

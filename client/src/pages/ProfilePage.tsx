@@ -208,7 +208,7 @@ function EngineerProfile() {
             notFoundContent={searchQuery.length >= 2 ? 'Ничего не найдено' : 'Введите 2+ символа'}
             options={searchResults.map((a: any) => ({
               value: a.id || a.objectCode || a.fullAddress,
-              label: a.fullAddress || a.full_address,
+              label: (a.objectCode || a.object_code) ? `[${a.objectCode || a.object_code}] ${a.fullAddress || a.full_address}` : (a.fullAddress || a.full_address),
             }))}
           />
           <Button icon={<PlusOutlined />} onClick={handleAddFavorite} disabled={!selectedAddress || favorites.length >= 20} />
