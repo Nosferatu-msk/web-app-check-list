@@ -4,6 +4,8 @@ import { useAuthStore } from './store/authStore';
 import { Spin } from 'antd';
 import SyncBanner from './components/SyncBanner';
 import SpecializationGate from './components/SpecializationGate';
+import BottomNav from './components/BottomNav';
+import { useIsMobile } from './hooks/useIsMobile';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -39,6 +41,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <><SyncBanner />{children}</>;
 }
 
+function EngineerMobileLayout({ children }: { children: React.ReactNode }) {
+  const isMobile = useIsMobile();
+  return (
+    <>
+      {children}
+      {isMobile && <BottomNav />}
+    </>
+  );
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
@@ -57,7 +69,7 @@ function EngineerRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
   if (user?.role !== 'engineer') return <>{children}</>;
-  return <SpecializationGate>{children}</SpecializationGate>;
+  return <SpecializationGate><EngineerMobileLayout>{children}</EngineerMobileLayout></SpecializationGate>;
 }
 
 export default function App() {

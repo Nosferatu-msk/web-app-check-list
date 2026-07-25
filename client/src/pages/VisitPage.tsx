@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined } from '@ant-design/icons';
+import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete, Dropdown } from 'antd';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { useIsMobile } from '../hooks/useIsMobile';
 import TorchButton from '../components/TorchButton';
 import NotificationBell from '../components/NotificationBell';
 import dayjs from 'dayjs';
@@ -30,6 +31,7 @@ export default function VisitPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
   const isNew = !id || id === 'new';
   const [form] = Form.useForm();
   const [visit, setVisit] = useState<any>(null);
@@ -493,8 +495,43 @@ export default function VisitPage() {
 
   if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>;
 
+  // Группировка задач по комнатам для мобильного вида
+  const tasksByRoom = isMobile ? (() => {
+    const groups = new Map<string, { roomName: string; tasks: any[] }>();
+    for (const task of tasks) {
+      const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
+      const roomName = task.roomType?.name || task.comment || 'Без помещения';
+      if (!groups.has(roomKey)) {
+        groups.set(roomKey, { roomName, tasks: [] });
+      }
+      groups.get(roomKey)!.tasks.push(task);
+    }
+    return Array.from(groups.entries()).map(([key, val]) => ({ key, ...val }));
+  })() : [];
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircleOutlined className="status-icon status-icon-completed" aria-label="Выполнено" />;
+      case 'in_progress':
+        return <SyncOutlined className="status-icon status-icon-in-progress" aria-label="В работе" />;
+      default:
+        return <ClockCircleOutlined className="status-icon status-icon-not-started" aria-label="Не начато" />;
+    }
+  };
+
+  const navigateToTask = (record: any) => {
+    if (visit?.id) {
+      if (record.taskType === 'group_climate') {
+        navigate(`/visit/${visit.id}/task/${record.id}/group`);
+      } else {
+        navigate(`/visit/${visit.id}/task/${record.id}`);
+      }
+    }
+  };
+
   return (
-    <div className="page-container">
+    <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
         <div className="page-title" style={{ margin: 0, flex: 1 }}>{isNew ? 'Новый визит' : 'Визит'}</div>
@@ -553,25 +590,86 @@ export default function VisitPage() {
         <Button type="dashed" icon={<PlusOutlined />} onClick={handleOpenAddModal}>Добавить оборудование</Button>
       </div>
 
-      <Table
-        dataSource={tasks}
-        columns={columns}
-        rowKey="id"
-        pagination={false}
-        size="small"
-        onRow={(record) => ({
-          onClick: () => {
-            if (visit?.id) {
-              if (record.taskType === 'group_climate') {
-                navigate(`/visit/${visit.id}/task/${record.id}/group`);
-              } else {
-                navigate(`/visit/${visit.id}/task/${record.id}`);
-              }
-            }
-          },
-          style: { cursor: 'pointer' },
-        })}
-      />
+      {!isMobile ? (
+        <Table
+          dataSource={tasks}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          size="small"
+          onRow={(record) => ({
+            onClick: () => navigateToTask(record),
+            style: { cursor: 'pointer' },
+          })}
+        />
+      ) : (
+        <div className="mobile-task-list">
+          {tasksByRoom.length === 0 ? (
+            <Empty description="Нет задач" />
+          ) : (
+            tasksByRoom.map((group) => (
+              <div key={group.key} className="room-group">
+                <div className="room-group-header">
+                  📍 {group.roomName}
+                </div>
+                {group.tasks.map((task: any) => {
+                  const eqName = task.taskType === 'group_climate'
+                    ? '🌡 Климатическое оборудование'
+                    : (task.equipmentType?.name || 'Оборудование');
+                  const subtitle = task.taskType === 'group_climate'
+                    ? `Единиц: ${(task.equipmentItems || []).length}`
+                    : [task.roomType?.name, task.equipmentType?.name].filter(Boolean).join(' · ');
+                  const overflowItems = [
+                    { key: 'edit', label: 'Редактировать', icon: <EditOutlined /> },
+                    { key: 'delete', label: 'Удалить', icon: <DeleteOutlined />, danger: true },
+                    { key: 'photos', label: 'Перейти к фото', icon: <PictureOutlined /> },
+                  ];
+                  return (
+                    <div
+                      key={task.id}
+                      className="task-card"
+                      onClick={() => navigateToTask(task)}
+                    >
+                      <div className="task-card-content">
+                        <div className="task-card-title">{eqName}</div>
+                        <div className="task-card-subtitle">{subtitle}</div>
+                      </div>
+                      <div className="task-card-meta">
+                        <span className="photo-progress">
+                          <CameraOutlined /> {getPhotoProgress(task)}
+                        </span>
+                        {getStatusIcon(task.status)}
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <Dropdown
+                            menu={{
+                              items: overflowItems,
+                              onClick: ({ key }) => {
+                                if (key === 'edit') navigateToTask(task);
+                                else if (key === 'delete') {
+                                  Modal.confirm({
+                                    title: 'Удалить задачу?',
+                                    okText: 'Да',
+                                    cancelText: 'Нет',
+                                    onOk: () => handleDeleteTask(task.id),
+                                  });
+                                }
+                                else if (key === 'photos') navigateToTask(task);
+                              },
+                            }}
+                            trigger={['click']}
+                          >
+                            <EllipsisOutlined style={{ fontSize: 18, padding: '0 4px' }} />
+                          </Dropdown>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {visit && (
         <div style={{ marginTop: 16 }}>

@@ -111,7 +111,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       orderBy: { dateStart: 'desc' },
       include: {
         address: true,
-        user: { select: { id: true, fullName: true, email: true } },
+        user: { select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } },
         assignedBy: { select: { id: true, fullName: true, email: true } },
         deletedBy: { select: { id: true, fullName: true, email: true } },
         _count: { select: { tasks: true } },

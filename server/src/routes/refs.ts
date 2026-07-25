@@ -219,14 +219,14 @@ router.get('/engineers', async (req: AuthRequest, res: Response) => {
   if (role === 'admin') {
     const data = await prisma.user.findMany({
       where: { role: 'engineer', isActive: true },
-      select: { id: true, fullName: true, email: true },
+      select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
       orderBy: { fullName: 'asc' },
     });
     res.json(data);
   } else if (role === 'tm') {
     const assignments = await prisma.tmEngineer.findMany({
       where: { tmId: req.userId as string },
-      select: { engineer: { select: { id: true, fullName: true, email: true } } },
+      select: { engineer: { select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } } },
     });
     res.json(assignments.map(a => a.engineer));
   } else {

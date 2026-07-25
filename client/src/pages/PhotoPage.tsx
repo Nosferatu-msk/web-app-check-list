@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Space, App, Spin, Modal, Alert } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PictureOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
+import { useIsMobile } from '../hooks/useIsMobile';
+import MobileHeader from '../components/MobileHeader';
 
 const CLIENT_ZONES = ['kassovaya', 'zona_samoobsl', 'kassa', 'sanitarnyj_uzel', 'kryltso'];
 
@@ -45,6 +47,7 @@ export default function PhotoPage() {
   const { message } = App.useApp();
   const { visitId, taskId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [task, setTask] = useState<any>(null);
   const [photos, setPhotos] = useState<any[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -180,11 +183,14 @@ export default function PhotoPage() {
   if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>;
 
   return (
-    <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}/task/${taskId}`)}>Назад</Button>
-        <div className="page-title" style={{ margin: 0 }}>Фотофиксация</div>
-      </div>
+    <div className={`page-container ${isMobile ? 'page-with-bottom-nav' : ''}`}>
+      {isMobile && <MobileHeader title="Фотофиксация" showBack onBack={() => navigate(`/visit/${visitId}/task/${taskId}`)} />}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}/task/${taskId}`)}>Назад</Button>
+          <div className="page-title" style={{ margin: 0 }}>Фотофиксация</div>
+        </div>
+      )}
 
       <Card>
         <div style={{ marginBottom: 8, fontWeight: 600, fontSize: 16 }}>{task?.equipmentType?.name}</div>
@@ -198,10 +204,10 @@ export default function PhotoPage() {
               <Button type="text" danger icon={<DeleteOutlined />} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.8)', borderRadius: '50%' }} onClick={() => handleDelete(beforePhoto.id)} />
             </div>
           ) : (
-            <Space wrap>
-              <Button icon={<CameraOutlined />} onClick={() => beforeRef.current?.click()} loading={uploading}>Камера</Button>
-              <Button icon={<PictureOutlined />} onClick={() => beforeGalleryRef.current?.click()} loading={uploading}>Галерея</Button>
-              <input ref={beforeRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
+            <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
+              <Button icon={<CameraOutlined />} onClick={() => beforeRef.current?.click()} loading={uploading} block={isMobile}>Камера</Button>
+              <Button icon={<PictureOutlined />} onClick={() => beforeGalleryRef.current?.click()} loading={uploading} block={isMobile}>Галерея</Button>
+              <input ref={beforeRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
               <input ref={beforeGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
             </Space>
           )}
@@ -216,10 +222,10 @@ export default function PhotoPage() {
                 <Button type="text" danger icon={<DeleteOutlined />} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.8)', borderRadius: '50%' }} onClick={() => handleDelete(afterPhoto.id)} />
               </div>
             ) : (
-              <Space wrap>
-                <Button icon={<CameraOutlined />} onClick={() => afterRef.current?.click()} loading={uploading}>Камера</Button>
-                <Button icon={<PictureOutlined />} onClick={() => afterGalleryRef.current?.click()} loading={uploading}>Галерея</Button>
-                <input ref={afterRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
+              <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
+                <Button icon={<CameraOutlined />} onClick={() => afterRef.current?.click()} loading={uploading} block={isMobile}>Камера</Button>
+                <Button icon={<PictureOutlined />} onClick={() => afterGalleryRef.current?.click()} loading={uploading} block={isMobile}>Галерея</Button>
+                <input ref={afterRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
                 <input ref={afterGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
               </Space>
             )}
