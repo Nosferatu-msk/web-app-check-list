@@ -55,29 +55,31 @@ model User {
   isActive           Boolean  @default(true) @map("is_active")
   mustChangePassword Boolean  @default(false) @map("must_change_password")
   specializationVik  Boolean  @default(false) @map("specialization_vik")
-  specializationIszh Boolean  @default(true)  @map("specialization_iszh")
+  specializationIszh Boolean  @default(true) @map("specialization_iszh")
   specializationGpm  Boolean  @default(false) @map("specialization_gpm")
   specializationDgu  Boolean  @default(false) @map("specialization_dgu")
   specializationIbp  Boolean  @default(false) @map("specialization_ibp")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
-  visits         Visit[]              @relation("UserVisits")
-  assignedVisits Visit[]              @relation("AssignedVisits")
-  auditLogs      AuditLog[]
-  resetTokens    PasswordResetToken[]
-  tmObjects      TmObject[]           @relation("TmObjectRelation")
-  tmEngineers    TmEngineer[]         @relation("TmEngineerTmRelation")
-  engineersAsTm  TmEngineer[]         @relation("TmEngineerEngineerRelation")
+  visits                   Visit[]              @relation("UserVisits")
+  assignedVisits           Visit[]              @relation("AssignedVisits")
+  auditLogs                AuditLog[]
+  resetTokens              PasswordResetToken[]
+  tmObjects                TmObject[]           @relation("TmObjectRelation")
+  tmEngineers              TmEngineer[]         @relation("TmEngineerTmRelation")
+  engineersAsTm            TmEngineer[]         @relation("TmEngineerEngineerRelation")
   deletedVisits            Visit[]              @relation("DeletedBy")
   equipmentProposals       EquipmentProposal[]  @relation("proposedBy")
   reviewedProposals        EquipmentProposal[]  @relation("reviewedBy")
   favoriteObjects          UserFavoriteObject[]
   confirmedObjectEquipment ObjectEquipment[]    @relation("objectEquipmentRoomConfirm")
+  createdObjectEquipment   ObjectEquipment[]    @relation("objectEquipmentCreatedBy")
   reportAttachments        ReportAttachment[]   @relation("ReportAttachmentUploader")
   reportTasks              ReportTask[]         @relation("ReportTaskCreator")
   submittedModels          Model[]              @relation("ModelSubmittedBy")
   reviewedModels           Model[]              @relation("ModelReviewedBy")
+  notifications            Notification[]
 
   @@map("users")
 }
@@ -95,11 +97,11 @@ model Address {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  visits              Visit[]
-  tmObjects           TmObject[]
-  objectEquipment     ObjectEquipment[]
-  equipmentProposals  EquipmentProposal[]
-  favoriteObjects     UserFavoriteObject[]
+  visits             Visit[]
+  tmObjects          TmObject[]
+  objectEquipment    ObjectEquipment[]
+  equipmentProposals EquipmentProposal[]
+  favoriteObjects    UserFavoriteObject[]
 
   @@index([city, street])
   @@map("addresses")
@@ -198,12 +200,12 @@ model Task {
   createdAt                 DateTime    @default(now()) @map("created_at")
   updatedAt                 DateTime    @updatedAt @map("updated_at")
 
-  visit            Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  equipmentType    EquipmentType       @relation(fields: [equipmentTypeId], references: [id])
-  roomType         RoomType?           @relation(fields: [roomTypeId], references: [id])
-  objectEquipment  ObjectEquipment?    @relation(fields: [objectEquipmentId], references: [id])
-  photos           Photo[]
-  equipmentItems   TaskEquipmentItem[]
+  visit           Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  equipmentType   EquipmentType       @relation(fields: [equipmentTypeId], references: [id])
+  roomType        RoomType?           @relation(fields: [roomTypeId], references: [id])
+  objectEquipment ObjectEquipment?    @relation(fields: [objectEquipmentId], references: [id])
+  photos          Photo[]
+  equipmentItems  TaskEquipmentItem[]
 
   @@index([visitId, status])
   @@map("tasks")
@@ -238,8 +240,8 @@ model TaskEquipmentItem {
   sortOrder         Int      @default(0) @map("sort_order")
   createdAt         DateTime @default(now()) @map("created_at")
 
-  task            Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  objectEquipment ObjectEquipment   @relation(fields: [objectEquipmentId], references: [id])
+  task            Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  objectEquipment ObjectEquipment @relation(fields: [objectEquipmentId], references: [id])
   photos          Photo[]
 
   @@unique([taskId, objectEquipmentId])
@@ -345,10 +347,17 @@ model ObjectEquipment {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
+  // v2.1: поля модерации и TTL
+  confirmationStatus String    @default("confirmed") @map("confirmation_status")
+  createdBy          String?   @map("created_by")
+  pendingUntil       DateTime? @map("pending_until")
+
   address             Address             @relation(fields: [addressId], references: [id], onDelete: Cascade)
   roomConfirmedByUser User?               @relation("objectEquipmentRoomConfirm", fields: [roomConfirmedBy], references: [id])
+  createdByUser       User?               @relation("objectEquipmentCreatedBy", fields: [createdBy], references: [id])
   tasks               Task[]
   taskEquipmentItems  TaskEquipmentItem[]
+  equipmentProposals  EquipmentProposal[]
 
   @@unique([addressId, equipmentTypeCode, serialNumber])
   @@unique([addressId, equipmentTypeCode, locationDescription])
@@ -376,8 +385,19 @@ model EquipmentProposal {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
+  // v2.1: расширенные поля модерации
+  requestType       String           @default("new_equipment") @map("request_type")
+  oldRoomTypeCode   String?          @map("old_room_type_code")
+  rejectionReason   String?          @map("rejection_reason")
+  pendingUntil      DateTime?        @map("pending_until")
+  objectEquipmentId String?          @map("object_equipment_id")
+  objectEquipment   ObjectEquipment? @relation(fields: [objectEquipmentId], references: [id])
+
   @@index([addressId])
   @@index([status])
+  @@index([requestType])
+  @@index([pendingUntil])
+  @@index([objectEquipmentId, status])
   @@map("equipment_proposals")
 }
 
@@ -468,4 +488,22 @@ model Model {
   @@index([manufacturerId])
   @@index([status])
   @@map("models")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  type       String
+  title      String
+  message    String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }

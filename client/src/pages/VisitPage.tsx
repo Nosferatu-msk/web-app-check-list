@@ -56,6 +56,9 @@ export default function VisitPage() {
   const [newTaskForm] = Form.useForm();
   const [mfrOptions, setMfrOptions] = useState<{ value: string; label: string }[]>([]);
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
+  const [otherRoomsEquipment, setOtherRoomsEquipment] = useState<any[]>([]);
+  const [otherRoomsLoading, setOtherRoomsLoading] = useState(false);
+  const [transferringId, setTransferringId] = useState<string | null>(null);
 
   const handleAutoSave = useCallback(async () => {
     if (isNew) return;
@@ -188,6 +191,39 @@ export default function VisitPage() {
     setObjectEquipLoading(false);
   }, []);
 
+  const loadOtherRoomsEquipment = useCallback(async (addressId: string, currentRoomTypeCode: string, visitId: string) => {
+    setOtherRoomsLoading(true);
+    try {
+      const eq = await api.getOtherRoomsEquipment({
+        address_id: addressId,
+        current_room_type_code: currentRoomTypeCode,
+        exclude_visit_id: visitId,
+      });
+      setOtherRoomsEquipment(eq);
+    } catch { /* ignore */ }
+    setOtherRoomsLoading(false);
+  }, []);
+
+  const handleTransferEquipment = useCallback(async (equipmentId: string, newRoomTypeCode: string) => {
+    setTransferringId(equipmentId);
+    try {
+      await api.createRoomChangeProposal({
+        objectEquipmentId: equipmentId,
+        newRoomTypeCode,
+      });
+      message.success('Запрос на перенос отправлен. Оборудование сразу доступно в этом помещении.');
+      // Обновляем список — оборудование теперь в текущем помещении
+      if (visit?.addressId && visit?.id) {
+        await loadOtherRoomsEquipment(visit.addressId, newRoomTypeCode, visit.id);
+        // Перезагрузить оборудование текущего помещения
+        await loadRoomEquipment(visit.addressId, newRoomTypeCode, visit.id);
+      }
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка переноса');
+    }
+    setTransferringId(null);
+  }, [visit, message, loadOtherRoomsEquipment, loadRoomEquipment]);
+
   const handleOpenAddModal = useCallback(async () => {
     let currentVisit = visit;
     if (!currentVisit?.id) {
@@ -221,6 +257,7 @@ export default function VisitPage() {
     setSelectedRoomEquipIds([]);
     setObjectEquipment([]);
     setSelectedObjectEquipIds([]);
+    setOtherRoomsEquipment([]);
     await loadEquipmentRooms(currentVisit.id, currentVisit.addressId);
     await loadObjectEquipment(currentVisit.addressId, currentVisit.id);
   }, [visit, form, navigate, loadEquipmentRooms, loadObjectEquipment, message]);
@@ -229,8 +266,9 @@ export default function VisitPage() {
     setSelectedRoom(roomCode);
     if (visit?.addressId && visit?.id) {
       await loadRoomEquipment(visit.addressId, roomCode, visit.id);
+      await loadOtherRoomsEquipment(visit.addressId, roomCode, visit.id);
     }
-  }, [visit, loadRoomEquipment]);
+  }, [visit, loadRoomEquipment, loadOtherRoomsEquipment]);
 
   const CLIMATE_INDOOR_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
   const CLIMATE_OUTDOOR_CODES = ['splitnar', 'mssnar', 'vrv_nar'];
@@ -639,6 +677,49 @@ export default function VisitPage() {
                           Добавить {selectedRoomEquipIds.length > 0 ? `(${selectedRoomEquipIds.length})` : ''}
                         </Button>
                       </>
+                    )}
+
+                    {/* Оборудование из других помещений */}
+                    {otherRoomsLoading ? (
+                      <div style={{ textAlign: 'center', padding: 16 }}><Spin size="small" /></div>
+                    ) : otherRoomsEquipment.length > 0 && (
+                      <div style={{ marginTop: 16 }}>
+                        <div style={{ fontWeight: 500, marginBottom: 8, color: '#666', fontSize: 13 }}>
+                          🔄 Оборудование из других помещений ({otherRoomsEquipment.length}):
+                        </div>
+                        <List
+                          size="small"
+                          bordered
+                          dataSource={otherRoomsEquipment}
+                          renderItem={(eq: any) => {
+                            const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+                            const roomName = eq.roomType?.name || eq.roomTypeCode || '—';
+                            return (
+                              <List.Item style={{ padding: '8px 12px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 500, fontSize: 13 }}>
+                                    {eqType?.name || eq.equipmentTypeCode}
+                                    {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#888' }}>
+                                    📍 {roomName}
+                                    {eq.serialNumber && <span> · SN: {eq.serialNumber}</span>}
+                                  </div>
+                                </div>
+                                <Button
+                                  size="small"
+                                  type="dashed"
+                                  loading={transferringId === eq.id}
+                                  disabled={eq.hasPendingProposal}
+                                  onClick={() => handleTransferEquipment(eq.id, selectedRoom!)}
+                                >
+                                  {eq.hasPendingProposal ? '⏳ Ожидает' : `🔄 Перенести`}
+                                </Button>
+                              </List.Item>
+                            );
+                          }}
+                        />
+                      </div>
                     )}
                   </>
                 )}

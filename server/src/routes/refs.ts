@@ -125,6 +125,12 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
     where.roomTypeCode = roomTypeCode;
   }
 
+  // Фильтрация по статусу подтверждения
+  const confirmationStatus = req.query.confirmation_status as string;
+  if (confirmationStatus === 'pending' || confirmationStatus === 'confirmed') {
+    where.confirmationStatus = confirmationStatus;
+  }
+
   const excludeVisitId = req.query.exclude_visit_id as string;
   if (excludeVisitId) {
     // Индивидуальные задачи — objectEquipmentId в task
@@ -226,6 +232,69 @@ router.get('/engineers', async (req: AuthRequest, res: Response) => {
   } else {
     res.json([]);
   }
+});
+
+// GET /api/refs/object-equipment/other-rooms — оборудование из других помещений объекта
+router.get('/object-equipment/other-rooms', async (req: AuthRequest, res: Response) => {
+  const addressId = req.query.address_id as string;
+  const currentRoomTypeCode = req.query.current_room_type_code as string;
+  const excludeVisitId = req.query.exclude_visit_id as string;
+
+  if (!addressId || !currentRoomTypeCode) {
+    res.status(400).json({ error: 'Требуется address_id и current_room_type_code' });
+    return;
+  }
+
+  const where: any = {
+    addressId,
+    isActive: true,
+    roomTypeCode: { not: currentRoomTypeCode, notIn: [null] },
+  };
+
+  // Исключить оборудование, уже добавленное в визит
+  if (excludeVisitId) {
+    const visitItems = await prisma.taskEquipmentItem.findMany({
+      where: { task: { visitId: excludeVisitId } },
+      select: { objectEquipmentId: true },
+    });
+    const taskRecords = await prisma.task.findMany({
+      where: { visitId: excludeVisitId, objectEquipmentId: { not: null } },
+      select: { objectEquipmentId: true },
+    });
+    const excludeIds = [
+      ...visitItems.map((i) => i.objectEquipmentId),
+      ...taskRecords.map((t) => t.objectEquipmentId!),
+    ];
+    if (excludeIds.length > 0) where.id = { notIn: excludeIds };
+  }
+
+  const equipment = await prisma.objectEquipment.findMany({
+    where,
+    orderBy: { equipmentTypeCode: 'asc' },
+  });
+
+  // Получить roomTypes для кодов помещений
+  const roomTypeCodes = [...new Set(equipment.map((e) => e.roomTypeCode).filter(Boolean))] as string[];
+  const roomTypes = await prisma.roomType.findMany({
+    where: { code: { in: roomTypeCodes } },
+  });
+  const roomTypeMap = new Map(roomTypes.map((rt) => [rt.code, rt]));
+
+  // Добавить hasPendingProposal и roomType
+  const result = await Promise.all(
+    equipment.map(async (eq) => {
+      const pendingProposal = await prisma.equipmentProposal.findFirst({
+        where: { objectEquipmentId: eq.id, status: 'pending' },
+      });
+      return {
+        ...eq,
+        roomType: eq.roomTypeCode ? roomTypeMap.get(eq.roomTypeCode) || null : null,
+        hasPendingProposal: !!pendingProposal,
+      };
+    }),
+  );
+
+  res.json(result);
 });
 
 // PATCH /api/refs/object-equipment/:id/room — confirm room for equipment

@@ -7,6 +7,16 @@ export type PhotoMoment = 'before' | 'after';
 export type TaskType = 'group_climate' | 'individual';
 export type EquipmentItemStatus = 'ok' | 'not_ok';
 export type ModelStatus = 'approved' | 'pending' | 'rejected';
+export type ConfirmationStatus = 'confirmed' | 'pending';
+export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+export type RequestType = 'new_equipment' | 'room_change' | 'brand_change';
+export type NotificationType =
+  | 'proposal_created'
+  | 'proposal_approved'
+  | 'proposal_rejected'
+  | 'proposal_expiring_soon'
+  | 'proposal_expired'
+  | 'equipment_removed';
 
 export interface User {
   id: string;
@@ -212,6 +222,24 @@ export const MODEL_STATUS_LABELS: Record<ModelStatus, string> = {
   rejected: 'Отклонена',
 };
 
+export const CONFIRMATION_STATUS_LABELS: Record<ConfirmationStatus, string> = {
+  confirmed: 'Подтверждено',
+  pending: 'Ожидает подтверждения',
+};
+
+export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
+  pending: 'Ожидает рассмотрения',
+  approved: 'Подтверждено',
+  rejected: 'Отклонено',
+  expired: 'Истекло',
+};
+
+export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
+  new_equipment: 'Новое оборудование',
+  room_change: 'Перенос оборудования',
+  brand_change: 'Смена бренда/модели',
+};
+
 // Коды климатического оборудования (внутренние блоки) для группировки
 export const CLIMATE_INDOOR_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
 // Коды климатического оборудования (наружные блоки) для группировки
@@ -265,6 +293,66 @@ export interface ImportLogEntry {
   errorRows: number;
   errors?: Record<string, unknown>;
   status: string;
+  createdAt: string;
+}
+
+export interface ObjectEquipment {
+  id: string;
+  addressId: string;
+  equipmentTypeCode: string;
+  roomTypeCode?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  locationDescription?: string;
+  isOutdoorUnit: boolean;
+  isActive: boolean;
+  confirmationStatus: ConfirmationStatus;
+  createdBy?: string;
+  pendingUntil?: string;
+  roomConfirmedAt?: string;
+  roomConfirmedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  roomType?: RoomType;
+}
+
+export interface EquipmentProposal {
+  id: string;
+  addressId: string;
+  equipmentTypeCode: string;
+  roomTypeCode: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  locationDescription?: string;
+  proposedById: string;
+  status: ProposalStatus;
+  reviewedById?: string;
+  reviewedAt?: string;
+  requestType: RequestType;
+  oldRoomTypeCode?: string;
+  rejectionReason?: string;
+  pendingUntil?: string;
+  objectEquipmentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  address?: Address;
+  proposedBy?: { id: string; fullName: string; email: string };
+  reviewedBy?: { id: string; fullName: string; email: string };
+  objectEquipment?: ObjectEquipment;
+  roomType?: RoomType;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  entityType?: string;
+  entityId?: string;
+  isRead: boolean;
   createdAt: string;
 }
 

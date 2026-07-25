@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { VISIT_STATUS_LABELS, ROLE_LABELS } from '../../../shared/types/index';
+import NotificationBell from '../components/NotificationBell';
 
 const STATUS_COLORS: Record<string, string> = {
   planned: 'cyan',
@@ -103,6 +104,7 @@ export default function VisitListPage() {
           </div>
         </div>
         <Space>
+          <NotificationBell />
           {isManager && (
             <Button icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')}>Сводные отчёты</Button>
           )}

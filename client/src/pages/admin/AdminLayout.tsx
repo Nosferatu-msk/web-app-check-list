@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App } from 'antd';
 import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
+import NotificationBell from '../../components/NotificationBell';
 
 const { Content } = Layout;
 
@@ -54,6 +55,9 @@ export default function AdminLayout() {
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} block style={{ marginBottom: 8 }}>
           К визитам
         </Button>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+          <NotificationBell />
+        </div>
         <Button onClick={handleLogout} block danger>
           Выход
         </Button>
@@ -100,7 +104,10 @@ export default function AdminLayout() {
             style={{ fontSize: 20 }}
           />
           <span style={{ fontWeight: 700, fontSize: 16, color: '#1677ff' }}>🔧 Админ</span>
-          <Button type="text" onClick={handleLogout} size="small">Выход</Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <NotificationBell />
+            <Button type="text" onClick={handleLogout} size="small">Выход</Button>
+          </div>
         </div>
 
         <Content

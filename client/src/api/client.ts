@@ -288,14 +288,42 @@ export const api = {
   // Proposals
   createProposal: (data: any) =>
     request<any>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
+  createRoomChangeProposal: (data: { objectEquipmentId: string; newRoomTypeCode: string }) =>
+    request<any>('/proposals/room-change', { method: 'POST', body: JSON.stringify(data) }),
+  getMyProposals: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any>(`/proposals/my${qs}`);
+  },
   getProposals: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any>(`/proposals/admin${qs}`);
   },
+  updateProposal: (id: string, data: any) =>
+    request<any>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  cancelProposal: (id: string) =>
+    request<any>(`/proposals/${id}`, { method: 'DELETE' }),
   approveProposal: (id: string) =>
     request<any>(`/proposals/admin/${id}/approve`, { method: 'PUT' }),
-  rejectProposal: (id: string) =>
-    request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT' }),
+  rejectProposal: (id: string, reason?: string) =>
+    request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+  batchProposals: (data: { ids: string[]; action: 'approve' | 'reject'; reason?: string }) =>
+    request<any>('/proposals/admin/batch', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Object equipment
+  getOtherRoomsEquipment: (params: { address_id: string; current_room_type_code: string; exclude_visit_id?: string }) => {
+    const qs = '?' + new URLSearchParams(params as Record<string, string>).toString();
+    return request<any>(`/refs/object-equipment/other-rooms${qs}`);
+  },
+
+  // Notifications
+  getNotifications: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any>(`/notifications${qs}`);
+  },
+  markNotificationRead: (id: string) =>
+    request<any>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllNotificationsRead: () =>
+    request<any>('/notifications/read-all', { method: 'PATCH' }),
 
   // Object equipment room confirmation
   confirmEquipmentRoom: (id: string, roomTypeCode: string) =>
