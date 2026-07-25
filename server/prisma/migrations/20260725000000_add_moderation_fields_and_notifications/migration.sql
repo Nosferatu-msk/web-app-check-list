@@ -1,26 +1,26 @@
 -- AlterTable: equipment_proposals — расширенные поля модерации
 ALTER TABLE "equipment_proposals"
-  ADD COLUMN "request_type" VARCHAR(20) NOT NULL DEFAULT 'new_equipment',
-  ADD COLUMN "old_room_type_code" VARCHAR(50),
+  ADD COLUMN "request_type" TEXT NOT NULL DEFAULT 'new_equipment',
+  ADD COLUMN "old_room_type_code" TEXT,
   ADD COLUMN "rejection_reason" TEXT,
   ADD COLUMN "pending_until" TIMESTAMP,
-  ADD COLUMN "object_equipment_id" UUID;
+  ADD COLUMN "object_equipment_id" TEXT;
 
 -- AlterTable: object_equipment — поля модерации и TTL
 ALTER TABLE "object_equipment"
-  ADD COLUMN "confirmation_status" VARCHAR(20) NOT NULL DEFAULT 'confirmed',
-  ADD COLUMN "created_by" UUID,
+  ADD COLUMN "confirmation_status" TEXT NOT NULL DEFAULT 'confirmed',
+  ADD COLUMN "created_by" TEXT,
   ADD COLUMN "pending_until" TIMESTAMP;
 
 -- CreateTable: notifications
 CREATE TABLE "notifications" (
-  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "user_id" UUID NOT NULL,
-  "type" VARCHAR(30) NOT NULL,
-  "title" VARCHAR(200) NOT NULL,
+  "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+  "user_id" TEXT NOT NULL,
+  "type" TEXT NOT NULL,
+  "title" TEXT NOT NULL,
   "message" TEXT NOT NULL,
-  "entity_type" VARCHAR(30),
-  "entity_id" UUID,
+  "entity_type" TEXT,
+  "entity_id" TEXT,
   "is_read" BOOLEAN NOT NULL DEFAULT false,
   "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
