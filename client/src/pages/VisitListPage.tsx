@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown } from 'antd';
-import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -139,11 +139,11 @@ export default function VisitListPage() {
           actions={
             <Space size={4}>
               {!isManager && (
-                <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/my-requests')} aria-label="Мои заявки" />
+                <Button type="text" size="small" icon={<FormOutlined />} onClick={() => navigate('/my-requests')} aria-label="Мои заявки" />
               )}
               {isManager && (
                 <>
-                  <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/requests')} aria-label="Заявки" />
+                  <Button type="text" size="small" icon={<FormOutlined />} onClick={() => navigate('/requests')} aria-label="Заявки" />
                   <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')} aria-label="Сводные отчёты" />
                 </>
               )}
@@ -170,11 +170,11 @@ export default function VisitListPage() {
           <Space>
             <NotificationBell />
             {!isManager && (
-              <Button icon={<BarChartOutlined />} onClick={() => navigate('/my-requests')}>Мои заявки</Button>
+              <Button icon={<FormOutlined />} onClick={() => navigate('/my-requests')}>Мои заявки</Button>
             )}
             {isManager && (
               <>
-                <Button icon={<BarChartOutlined />} onClick={() => navigate('/requests')}>Заявки</Button>
+                <Button icon={<FormOutlined />} onClick={() => navigate('/requests')}>Заявки</Button>
                 <Button icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')}>Сводные отчёты</Button>
               </>
             )}
@@ -196,29 +196,32 @@ export default function VisitListPage() {
         </Row>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: isMobile ? 'wrap' : undefined }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
         {(user?.role === 'engineer' || user?.role === 'tm') && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/visit/new')} style={{ flex: isMobile ? '1 1 100%' : 1 }} size={isMobile ? 'middle' : 'large'}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/visit/new')} block size={isMobile ? 'middle' : 'large'}>
             Новый визит
           </Button>
         )}
-        {isManager && engineers.length > 0 && (
-          <Select
-            allowClear
-            placeholder="Фильтр по инженеру"
-            style={{ minWidth: isMobile ? '100%' : 200, flex: isMobile ? '1 1 100%' : undefined }}
-            value={selectedEngineer || undefined}
-            onChange={(v) => setSelectedEngineer(v || '')}
-            options={engineers.map((e: any) => ({ value: e.id, label: e.fullName }))}
-          />
-        )}
         {isManager && (
-          <Switch
-            checked={showDeleted}
-            onChange={setShowDeleted}
-            checkedChildren="Удалённые"
-            unCheckedChildren="Активные"
-          />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {engineers.length > 0 && (
+              <Select
+                allowClear
+                placeholder="Фильтр по инженеру"
+                style={{ flex: 1, minWidth: 0 }}
+                value={selectedEngineer || undefined}
+                onChange={(v) => setSelectedEngineer(v || '')}
+                options={engineers.map((e: any) => ({ value: e.id, label: e.fullName }))}
+              />
+            )}
+            <Switch
+              checked={showDeleted}
+              onChange={setShowDeleted}
+              checkedChildren="Удалённые"
+              unCheckedChildren="Активные"
+              style={{ flexShrink: 0 }}
+            />
+          </div>
         )}
       </div>
 
