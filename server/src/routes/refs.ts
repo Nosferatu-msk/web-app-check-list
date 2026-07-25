@@ -248,7 +248,10 @@ router.get('/object-equipment/other-rooms', async (req: AuthRequest, res: Respon
   const where: any = {
     addressId,
     isActive: true,
-    roomTypeCode: { not: currentRoomTypeCode, notIn: [null] },
+    AND: [
+      { roomTypeCode: { not: null } },
+      { roomTypeCode: { not: currentRoomTypeCode } },
+    ],
   };
 
   // Исключить оборудование, уже добавленное в визит
