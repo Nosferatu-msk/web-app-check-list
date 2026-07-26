@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined } from '@ant-design/icons';
+import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete, Dropdown } from 'antd';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { useIsMobile } from '../hooks/useIsMobile';
+import TorchButton from '../components/TorchButton';
+import NotificationBell from '../components/NotificationBell';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ru';
@@ -28,6 +31,7 @@ export default function VisitPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
   const isNew = !id || id === 'new';
   const [form] = Form.useForm();
   const [visit, setVisit] = useState<any>(null);
@@ -53,6 +57,11 @@ export default function VisitPage() {
   const [addingEquipment, setAddingEquipment] = useState(false);
   const [proposeEquipment, setProposeEquipment] = useState(false);
   const [newTaskForm] = Form.useForm();
+  const [mfrOptions, setMfrOptions] = useState<{ value: string; label: string }[]>([]);
+  const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
+  const [otherRoomsEquipment, setOtherRoomsEquipment] = useState<any[]>([]);
+  const [otherRoomsLoading, setOtherRoomsLoading] = useState(false);
+  const [transferringId, setTransferringId] = useState<string | null>(null);
 
   const handleAutoSave = useCallback(async () => {
     if (isNew) return;
@@ -185,6 +194,39 @@ export default function VisitPage() {
     setObjectEquipLoading(false);
   }, []);
 
+  const loadOtherRoomsEquipment = useCallback(async (addressId: string, currentRoomTypeCode: string, visitId: string) => {
+    setOtherRoomsLoading(true);
+    try {
+      const eq = await api.getOtherRoomsEquipment({
+        address_id: addressId,
+        current_room_type_code: currentRoomTypeCode,
+        exclude_visit_id: visitId,
+      });
+      setOtherRoomsEquipment(eq);
+    } catch { /* ignore */ }
+    setOtherRoomsLoading(false);
+  }, []);
+
+  const handleTransferEquipment = useCallback(async (equipmentId: string, newRoomTypeCode: string) => {
+    setTransferringId(equipmentId);
+    try {
+      await api.createRoomChangeProposal({
+        objectEquipmentId: equipmentId,
+        newRoomTypeCode,
+      });
+      message.success('Запрос на перенос отправлен. Оборудование сразу доступно в этом помещении.');
+      // Обновляем список — оборудование теперь в текущем помещении
+      if (visit?.addressId && visit?.id) {
+        await loadOtherRoomsEquipment(visit.addressId, newRoomTypeCode, visit.id);
+        // Перезагрузить оборудование текущего помещения
+        await loadRoomEquipment(visit.addressId, newRoomTypeCode, visit.id);
+      }
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка переноса');
+    }
+    setTransferringId(null);
+  }, [visit, message, loadOtherRoomsEquipment, loadRoomEquipment]);
+
   const handleOpenAddModal = useCallback(async () => {
     let currentVisit = visit;
     if (!currentVisit?.id) {
@@ -218,6 +260,7 @@ export default function VisitPage() {
     setSelectedRoomEquipIds([]);
     setObjectEquipment([]);
     setSelectedObjectEquipIds([]);
+    setOtherRoomsEquipment([]);
     await loadEquipmentRooms(currentVisit.id, currentVisit.addressId);
     await loadObjectEquipment(currentVisit.addressId, currentVisit.id);
   }, [visit, form, navigate, loadEquipmentRooms, loadObjectEquipment, message]);
@@ -226,8 +269,9 @@ export default function VisitPage() {
     setSelectedRoom(roomCode);
     if (visit?.addressId && visit?.id) {
       await loadRoomEquipment(visit.addressId, roomCode, visit.id);
+      await loadOtherRoomsEquipment(visit.addressId, roomCode, visit.id);
     }
-  }, [visit, loadRoomEquipment]);
+  }, [visit, loadRoomEquipment, loadOtherRoomsEquipment]);
 
   const CLIMATE_INDOOR_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
   const CLIMATE_OUTDOOR_CODES = ['splitnar', 'mssnar', 'vrv_nar'];
@@ -451,11 +495,53 @@ export default function VisitPage() {
 
   if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>;
 
+  // Группировка задач по комнатам для мобильного вида
+  const tasksByRoom = isMobile ? (() => {
+    const groups = new Map<string, { roomName: string; tasks: any[] }>();
+    for (const task of tasks) {
+      const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
+      const roomName = task.roomType?.name || task.comment || 'Без помещения';
+      if (!groups.has(roomKey)) {
+        groups.set(roomKey, { roomName, tasks: [] });
+      }
+      groups.get(roomKey)!.tasks.push(task);
+    }
+    return Array.from(groups.entries()).map(([key, val]) => ({ key, ...val }));
+  })() : [];
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircleOutlined className="status-icon status-icon-completed" aria-label="Выполнено" />;
+      case 'in_progress':
+        return <SyncOutlined className="status-icon status-icon-in-progress" aria-label="В работе" />;
+      default:
+        return <ClockCircleOutlined className="status-icon status-icon-not-started" aria-label="Не начато" />;
+    }
+  };
+
+  const navigateToTask = (record: any) => {
+    if (visit?.id) {
+      if (record.taskType === 'group_climate') {
+        navigate(`/visit/${visit.id}/task/${record.id}/group`);
+      } else {
+        navigate(`/visit/${visit.id}/task/${record.id}`);
+      }
+    }
+  };
+
   return (
-    <div className="page-container">
+    <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
-        <div className="page-title" style={{ margin: 0 }}>{isNew ? 'Новый визит' : 'Визит'}</div>
+        <div className="page-title" style={{ margin: 0, flex: 1 }}>
+          {isNew ? 'Новый визит' : 'Визит'}
+          {!isNew && visit?.importedRequests?.length > 0 && (
+            <Tag color="green" style={{ marginLeft: 8, fontSize: 13 }}>{visit.importedRequests[0].externalRequestId}</Tag>
+          )}
+        </div>
+        <NotificationBell />
+        <TorchButton />
       </div>
 
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
@@ -472,7 +558,7 @@ export default function VisitPage() {
               onChange={(v: string) => {
                 form.setFieldValue('addressId', v);
               }}
-              options={addressOptions.map((a: any) => ({ label: a.fullAddress, value: a.id, dataId: a.id }))}
+              options={addressOptions.map((a: any) => ({ label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress, value: a.id, dataId: a.id }))}
               notFoundContent="Адрес не найден"
             />
           </Form.Item>
@@ -509,25 +595,86 @@ export default function VisitPage() {
         <Button type="dashed" icon={<PlusOutlined />} onClick={handleOpenAddModal}>Добавить оборудование</Button>
       </div>
 
-      <Table
-        dataSource={tasks}
-        columns={columns}
-        rowKey="id"
-        pagination={false}
-        size="small"
-        onRow={(record) => ({
-          onClick: () => {
-            if (visit?.id) {
-              if (record.taskType === 'group_climate') {
-                navigate(`/visit/${visit.id}/task/${record.id}/group`);
-              } else {
-                navigate(`/visit/${visit.id}/task/${record.id}`);
-              }
-            }
-          },
-          style: { cursor: 'pointer' },
-        })}
-      />
+      {!isMobile ? (
+        <Table
+          dataSource={tasks}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          size="small"
+          onRow={(record) => ({
+            onClick: () => navigateToTask(record),
+            style: { cursor: 'pointer' },
+          })}
+        />
+      ) : (
+        <div className="mobile-task-list">
+          {tasksByRoom.length === 0 ? (
+            <Empty description="Нет задач" />
+          ) : (
+            tasksByRoom.map((group) => (
+              <div key={group.key} className="room-group">
+                <div className="room-group-header">
+                  📍 {group.roomName}
+                </div>
+                {group.tasks.map((task: any) => {
+                  const eqName = task.taskType === 'group_climate'
+                    ? '🌡 Климатическое оборудование'
+                    : (task.equipmentType?.name || 'Оборудование');
+                  const subtitle = task.taskType === 'group_climate'
+                    ? `Единиц: ${(task.equipmentItems || []).length}`
+                    : [task.roomType?.name, task.equipmentType?.name].filter(Boolean).join(' · ');
+                  const overflowItems = [
+                    { key: 'edit', label: 'Редактировать', icon: <EditOutlined /> },
+                    { key: 'delete', label: 'Удалить', icon: <DeleteOutlined />, danger: true },
+                    { key: 'photos', label: 'Перейти к фото', icon: <PictureOutlined /> },
+                  ];
+                  return (
+                    <div
+                      key={task.id}
+                      className="task-card"
+                      onClick={() => navigateToTask(task)}
+                    >
+                      <div className="task-card-content">
+                        <div className="task-card-title">{eqName}</div>
+                        <div className="task-card-subtitle">{subtitle}</div>
+                      </div>
+                      <div className="task-card-meta">
+                        <span className="photo-progress">
+                          <CameraOutlined /> {getPhotoProgress(task)}
+                        </span>
+                        {getStatusIcon(task.status)}
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <Dropdown
+                            menu={{
+                              items: overflowItems,
+                              onClick: ({ key }) => {
+                                if (key === 'edit') navigateToTask(task);
+                                else if (key === 'delete') {
+                                  Modal.confirm({
+                                    title: 'Удалить задачу?',
+                                    okText: 'Да',
+                                    cancelText: 'Нет',
+                                    onOk: () => handleDeleteTask(task.id),
+                                  });
+                                }
+                                else if (key === 'photos') navigateToTask(task);
+                              },
+                            }}
+                            trigger={['click']}
+                          >
+                            <EllipsisOutlined style={{ fontSize: 18, padding: '0 4px' }} />
+                          </Dropdown>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {visit && (
         <div style={{ marginTop: 16 }}>
@@ -636,6 +783,49 @@ export default function VisitPage() {
                         </Button>
                       </>
                     )}
+
+                    {/* Оборудование из других помещений */}
+                    {otherRoomsLoading ? (
+                      <div style={{ textAlign: 'center', padding: 16 }}><Spin size="small" /></div>
+                    ) : otherRoomsEquipment.length > 0 && (
+                      <div style={{ marginTop: 16 }}>
+                        <div style={{ fontWeight: 500, marginBottom: 8, color: '#666', fontSize: 13 }}>
+                          🔄 Оборудование из других помещений ({otherRoomsEquipment.length}):
+                        </div>
+                        <List
+                          size="small"
+                          bordered
+                          dataSource={otherRoomsEquipment}
+                          renderItem={(eq: any) => {
+                            const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+                            const roomName = eq.roomType?.name || eq.roomTypeCode || '—';
+                            return (
+                              <List.Item style={{ padding: '8px 12px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 500, fontSize: 13 }}>
+                                    {eqType?.name || eq.equipmentTypeCode}
+                                    {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#888' }}>
+                                    📍 {roomName}
+                                    {eq.serialNumber && <span> · SN: {eq.serialNumber}</span>}
+                                  </div>
+                                </div>
+                                <Button
+                                  size="small"
+                                  type="dashed"
+                                  loading={transferringId === eq.id}
+                                  disabled={eq.hasPendingProposal}
+                                  onClick={() => handleTransferEquipment(eq.id, selectedRoom!)}
+                                >
+                                  {eq.hasPendingProposal ? '⏳ Ожидает' : `🔄 Перенести`}
+                                </Button>
+                              </List.Item>
+                            );
+                          }}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
               </>
@@ -715,11 +905,46 @@ export default function VisitPage() {
                 <Form.Item name="comment" label="Комментарий">
                   <Input placeholder="Необязательно" />
                 </Form.Item>
-                <Form.Item name="brand" label="Марка">
-                  <Input placeholder="Необязательно" />
+                <Form.Item name="brand" label="Производитель">
+                  <AutoComplete
+                    placeholder="Начните вводить..."
+                    options={mfrOptions}
+                    onSearch={async (q) => {
+                      try {
+                        const list = await api.getManufacturersList();
+                        const filtered = list.filter((m: any) => m.name.toLowerCase().includes(q.toLowerCase()));
+                        setMfrOptions(filtered.map((m: any) => ({ value: m.name, label: m.name })));
+                      } catch { setMfrOptions([]); }
+                    }}
+                    onFocus={async () => {
+                      if (mfrOptions.length === 0) {
+                        try {
+                          const list = await api.getManufacturersList();
+                          setMfrOptions(list.map((m: any) => ({ value: m.name, label: m.name })));
+                        } catch { /* ignore */ }
+                      }
+                    }}
+                    filterOption={false}
+                    allowClear
+                  />
                 </Form.Item>
                 <Form.Item name="model" label="Модель">
-                  <Input placeholder="Необязательно" />
+                  <AutoComplete
+                    placeholder="Начните вводить..."
+                    options={modelOptions}
+                    onSearch={async (q) => {
+                      const eqTypeId = newTaskForm.getFieldValue('equipmentTypeId');
+                      try {
+                        const results = await api.searchModels({ equipment_type_id: eqTypeId, query: q });
+                        setModelOptions(results.map((m: any) => ({
+                          value: m.fullModelName || m.modelName,
+                          label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+                        })));
+                      } catch { setModelOptions([]); }
+                    }}
+                    filterOption={false}
+                    allowClear
+                  />
                 </Form.Item>
                 <Form.Item name="serialNumber" label="Серийный номер">
                   <Input placeholder="Необязательно" />

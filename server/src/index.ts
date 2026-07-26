@@ -11,7 +11,10 @@ import refRoutes from './routes/refs.js';
 import reportRoutes from './routes/reports.js';
 import importRoutes from './routes/import.js';
 import proposalRoutes from './routes/proposals.js';
+import notificationRoutes from './routes/notifications.js';
 import profileRoutes from './routes/profile.js';
+import requestRoutes from './routes/requests.js';
+import { startCronJobs } from './services/cron.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -34,7 +37,9 @@ app.use('/api/refs', refRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin/import', importRoutes);
 app.use('/api/proposals', proposalRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/requests', requestRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -49,4 +54,5 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  startCronJobs();
 });

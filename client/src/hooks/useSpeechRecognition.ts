@@ -1,140 +1,170 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
-interface UseSpeechRecognitionReturn {
-  isListening: boolean;
-  isSupported: boolean;
-  interimText: string;
-  start: (onFinal: (text: string) => void) => void;
-  stop: () => void;
-  error: string | null;
+export type VoiceState = 'idle' | 'requesting' | 'listening' | 'error' | 'disabled';
+
+interface UseSpeechRecognitionOptions {
+  onResult: (text: string) => void;
 }
 
-const SILENCE_TIMEOUT_MS = 5000;
+interface UseSpeechRecognitionReturn {
+  state: VoiceState;
+  error: string | null;
+  isSupported: boolean;
+  start: () => void;
+  stop: () => void;
+  toggle: () => void;
+}
 
-export function useSpeechRecognition(): UseSpeechRecognitionReturn {
-  const [isListening, setIsListening] = useState(false);
-  const [interimText, setInterimText] = useState('');
+export function useSpeechRecognition({
+  onResult,
+}: UseSpeechRecognitionOptions): UseSpeechRecognitionReturn {
+  const [state, setState] = useState<VoiceState>('idle');
   const [error, setError] = useState<string | null>(null);
-
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onFinalRef = useRef<((text: string) => void) | null>(null);
-  const activeRef = useRef(false);
-  const pendingFinalRef = useRef('');
+  const isListeningRef = useRef(false);
+  const accumulatedRef = useRef('');
 
-  const SpeechAPI = typeof window !== 'undefined'
-    ? (window.SpeechRecognition || window.webkitSpeechRecognition)
-    : null;
+  const isSupported = typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
-  const isSupported = !!SpeechAPI;
+  // Network state tracking
+  useEffect(() => {
+    const handleOnline = () => { if (state === 'disabled') setState('idle'); };
+    const handleOffline = () => {
+      if (isListeningRef.current) {
+        stopRecognition();
+      }
+      setState('disabled');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [state]);
 
-  const resetTimer = useCallback(() => {
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    silenceTimerRef.current = setTimeout(() => {
-      recognitionRef.current?.stop();
-    }, SILENCE_TIMEOUT_MS);
-  }, []);
-
-  const clearTimer = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
+  const stopRecognition = useCallback(() => {
+    isListeningRef.current = false;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
     }
   }, []);
 
-  const createRecognition = useCallback((onFinal: (text: string) => void) => {
-    if (!SpeechAPI) return null;
+  const startRecognition = useCallback(() => {
+    if (!isSupported) {
+      setError('Голосовой ввод не поддерживается в этом браузере');
+      setState('error');
+      return;
+    }
 
-    const recognition = new SpeechAPI();
+    if (!navigator.onLine) {
+      setState('disabled');
+      return;
+    }
+
+    setError(null);
+    setState('requesting');
+    accumulatedRef.current = '';
+
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognitionAPI();
     recognition.lang = 'ru-RU';
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    pendingFinalRef.current = '';
+    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.maxAlternatives = 1;
 
-    recognition.onresult = (e: SpeechRecognitionEvent) => {
-      resetTimer();
-      let interim = '';
-      let final = '';
-
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          final += e.results[i][0].transcript;
-        } else {
-          interim += e.results[i][0].transcript;
-        }
-      }
-
-      if (final) pendingFinalRef.current = final.trim();
-      setInterimText(interim);
+    recognition.onstart = () => {
+      setState('listening');
+      isListeningRef.current = true;
     };
 
-    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
-      if (e.error === 'aborted' || e.error === 'no-speech') return;
-      const msgs: Record<string, string> = {
-        'not-allowed': 'Доступ к микрофону запрещён.',
-        'network': 'Ошибка сети.',
-        'audio-capture': 'Микрофон не найден.',
-      };
-      setError(msgs[e.error] || 'Не удалось распознать речь.');
-      activeRef.current = false;
-      setIsListening(false);
-      clearTimer();
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      // Accumulate only final results
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          const text = event.results[i][0].transcript.trim();
+          if (text) {
+            accumulatedRef.current = accumulatedRef.current
+              ? `${accumulatedRef.current} ${text}`
+              : text;
+          }
+        }
+      }
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      isListeningRef.current = false;
+
+      switch (event.error) {
+        case 'not-allowed':
+          setError('Доступ к микрофону запрещен. Разрешите доступ в настройках браузера.');
+          break;
+        case 'no-speech':
+          // No speech detected, just go idle
+          break;
+        case 'network':
+          setError('Связь потеряна. Голосовой ввод остановлен.');
+          break;
+        case 'aborted':
+          break;
+        default:
+          setError('Не удалось распознать речь. Попробуйте еще раз.');
+      }
+
+      if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        setState('error');
+      }
     };
 
     recognition.onend = () => {
-      clearTimer();
-      setInterimText('');
-
-      // Insert the final text from this segment
-      if (pendingFinalRef.current) {
-        onFinal(pendingFinalRef.current);
-        pendingFinalRef.current = '';
+      isListeningRef.current = false;
+      // Deliver accumulated text
+      const text = accumulatedRef.current.trim();
+      accumulatedRef.current = '';
+      if (text) {
+        onResult(text);
       }
-
-      // Auto-restart if still active
-      if (activeRef.current) {
-        const next = createRecognition(onFinal);
-        if (next) {
-          recognitionRef.current = next;
-          try { next.start(); } catch { activeRef.current = false; setIsListening(false); }
-        }
-      } else {
-        setIsListening(false);
-        recognitionRef.current = null;
-      }
+      setState(prev => (prev === 'error' ? prev : 'idle'));
     };
 
-    return recognition;
-  }, [SpeechAPI, resetTimer, clearTimer]);
-
-  const start = useCallback((onFinal: (text: string) => void) => {
-    if (!SpeechAPI) { setError('Голосовой ввод не поддерживается'); return; }
-
-    setError(null);
-    setInterimText('');
-    activeRef.current = true;
-    onFinalRef.current = onFinal;
-
-    const recognition = createRecognition(onFinal);
-    if (!recognition) return;
-
     recognitionRef.current = recognition;
-    try { recognition.start(); setIsListening(true); } catch { setError('Не удалось запустить распознавание.'); }
-  }, [SpeechAPI, createRecognition]);
 
-  const stop = useCallback(() => {
-    activeRef.current = false;
-    clearTimer();
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
-    setIsListening(false);
-  }, [clearTimer]);
+    try {
+      recognition.start();
+    } catch {
+      setError('Не удалось запустить распознавание речи.');
+      setState('error');
+    }
+  }, [isSupported, onResult]);
 
-  useEffect(() => () => {
-    activeRef.current = false;
-    clearTimer();
-    recognitionRef.current?.abort();
-  }, [clearTimer]);
+  const toggle = useCallback(() => {
+    if (isListeningRef.current) {
+      stopRecognition();
+    } else {
+      startRecognition();
+    }
+  }, [startRecognition, stopRecognition]);
 
-  return { isListening, isSupported, interimText, start, stop, error };
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch { /* ignore */ }
+      }
+    };
+  }, []);
+
+  return {
+    state,
+    error,
+    isSupported,
+    start: startRecognition,
+    stop: stopRecognition,
+    toggle,
+  };
 }

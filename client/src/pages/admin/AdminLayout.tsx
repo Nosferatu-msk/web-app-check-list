@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
+import NotificationBell from '../../components/NotificationBell';
 
 const { Content } = Layout;
 
 const menuItems = [
   { key: '/admin/addresses', icon: <EnvironmentOutlined />, label: 'Адреса' },
   { key: '/admin/equipment', icon: <ToolOutlined />, label: 'Оборудование' },
+  { key: '/admin/manufacturers', icon: <ShopOutlined />, label: 'Производители' },
+  { key: '/admin/models', icon: <AppstoreOutlined />, label: 'Модели' },
   { key: '/admin/rooms', icon: <HomeOutlined />, label: 'Помещения' },
   { key: '/admin/recommendations', icon: <FileTextOutlined />, label: 'Рекомендации' },
   { key: '/admin/users', icon: <UserOutlined />, label: 'Пользователи' },
@@ -50,7 +53,7 @@ export default function AdminLayout() {
       />
       <div style={{ padding: 16, borderTop: '1px solid #f0f0f0' }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} block style={{ marginBottom: 8 }}>
-          К визитам
+          Назад
         </Button>
         <Button onClick={handleLogout} block danger>
           Выход
@@ -98,7 +101,10 @@ export default function AdminLayout() {
             style={{ fontSize: 20 }}
           />
           <span style={{ fontWeight: 700, fontSize: 16, color: '#1677ff' }}>🔧 Админ</span>
-          <Button type="text" onClick={handleLogout} size="small">Выход</Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <NotificationBell />
+            <Button type="text" onClick={handleLogout} size="small">Выход</Button>
+          </div>
         </div>
 
         <Content

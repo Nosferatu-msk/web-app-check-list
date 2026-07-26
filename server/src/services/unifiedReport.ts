@@ -231,7 +231,7 @@ export interface UnifiedReportTask {
 }
 
 export interface UnifiedReportOptions {
-  type: 'period' | 'objects';
+  type: 'period' | 'objects' | 'requests';
   dateFrom: string;
   dateTo: string;
   generatedBy: { fullName: string; role: string };

@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Collapse, Tag, Modal, List, Empty } from 'antd';
+import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Collapse, Tag, Modal, List, Empty, Tabs } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined, DeleteOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import VoiceInput from '../components/VoiceInput';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { useIsMobile } from '../hooks/useIsMobile';
+import MobileHeader from '../components/MobileHeader';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ru';
@@ -54,6 +56,7 @@ export default function GroupTaskPage() {
   const { message } = App.useApp();
   const { visitId, taskId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [form] = Form.useForm();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -249,13 +252,16 @@ export default function GroupTaskPage() {
   if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>;
 
   return (
-    <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
-        <div className="page-title" style={{ margin: 0 }}>
-          {isOutdoor ? '🏠 Наружные блоки кондиционеров' : '🌡 Климатическое оборудование'}
+    <div className={`page-container ${isMobile ? 'page-with-bottom-nav' : ''}`}>
+      {isMobile && <MobileHeader title={isOutdoor ? 'Наружные блоки' : 'Климатическое оборудование'} showBack onBack={() => navigate(`/visit/${visitId}`)} />}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
+          <div className="page-title" style={{ margin: 0 }}>
+            {isOutdoor ? '🏠 Наружные блоки кондиционеров' : '🌡 Климатическое оборудование'}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Общие параметры */}
       <Card title="Общие параметры" style={{ marginBottom: 16 }}>

@@ -30,6 +30,7 @@ router.get('/addresses', async (req: AuthRequest, res: Response) => {
       OR: [
         { fullAddress: { contains: search, mode: 'insensitive' as const } },
         { street: { contains: search, mode: 'insensitive' as const } },
+        { objectCode: { contains: search, mode: 'insensitive' as const } },
       ],
     } : {}),
   };
@@ -44,7 +45,7 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
   const data = await prisma.address.findMany({
-    where: { isDeleted: false, OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] },
+    where: { isDeleted: false, OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }, { objectCode: { contains: q, mode: 'insensitive' } }] },
     take: 20,
   });
   res.json(data);
@@ -504,6 +505,178 @@ router.delete('/audit-log', async (req: AuthRequest, res: Response) => {
   await prisma.auditLog.deleteMany({ where });
   await logAudit({ userId: req.userId, action: 'delete', entityType: 'audit_log', entityId: null, oldValue: { filters: where, deletedCount: count }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json({ message: `Удалено записей: ${count}` });
+});
+
+// ─── MANUFACTURERS ──────────────────────────────────────────
+
+const createManufacturerSchema = z.object({
+  name: z.string().min(1),
+  country: z.string().optional().nullable(),
+});
+
+const updateManufacturerSchema = z.object({
+  name: z.string().min(1).optional(),
+  country: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+router.get('/manufacturers', async (req: AuthRequest, res: Response) => {
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 20));
+  const q = (req.query.q as string) || '';
+
+  const where: any = {};
+  if (q) {
+    where.OR = [
+      { name: { contains: q, mode: 'insensitive' } },
+      { country: { contains: q, mode: 'insensitive' } },
+    ];
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.manufacturer.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.manufacturer.count({ where }),
+  ]);
+
+  res.json({ data, total, page, pageSize });
+});
+
+router.post('/manufacturers', validate(createManufacturerSchema), async (req: AuthRequest, res: Response) => {
+  const { name, country } = req.body;
+  const manufacturer = await prisma.manufacturer.create({ data: { name, country } });
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'manufacturer', entityId: manufacturer.id, newValue: manufacturer, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(manufacturer);
+});
+
+router.put('/manufacturers/:id', validate(updateManufacturerSchema), async (req: AuthRequest, res: Response) => {
+  const old = await prisma.manufacturer.findUnique({ where: { id: req.params.id as string } });
+  if (!old) return res.status(404).json({ message: 'Производитель не найден' });
+  const updated = await prisma.manufacturer.update({ where: { id: req.params.id as string }, data: req.body });
+  await logAudit({ userId: req.userId, action: 'update', entityType: 'manufacturer', entityId: updated.id, oldValue: old, newValue: updated, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json(updated);
+});
+
+router.delete('/manufacturers/:id', async (req: AuthRequest, res: Response) => {
+  const old = await prisma.manufacturer.findUnique({ where: { id: req.params.id as string } });
+  if (!old) return res.status(404).json({ message: 'Производитель не найден' });
+  await prisma.manufacturer.update({ where: { id: req.params.id as string }, data: { isActive: false } });
+  await logAudit({ userId: req.userId, action: 'deactivate', entityType: 'manufacturer', entityId: old.id, oldValue: old, newValue: { isActive: false }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json({ message: 'Производитель деактивирован' });
+});
+
+// ─── MODELS ─────────────────────────────────────────────────
+
+const createModelSchema = z.object({
+  equipmentTypeId: z.string().uuid(),
+  manufacturerId: z.string().uuid(),
+  modelName: z.string().min(1),
+  fullModelName: z.string().optional().nullable(),
+  status: z.enum(['approved', 'pending', 'rejected']).optional(),
+});
+
+const updateModelSchema = z.object({
+  equipmentTypeId: z.string().uuid().optional(),
+  manufacturerId: z.string().uuid().optional(),
+  modelName: z.string().min(1).optional(),
+  fullModelName: z.string().optional().nullable(),
+});
+
+router.get('/models', async (req: AuthRequest, res: Response) => {
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 20));
+  const q = (req.query.q as string) || '';
+  const status = (req.query.status as string) || '';
+  const equipmentTypeId = (req.query.equipment_type_id as string) || '';
+  const manufacturerId = (req.query.manufacturer_id as string) || '';
+
+  const where: any = {};
+  if (q) {
+    where.OR = [
+      { modelName: { contains: q, mode: 'insensitive' } },
+      { fullModelName: { contains: q, mode: 'insensitive' } },
+    ];
+  }
+  if (status) where.status = status;
+  if (equipmentTypeId) where.equipmentTypeId = equipmentTypeId;
+  if (manufacturerId) where.manufacturerId = manufacturerId;
+
+  const [data, total] = await Promise.all([
+    prisma.model.findMany({
+      where,
+      include: {
+        equipmentType: true,
+        manufacturer: true,
+        submittedBy: { select: { id: true, fullName: true, email: true } },
+        reviewedBy: { select: { id: true, fullName: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.model.count({ where }),
+  ]);
+
+  res.json({ data, total, page, pageSize });
+});
+
+router.post('/models', validate(createModelSchema), async (req: AuthRequest, res: Response) => {
+  const model = await prisma.model.create({
+    data: {
+      ...req.body,
+      status: req.body.status || 'approved',
+      submittedById: req.userId,
+      submittedAt: new Date(),
+    },
+    include: { equipmentType: true, manufacturer: true },
+  });
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'model', entityId: model.id, newValue: model, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(model);
+});
+
+router.put('/models/:id', validate(updateModelSchema), async (req: AuthRequest, res: Response) => {
+  const old = await prisma.model.findUnique({ where: { id: req.params.id as string } });
+  if (!old) return res.status(404).json({ message: 'Модель не найдена' });
+  const updated = await prisma.model.update({
+    where: { id: req.params.id as string },
+    data: req.body,
+    include: { equipmentType: true, manufacturer: true },
+  });
+  await logAudit({ userId: req.userId, action: 'update', entityType: 'model', entityId: updated.id, oldValue: old, newValue: updated, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json(updated);
+});
+
+router.put('/models/:id/approve', async (req: AuthRequest, res: Response) => {
+  const model = await prisma.model.findUnique({ where: { id: req.params.id as string } });
+  if (!model) return res.status(404).json({ message: 'Модель не найдена' });
+  if (model.status !== 'pending') return res.status(400).json({ message: 'Модель не на модерации' });
+
+  const updated = await prisma.model.update({
+    where: { id: req.params.id as string },
+    data: { status: 'approved', reviewedById: req.userId, reviewedAt: new Date() },
+    include: { equipmentType: true, manufacturer: true },
+  });
+  await logAudit({ userId: req.userId, action: 'approve', entityType: 'model', entityId: updated.id, oldValue: { status: 'pending' }, newValue: { status: 'approved' }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json(updated);
+});
+
+router.put('/models/:id/reject', async (req: AuthRequest, res: Response) => {
+  const model = await prisma.model.findUnique({ where: { id: req.params.id as string } });
+  if (!model) return res.status(404).json({ message: 'Модель не найдена' });
+  if (model.status !== 'pending') return res.status(400).json({ message: 'Модель не на модерации' });
+
+  const { reason } = req.body;
+  const updated = await prisma.model.update({
+    where: { id: req.params.id as string },
+    data: { status: 'rejected', reviewedById: req.userId, reviewedAt: new Date(), rejectionReason: reason || null },
+    include: { equipmentType: true, manufacturer: true },
+  });
+  await logAudit({ userId: req.userId, action: 'reject', entityType: 'model', entityId: updated.id, oldValue: { status: 'pending' }, newValue: { status: 'rejected', reason }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json(updated);
 });
 
 export default router;

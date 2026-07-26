@@ -202,10 +202,10 @@ export async function generateReportHtml(visitId: string): Promise<string> {
   const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
   const recMap = new Map(recommendations.map(r => [r.id, r.text]));
 
-  const visitUser = await prisma.user.findUnique({
+  const visitUser = visit.userId ? await prisma.user.findUnique({
     where: { id: visit.userId },
     select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
-  });
+  }) : null;
   const specParts: string[] = [];
   if (visitUser) {
     if (visitUser.specializationVik) specParts.push('ВиК');

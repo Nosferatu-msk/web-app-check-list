@@ -1,11 +1,29 @@
 export type UserRole = 'engineer' | 'tm' | 'admin';
 export type Season = 'summer' | 'winter';
-export type VisitStatus = 'planned' | 'not_started' | 'in_progress' | 'completed' | 'sent' | 'sent_by_engineer' | 'sent_by_tm' | 'corrected_by_tm';
+export type VisitStatus = 'planned' | 'not_started' | 'in_progress' | 'completed' | 'sent' | 'sent_by_engineer' | 'sent_by_tm' | 'corrected_by_tm' | 'awaiting_assignment';
 export type TaskStatus = 'not_started' | 'in_progress' | 'completed';
 export type Conclusion = 'ok' | 'ok_with_notes' | 'faulty';
 export type PhotoMoment = 'before' | 'after';
 export type TaskType = 'group_climate' | 'individual';
 export type EquipmentItemStatus = 'ok' | 'not_ok';
+export type ModelStatus = 'approved' | 'pending' | 'rejected';
+export type ConfirmationStatus = 'confirmed' | 'pending';
+export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+export type RequestType = 'new_equipment' | 'room_change' | 'brand_change';
+export type NotificationType =
+  | 'proposal_created'
+  | 'proposal_approved'
+  | 'proposal_rejected'
+  | 'proposal_expiring_soon'
+  | 'proposal_expired'
+  | 'equipment_removed'
+  | 'request_assigned'
+  | 'request_unassigned'
+  | 'request_declined'
+  | 'request_imported';
+
+export type ImportStatus = 'new' | 'matched' | 'created' | 'error' | 'skipped';
+export type AssignmentAction = 'assigned' | 'unassigned' | 'declined';
 
 export interface User {
   id: string;
@@ -53,9 +71,34 @@ export interface Recommendation {
   isActive: boolean;
 }
 
+export interface Manufacturer {
+  id: string;
+  name: string;
+  country?: string | null;
+  isActive: boolean;
+}
+
+export interface Model {
+  id: string;
+  equipmentTypeId: string;
+  manufacturerId: string;
+  modelName: string;
+  fullModelName?: string | null;
+  status: ModelStatus;
+  submittedById?: string | null;
+  submittedAt?: string | null;
+  reviewedById?: string | null;
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+  equipmentType?: EquipmentType;
+  manufacturer?: Manufacturer;
+  submittedBy?: { id: string; fullName: string; email: string };
+  reviewedBy?: { id: string; fullName: string; email: string };
+}
+
 export interface Visit {
   id: string;
-  userId: string;
+  userId: string | null;
   addressId: string;
   engineerName: string;
   dateStart: string;
@@ -68,14 +111,16 @@ export interface Visit {
   sentByEngineerAt?: string;
   sentByTmAt?: string;
   tmCorrected: boolean;
+  isMultiSpecialist: boolean;
   isDeleted: boolean;
   deletedById?: string;
   deletedAt?: string;
   address?: Address;
   tasks?: Task[];
-  user?: { id: string; fullName: string; email: string };
+  user?: { id: string; fullName: string; email: string } | null;
   assignedBy?: { id: string; fullName: string; email: string };
   deletedBy?: { id: string; fullName: string; email: string };
+  visitEngineers?: VisitEngineer[];
 }
 
 export interface Task {
@@ -86,6 +131,7 @@ export interface Task {
   roomTypeId?: string;
   roomTypeCode?: string;
   objectEquipmentId?: string;
+  externalRequestId?: string;
   comment?: string;
   brand?: string;
   model?: string;
@@ -180,6 +226,30 @@ export const EQUIPMENT_ITEM_STATUS_LABELS: Record<EquipmentItemStatus, string> =
   not_ok: 'Неисправно',
 };
 
+export const MODEL_STATUS_LABELS: Record<ModelStatus, string> = {
+  approved: 'Утверждена',
+  pending: 'На модерации',
+  rejected: 'Отклонена',
+};
+
+export const CONFIRMATION_STATUS_LABELS: Record<ConfirmationStatus, string> = {
+  confirmed: 'Подтверждено',
+  pending: 'Ожидает подтверждения',
+};
+
+export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
+  pending: 'Ожидает рассмотрения',
+  approved: 'Подтверждено',
+  rejected: 'Отклонено',
+  expired: 'Истекло',
+};
+
+export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
+  new_equipment: 'Новое оборудование',
+  room_change: 'Перенос оборудования',
+  brand_change: 'Смена бренда/модели',
+};
+
 // Коды климатического оборудования (внутренние блоки) для группировки
 export const CLIMATE_INDOOR_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
 // Коды климатического оборудования (наружные блоки) для группировки
@@ -202,6 +272,15 @@ export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
   sent_by_engineer: 'Отправлен инженером',
   sent_by_tm: 'Отправлен ТМ',
   corrected_by_tm: 'Откорректирован ТМ',
+  awaiting_assignment: 'Ожидает назначения',
+};
+
+export const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
+  new: 'Новая',
+  matched: 'Сопоставлена',
+  created: 'Создана',
+  error: 'Ошибка',
+  skipped: 'Пропущена',
 };
 
 export interface TmAssignment {
@@ -234,6 +313,118 @@ export interface ImportLogEntry {
   errors?: Record<string, unknown>;
   status: string;
   createdAt: string;
+}
+
+export interface ObjectEquipment {
+  id: string;
+  addressId: string;
+  equipmentTypeCode: string;
+  roomTypeCode?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  locationDescription?: string;
+  isOutdoorUnit: boolean;
+  isActive: boolean;
+  confirmationStatus: ConfirmationStatus;
+  createdBy?: string;
+  pendingUntil?: string;
+  roomConfirmedAt?: string;
+  roomConfirmedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  roomType?: RoomType;
+}
+
+export interface EquipmentProposal {
+  id: string;
+  addressId: string;
+  equipmentTypeCode: string;
+  roomTypeCode: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  locationDescription?: string;
+  proposedById: string;
+  status: ProposalStatus;
+  reviewedById?: string;
+  reviewedAt?: string;
+  requestType: RequestType;
+  oldRoomTypeCode?: string;
+  rejectionReason?: string;
+  pendingUntil?: string;
+  objectEquipmentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  address?: Address;
+  proposedBy?: { id: string; fullName: string; email: string };
+  reviewedBy?: { id: string; fullName: string; email: string };
+  objectEquipment?: ObjectEquipment;
+  roomType?: RoomType;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  entityType?: string;
+  entityId?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface ImportedRequest {
+  id: string;
+  externalRequestId: string;
+  externalStatus?: string;
+  equipmentTypeId: string;
+  equipmentTypeCode?: string;
+  objectCode: string;
+  addressRaw?: string;
+  matchedAddressId?: string;
+  visitId?: string;
+  importStatus: ImportStatus;
+  errorMessage?: string;
+  importedBy?: string;
+  importedAt: string;
+  createdAt: string;
+  equipmentType?: EquipmentType;
+  matchedAddress?: Address;
+  visit?: Visit;
+}
+
+export interface VisitEngineer {
+  id: string;
+  visitId: string;
+  engineerId: string;
+  isPrimary: boolean;
+  assignedBy?: string;
+  assignedAt: string;
+  engineer?: { id: string; fullName: string; email: string };
+}
+
+export interface RequestAssignmentLogEntry {
+  id: string;
+  importedRequestId: string;
+  action: AssignmentAction;
+  engineerId?: string;
+  performedBy?: string;
+  reason?: string;
+  createdAt: string;
+  engineer?: { id: string; fullName: string; email: string };
+  performer?: { id: string; fullName: string; email: string };
+}
+
+export interface ImportRequestsResult {
+  importLogId: string;
+  total: number;
+  created: number;
+  matched: number;
+  skipped: number;
+  errors: number;
+  errorDetails: { row: number; externalRequestId: string; message: string }[];
 }
 
 export function determineSeason(date: Date): Season {

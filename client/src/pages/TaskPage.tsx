@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Tooltip } from 'antd';
+import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Tooltip, AutoComplete, Collapse } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
-import VoiceInput from '../components/VoiceInput';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { useIsMobile } from '../hooks/useIsMobile';
+import VoiceInputButton from '../components/VoiceInputButton';
+import MobileHeader from '../components/MobileHeader';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ru';
@@ -372,6 +374,36 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
   ],
 };
 
+function ModelAutocomplete({ equipmentTypeId, value, onChange }: { equipmentTypeId?: string; value?: string; onChange?: (v: string) => void }) {
+  const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
+
+  const handleSearch = useCallback(async (query: string) => {
+    if (!equipmentTypeId) return;
+    try {
+      const results = await api.searchModels({ equipment_type_id: equipmentTypeId, query });
+      setOptions(results.map((m: any) => ({
+        value: m.fullModelName || m.modelName,
+        label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+      })));
+    } catch {
+      setOptions([]);
+    }
+  }, [equipmentTypeId]);
+
+  return (
+    <AutoComplete
+      value={value}
+      options={options}
+      onSearch={handleSearch}
+      onSelect={onChange}
+      onChange={onChange}
+      placeholder="Начните вводить для поиска..."
+      filterOption={false}
+      allowClear
+    />
+  );
+}
+
 export default function TaskPage() {
   const { message } = App.useApp();
   const { visitId, taskId } = useParams();
@@ -389,6 +421,7 @@ export default function TaskPage() {
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const loadedParamsRef = useRef<Record<string, any>>({});
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs'];
 
@@ -555,71 +588,171 @@ export default function TaskPage() {
   if (loading || formInitialValues === null) return <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>;
 
   return (
-    <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
-        <div className="page-title" style={{ margin: 0 }}>{task?.equipmentType?.name}</div>
-      </div>
+    <div className={`page-container ${isMobile ? 'page-with-bottom-nav' : ''}`}>
+      {isMobile && <MobileHeader title={task?.equipmentType?.name || 'Задача'} showBack onBack={() => navigate(`/visit/${visitId}`)} />}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
+          <div className="page-title" style={{ margin: 0 }}>{task?.equipmentType?.name}</div>
+        </div>
+      )}
 
       <Card>
         <Form form={form} key={formKey} initialValues={formInitialValues} layout="vertical" onValuesChange={markAutoSaveDirty}>
-          {paramConfig.map(p => (
-            <Form.Item
-              key={p.key}
-              label={
-                autoFilledFields.has(p.key) ? (
-                  <span>
-                    {p.label}{' '}
-                    <Tooltip title="Автозаполнено из справочника объекта">
-                      <span style={{ cursor: 'help' }}>📋</span>
-                    </Tooltip>
-                  </span>
-                ) : p.label
-              }
-              name={p.key}
-              rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}
-            >
-              {p.type === 'select' ? (
-                <Select options={p.options} placeholder="Выберите..." />
-              ) : p.type === 'number' ? (
-                <Input type="number" placeholder="Введите значение" />
-              ) : (
-                <Input placeholder="Введите значение" />
-              )}
-            </Form.Item>
-          ))}
-
-          <Form.Item label="Заключение" name="conclusion" rules={[{ required: true }]}>
-            <Select options={CONCLUSION_OPTIONS} onChange={(v) => setConclusion(v)} />
-          </Form.Item>
-
-          {recommendations.length > 0 && (
-            <Form.Item label="Типовые рекомендации">
-              <Checkbox.Group value={selectedRecs} onChange={(v) => { setSelectedRecs(v as string[]); markAutoSaveDirty(); }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {recommendations.map(r => (
-                    <Checkbox key={r.id} value={r.id}>{r.text}</Checkbox>
-                  ))}
-                </div>
-              </Checkbox.Group>
-            </Form.Item>
-          )}
-
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.conclusion !== cur.conclusion}>
-            {({ getFieldValue }) => {
-              const currentConclusion = getFieldValue('conclusion');
-              const isRequired = currentConclusion === 'ok_with_notes' || currentConclusion === 'faulty';
-              return (
-                <Form.Item
-                  label="Дополнительные рекомендации"
-                  name="additionalRecommendations"
-                  rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
-                >
-                  <VoiceInput rows={3} placeholder="Опишите проблему или рекомендации..." />
+          {isMobile ? (
+            <Collapse defaultActiveKey={['params']} ghost>
+              <Collapse.Panel header="Основные параметры" key="params">
+                {paramConfig.map(p => (
+                  <Form.Item
+                    key={p.key}
+                    label={
+                      autoFilledFields.has(p.key) ? (
+                        <span>
+                          {p.label}{' '}
+                          <Tooltip title="Автозаполнено из справочника объекта">
+                            <span style={{ cursor: 'help' }}>📋</span>
+                          </Tooltip>
+                        </span>
+                      ) : p.label
+                    }
+                    name={p.key}
+                    rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}
+                  >
+                    {p.type === 'select' ? (
+                      <Select options={p.options} placeholder="Выберите..." />
+                    ) : p.type === 'number' ? (
+                      <Input type="number" inputMode="decimal" placeholder="Введите значение" />
+                    ) : p.key === 'model' ? (
+                      <ModelAutocomplete equipmentTypeId={task?.equipmentType?.id} />
+                    ) : (
+                      <Input placeholder="Введите значение" />
+                    )}
+                  </Form.Item>
+                ))}
+              </Collapse.Panel>
+              <Collapse.Panel header="Заключение и рекомендации" key="conclusion">
+                <Form.Item label="Заключение" name="conclusion" rules={[{ required: true }]}>
+                  <Select options={CONCLUSION_OPTIONS} onChange={(v) => setConclusion(v)} />
                 </Form.Item>
-              );
-            }}
-          </Form.Item>
+
+                {recommendations.length > 0 && (
+                  <Form.Item label="Типовые рекомендации">
+                    <Checkbox.Group value={selectedRecs} onChange={(v) => { setSelectedRecs(v as string[]); markAutoSaveDirty(); }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {recommendations.map(r => (
+                          <Checkbox key={r.id} value={r.id}>{r.text}</Checkbox>
+                        ))}
+                      </div>
+                    </Checkbox.Group>
+                  </Form.Item>
+                )}
+
+                <Form.Item noStyle shouldUpdate={(prev, cur) => prev.conclusion !== cur.conclusion}>
+                  {({ getFieldValue }) => {
+                    const currentConclusion = getFieldValue('conclusion');
+                    const isRequired = currentConclusion === 'ok_with_notes' || currentConclusion === 'faulty';
+                    return (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontWeight: 500 }}>Дополнительные рекомендации</span>
+                          <VoiceInputButton
+                            onResult={(text) => {
+                              const current = form.getFieldValue('additionalRecommendations') || '';
+                              const updated = current ? `${current} ${text}` : text;
+                              form.setFieldValue('additionalRecommendations', updated);
+                              markAutoSaveDirty();
+                            }}
+                          />
+                        </div>
+                        <Form.Item
+                          name="additionalRecommendations"
+                          style={{ marginBottom: 0 }}
+                          rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
+                        >
+                          <TextArea rows={3} placeholder="Опишите проблему или рекомендации..." />
+                        </Form.Item>
+                      </>
+                    );
+                  }}
+                </Form.Item>
+              </Collapse.Panel>
+            </Collapse>
+          ) : (
+            <>
+              {paramConfig.map(p => (
+                <Form.Item
+                  key={p.key}
+                  label={
+                    autoFilledFields.has(p.key) ? (
+                      <span>
+                        {p.label}{' '}
+                        <Tooltip title="Автозаполнено из справочника объекта">
+                          <span style={{ cursor: 'help' }}>📋</span>
+                        </Tooltip>
+                      </span>
+                    ) : p.label
+                  }
+                  name={p.key}
+                  rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}
+                >
+                  {p.type === 'select' ? (
+                    <Select options={p.options} placeholder="Выберите..." />
+                  ) : p.type === 'number' ? (
+                    <Input type="number" placeholder="Введите значение" />
+                  ) : p.key === 'model' ? (
+                    <ModelAutocomplete equipmentTypeId={task?.equipmentType?.id} />
+                  ) : (
+                    <Input placeholder="Введите значение" />
+                  )}
+                </Form.Item>
+              ))}
+
+              <Form.Item label="Заключение" name="conclusion" rules={[{ required: true }]}>
+                <Select options={CONCLUSION_OPTIONS} onChange={(v) => setConclusion(v)} />
+              </Form.Item>
+
+              {recommendations.length > 0 && (
+                <Form.Item label="Типовые рекомендации">
+                  <Checkbox.Group value={selectedRecs} onChange={(v) => { setSelectedRecs(v as string[]); markAutoSaveDirty(); }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {recommendations.map(r => (
+                        <Checkbox key={r.id} value={r.id}>{r.text}</Checkbox>
+                      ))}
+                    </div>
+                  </Checkbox.Group>
+                </Form.Item>
+              )}
+
+              <Form.Item noStyle shouldUpdate={(prev, cur) => prev.conclusion !== cur.conclusion}>
+                {({ getFieldValue }) => {
+                  const currentConclusion = getFieldValue('conclusion');
+                  const isRequired = currentConclusion === 'ok_with_notes' || currentConclusion === 'faulty';
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontWeight: 500 }}>Дополнительные рекомендации</span>
+                        <VoiceInputButton
+                          onResult={(text) => {
+                            const current = form.getFieldValue('additionalRecommendations') || '';
+                            const updated = current ? `${current} ${text}` : text;
+                            form.setFieldValue('additionalRecommendations', updated);
+                            markAutoSaveDirty();
+                          }}
+                        />
+                      </div>
+                      <Form.Item
+                        name="additionalRecommendations"
+                        style={{ marginBottom: 0 }}
+                        rules={isRequired ? [{ required: true, message: 'Обязательно при замечаниях' }] : []}
+                      >
+                        <TextArea rows={3} placeholder="Опишите проблему или рекомендации..." />
+                      </Form.Item>
+                    </>
+                  );
+                }}
+              </Form.Item>
+            </>
+          )}
         </Form>
 
         <Space style={{ width: '100%' }} direction="vertical" size="middle">

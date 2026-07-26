@@ -107,7 +107,7 @@ export default function AdminTmAssignments() {
                   onChange={setNewAddressId}
                   onSearch={loadAddresses}
                   filterOption={false}
-                  options={addresses.map((a: any) => ({ value: a.id, label: a.fullAddress }))}
+                  options={addresses.map((a: any) => ({ value: a.id, label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress }))}
                   notFoundContent="Введите минимум 2 символа"
                 />
                 <Button type="primary" icon={<PlusOutlined />} onClick={handleAddObject} disabled={!selectedTm || !newAddressId}>
@@ -121,7 +121,7 @@ export default function AdminTmAssignments() {
                 pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }}
                 columns={[
                   { title: 'ТМ', render: (_: any, r: any) => r.tm?.fullName },
-                  { title: 'Адрес', render: (_: any, r: any) => r.address?.fullAddress },
+                  { title: 'Адрес', render: (_: any, r: any) => r.address?.objectCode ? `[${r.address.objectCode}] ${r.address.fullAddress}` : r.address?.fullAddress },
                   { title: 'Дата', render: (_: any, r: any) => new Date(r.createdAt).toLocaleDateString('ru-RU') },
                   { title: '', key: 'actions', width: 60, render: (_: any, r: any) => (
                     <Popconfirm title="Удалить привязку?" onConfirm={() => handleDeleteObject(r.id)}>

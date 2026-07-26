@@ -31,7 +31,7 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
 
-  const textFilter = { AND: [{ isDeleted: false }, { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }] }] };
+  const textFilter = { AND: [{ isDeleted: false }, { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }, { objectCode: { contains: q, mode: 'insensitive' } }] }] };
 
   // Role-based filtering: engineer sees only TM's addresses, tm sees own, admin sees all
   let addressIds: string[] | null = null;
@@ -125,6 +125,12 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
     where.roomTypeCode = roomTypeCode;
   }
 
+  // Фильтрация по статусу подтверждения
+  const confirmationStatus = req.query.confirmation_status as string;
+  if (confirmationStatus === 'pending' || confirmationStatus === 'confirmed') {
+    where.confirmationStatus = confirmationStatus;
+  }
+
   const excludeVisitId = req.query.exclude_visit_id as string;
   if (excludeVisitId) {
     // Индивидуальные задачи — objectEquipmentId в task
@@ -213,19 +219,85 @@ router.get('/engineers', async (req: AuthRequest, res: Response) => {
   if (role === 'admin') {
     const data = await prisma.user.findMany({
       where: { role: 'engineer', isActive: true },
-      select: { id: true, fullName: true, email: true },
+      select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
       orderBy: { fullName: 'asc' },
     });
     res.json(data);
   } else if (role === 'tm') {
     const assignments = await prisma.tmEngineer.findMany({
       where: { tmId: req.userId as string },
-      select: { engineer: { select: { id: true, fullName: true, email: true } } },
+      select: { engineer: { select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } } },
     });
     res.json(assignments.map(a => a.engineer));
   } else {
     res.json([]);
   }
+});
+
+// GET /api/refs/object-equipment/other-rooms — оборудование из других помещений объекта
+router.get('/object-equipment/other-rooms', async (req: AuthRequest, res: Response) => {
+  const addressId = req.query.address_id as string;
+  const currentRoomTypeCode = req.query.current_room_type_code as string;
+  const excludeVisitId = req.query.exclude_visit_id as string;
+
+  if (!addressId || !currentRoomTypeCode) {
+    res.status(400).json({ error: 'Требуется address_id и current_room_type_code' });
+    return;
+  }
+
+  const where: any = {
+    addressId,
+    isActive: true,
+    AND: [
+      { roomTypeCode: { not: null } },
+      { roomTypeCode: { not: currentRoomTypeCode } },
+    ],
+  };
+
+  // Исключить оборудование, уже добавленное в визит
+  if (excludeVisitId) {
+    const visitItems = await prisma.taskEquipmentItem.findMany({
+      where: { task: { visitId: excludeVisitId } },
+      select: { objectEquipmentId: true },
+    });
+    const taskRecords = await prisma.task.findMany({
+      where: { visitId: excludeVisitId, objectEquipmentId: { not: null } },
+      select: { objectEquipmentId: true },
+    });
+    const excludeIds = [
+      ...visitItems.map((i) => i.objectEquipmentId),
+      ...taskRecords.map((t) => t.objectEquipmentId!),
+    ].filter(Boolean);
+    if (excludeIds.length > 0) where.id = { notIn: excludeIds };
+  }
+
+  const equipment = await prisma.objectEquipment.findMany({
+    where,
+    orderBy: { equipmentTypeCode: 'asc' },
+  });
+
+  // Получить roomTypes для кодов помещений
+  const roomTypeCodes = [...new Set(equipment.map((e) => e.roomTypeCode).filter(Boolean))] as string[];
+  const roomTypes = await prisma.roomType.findMany({
+    where: { code: { in: roomTypeCodes } },
+  });
+  const roomTypeMap = new Map(roomTypes.map((rt) => [rt.code, rt]));
+
+  // Добавить hasPendingProposal и roomType
+  const result = await Promise.all(
+    equipment.map(async (eq) => {
+      const pendingProposal = await prisma.equipmentProposal.findFirst({
+        where: { objectEquipmentId: eq.id, status: 'pending' },
+      });
+      return {
+        ...eq,
+        roomType: eq.roomTypeCode ? roomTypeMap.get(eq.roomTypeCode) || null : null,
+        hasPendingProposal: !!pendingProposal,
+      };
+    }),
+  );
+
+  res.json(result);
 });
 
 // PATCH /api/refs/object-equipment/:id/room — confirm room for equipment
@@ -255,6 +327,39 @@ router.patch('/object-equipment/:id/room', async (req: AuthRequest, res: Respons
     },
   });
   res.json(item);
+});
+
+// GET /api/refs/manufacturers — список активных производителей
+router.get('/manufacturers', async (_req: AuthRequest, res: Response) => {
+  const data = await prisma.manufacturer.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' },
+  });
+  res.json(data);
+});
+
+// GET /api/refs/models/search?equipment_type_id=...&query=... — поиск моделей с автодополнением
+router.get('/models/search', async (req: AuthRequest, res: Response) => {
+  const equipmentTypeId = req.query.equipment_type_id as string;
+  const query = (req.query.query as string) || '';
+
+  const where: any = { status: 'approved' };
+  if (equipmentTypeId) where.equipmentTypeId = equipmentTypeId;
+  if (query) {
+    where.OR = [
+      { modelName: { contains: query, mode: 'insensitive' } },
+      { fullModelName: { contains: query, mode: 'insensitive' } },
+    ];
+  }
+
+  const data = await prisma.model.findMany({
+    where,
+    include: { manufacturer: true },
+    orderBy: { modelName: 'asc' },
+    take: 50,
+  });
+
+  res.json(data);
 });
 
 export default router;

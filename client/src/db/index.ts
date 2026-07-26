@@ -95,6 +95,33 @@ export interface CachedRef {
   updatedAt: string;
 }
 
+export interface LocalNotification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  entityType?: string;
+  entityId?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface LocalProposal {
+  id: string;
+  addressId: string;
+  equipmentTypeCode: string;
+  roomTypeCode: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  requestType: string;
+  status: string;
+  pendingUntil?: string;
+  createdAt: string;
+  dirty: boolean;
+}
+
 class ChecklistDB extends Dexie {
   visits!: Table<LocalVisit, string>;
   tasks!: Table<LocalTask, string>;
@@ -103,6 +130,8 @@ class ChecklistDB extends Dexie {
   syncQueue!: Table<SyncQueueItem, number>;
   cachedRefs!: Table<CachedRef, string>;
   favorites!: Table<LocalFavorite, string>;
+  notifications!: Table<LocalNotification, string>;
+  proposals!: Table<LocalProposal, string>;
 
   constructor() {
     super('ChecklistDB');
@@ -129,6 +158,17 @@ class ChecklistDB extends Dexie {
       syncQueue: '++id, entityType, entityId, createdAt',
       cachedRefs: 'key',
       favorites: 'id, userId, objectCode, addedAt',
+    });
+    this.version(4).stores({
+      visits: 'id, serverId, userId, status, dirty, isDeleted',
+      tasks: 'id, serverId, visitLocalId, visitServerId, dirty',
+      taskEquipmentItems: 'id, serverId, taskLocalId, taskServerId, dirty',
+      photos: 'id, serverId, taskLocalId, taskServerId, taskEquipmentItemLocalId, taskEquipmentItemServerId, dirty',
+      syncQueue: '++id, entityType, entityId, createdAt',
+      cachedRefs: 'key',
+      favorites: 'id, userId, objectCode, addedAt',
+      notifications: 'id, userId, isRead, createdAt',
+      proposals: 'id, addressId, status, requestType, dirty',
     });
   }
 }

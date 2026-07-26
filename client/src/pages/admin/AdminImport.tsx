@@ -14,6 +14,8 @@ const IMPORT_TYPES = [
   { key: 'tm-objects', label: 'Привязка объектов к ТМ', icon: '🔗', description: 'CSV: object_code, tm_email' },
   { key: 'tm-engineers', label: 'Привязка инженеров к ТМ', icon: '🔗', description: 'CSV: engineer_email, tm_email' },
   { key: 'object-equipment', label: 'Оборудование объектов', icon: '⚙️', description: 'CSV/XLSX: object_code, equipment_type, room_type (опц.), brand, model, serial_number, location_description' },
+  { key: 'manufacturers', label: 'Производители', icon: '🏭', description: 'CSV: name, country' },
+  { key: 'models', label: 'Модели оборудования', icon: '📦', description: 'CSV: eq_type, manufacture, model' },
 ];
 
 interface ImportResult {

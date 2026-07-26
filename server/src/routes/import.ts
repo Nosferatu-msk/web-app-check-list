@@ -619,4 +619,87 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── IMPORT MANUFACTURERS ──────────────────────────────────
+
+router.post('/manufacturers', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
+    const { rows, fileName } = await parseUploadedFile(req);
+    const result = { total: 0, success: 0, duplicates: 0, errors: [] as any[] };
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const name = (row.name || '').trim();
+      if (!name) { result.errors.push({ row: i + 2, field: 'name', message: 'Название обязательно' }); continue; }
+      result.total++;
+      const existing = await prisma.manufacturer.findUnique({ where: { name } });
+      if (existing) { result.duplicates++; continue; }
+      await prisma.manufacturer.create({ data: { name, country: (row.country || '').trim() || null } });
+      result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = { totalRows: rows.length, validRows: result.total - result.errors.length - result.duplicates, duplicateRows: result.duplicates, errorRows: result.errors.length, duplicates: [], errors: result.errors };
+      return res.json(vr);
+    }
+
+    await prisma.importLog.create({
+      data: { userId: req.userId!, entityType: 'manufacturers', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
+    });
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── IMPORT MODELS ─────────────────────────────────────────
+
+router.post('/models', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
+    const { rows, fileName } = await parseUploadedFile(req);
+    const result = { total: 0, success: 0, duplicates: 0, errors: [] as any[] };
+
+    const eqTypes = await prisma.equipmentType.findMany();
+    const eqMap = new Map(eqTypes.map(e => [e.name.toLowerCase(), e.id]));
+    const mfrs = await prisma.manufacturer.findMany();
+    const mfrMap = new Map(mfrs.map(m => [m.name.toLowerCase(), m.id]));
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const eqTypeName = (row.eq_type || row.equipment_type || '').trim().toLowerCase();
+      const mfrName = (row.manufacture || row.manufacturer || '').trim().toLowerCase();
+      const modelName = (row.model || row.model_name || '').trim();
+
+      if (!eqTypeName) { result.errors.push({ row: i + 2, field: 'eq_type', message: 'Вид оборудования обязателен' }); continue; }
+      if (!mfrName) { result.errors.push({ row: i + 2, field: 'manufacture', message: 'Производитель обязателен' }); continue; }
+      if (!modelName) { result.errors.push({ row: i + 2, field: 'model', message: 'Модель обязательна' }); continue; }
+
+      const eqId = eqMap.get(eqTypeName);
+      const mfrId = mfrMap.get(mfrName);
+      if (!eqId) { result.errors.push({ row: i + 2, field: 'eq_type', message: `Вид «${eqTypeName}» не найден` }); continue; }
+      if (!mfrId) { result.errors.push({ row: i + 2, field: 'manufacture', message: `Производитель «${mfrName}» не найден` }); continue; }
+
+      result.total++;
+      const existing = await prisma.model.findFirst({
+        where: { equipmentTypeId: eqId, manufacturerId: mfrId, modelName },
+      });
+      if (existing) { result.duplicates++; continue; }
+
+      await prisma.model.create({
+        data: { equipmentTypeId: eqId, manufacturerId: mfrId, modelName, fullModelName: `${mfrs.find(m => m.id === mfrId)?.name} ${modelName}`, status: 'approved' },
+      });
+      result.success++;
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = { totalRows: rows.length, validRows: result.total - result.errors.length - result.duplicates, duplicateRows: result.duplicates, errorRows: result.errors.length, duplicates: [], errors: result.errors };
+      return res.json(vr);
+    }
+
+    await prisma.importLog.create({
+      data: { userId: req.userId!, entityType: 'models', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
+    });
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 export default router;

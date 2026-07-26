@@ -9,7 +9,15 @@ import './index.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ConfigProvider locale={ruRU} theme={{ token: { colorPrimary: '#1677ff' } }}>
+      <ConfigProvider
+        locale={ruRU}
+        theme={{
+          token: {
+            colorPrimary: '#1677ff',
+            controlHeight: 40,
+          },
+        }}
+      >
         <AntApp>
           <App />
         </AntApp>

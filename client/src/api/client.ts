@@ -208,10 +208,11 @@ export const api = {
 
   // Unified summary report (new)
   generateUnifiedReport: async (data: {
-    type: 'period' | 'objects';
+    type: 'period' | 'objects' | 'requests';
     dateFrom: string;
     dateTo: string;
     addressIds?: string[];
+    requestIds?: string[];
     engineerId?: string;
     scanIds?: string[];
   }): Promise<void> => {
@@ -231,7 +232,7 @@ export const api = {
     const blob = await res.blob();
     const disposition = res.headers.get('content-disposition') || '';
     const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)/i);
-    const fileName = match ? decodeURIComponent(match[1]) : (data.type === 'period' ? 'svodnyj_otchet.pdf' : 'otchet_po_obektam.pdf');
+    const fileName = match ? decodeURIComponent(match[1]) : (data.type === 'period' ? 'svodnyj_otchet.pdf' : data.type === 'requests' ? 'otchet_po_zayavkam.pdf' : 'otchet_po_obektam.pdf');
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -288,14 +289,42 @@ export const api = {
   // Proposals
   createProposal: (data: any) =>
     request<any>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
+  createRoomChangeProposal: (data: { objectEquipmentId: string; newRoomTypeCode: string }) =>
+    request<any>('/proposals/room-change', { method: 'POST', body: JSON.stringify(data) }),
+  getMyProposals: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any>(`/proposals/my${qs}`);
+  },
   getProposals: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any>(`/proposals/admin${qs}`);
   },
+  updateProposal: (id: string, data: any) =>
+    request<any>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  cancelProposal: (id: string) =>
+    request<any>(`/proposals/${id}`, { method: 'DELETE' }),
   approveProposal: (id: string) =>
     request<any>(`/proposals/admin/${id}/approve`, { method: 'PUT' }),
-  rejectProposal: (id: string) =>
-    request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT' }),
+  rejectProposal: (id: string, reason?: string) =>
+    request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+  batchProposals: (data: { ids: string[]; action: 'approve' | 'reject'; reason?: string }) =>
+    request<any>('/proposals/admin/batch', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Object equipment
+  getOtherRoomsEquipment: (params: { address_id: string; current_room_type_code: string; exclude_visit_id?: string }) => {
+    const qs = '?' + new URLSearchParams(params as Record<string, string>).toString();
+    return request<any>(`/refs/object-equipment/other-rooms${qs}`);
+  },
+
+  // Notifications
+  getNotifications: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any>(`/notifications${qs}`);
+  },
+  markNotificationRead: (id: string) =>
+    request<any>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllNotificationsRead: () =>
+    request<any>('/notifications/read-all', { method: 'PATCH' }),
 
   // Object equipment room confirmation
   confirmEquipmentRoom: (id: string, roomTypeCode: string) =>
@@ -441,4 +470,99 @@ export const api = {
     const { db } = await import('../db/index');
     return db.favorites.toArray();
   },
+
+  // ─── MANUFACTURERS ──────────────────────────────────────────
+  getManufacturers: async (params?: { page?: number; pageSize?: number; q?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params?.q) qs.set('q', params.q);
+    return request<{ data: any[]; total: number; page: number; pageSize: number }>(`/admin/manufacturers?${qs}`);
+  },
+
+  createManufacturer: (data: { name: string; country?: string }) =>
+    request('/admin/manufacturers', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateManufacturer: (id: string, data: { name?: string; country?: string; isActive?: boolean }) =>
+    request(`/admin/manufacturers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteManufacturer: (id: string) =>
+    request(`/admin/manufacturers/${id}`, { method: 'DELETE' }),
+
+  // ─── MODELS ─────────────────────────────────────────────────
+  getModels: async (params?: { page?: number; pageSize?: number; q?: string; status?: string; equipment_type_id?: string; manufacturer_id?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params?.q) qs.set('q', params.q);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.equipment_type_id) qs.set('equipment_type_id', params.equipment_type_id);
+    if (params?.manufacturer_id) qs.set('manufacturer_id', params.manufacturer_id);
+    return request<{ data: any[]; total: number; page: number; pageSize: number }>(`/admin/models?${qs}`);
+  },
+
+  createModel: (data: { equipmentTypeId: string; manufacturerId: string; modelName: string; fullModelName?: string }) =>
+    request('/admin/models', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateModel: (id: string, data: { equipmentTypeId?: string; manufacturerId?: string; modelName?: string; fullModelName?: string }) =>
+    request(`/admin/models/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  approveModel: (id: string) =>
+    request(`/admin/models/${id}/approve`, { method: 'PUT' }),
+
+  rejectModel: (id: string, reason?: string) =>
+    request(`/admin/models/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+
+  searchModels: async (params: { equipment_type_id?: string; query?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.equipment_type_id) qs.set('equipment_type_id', params.equipment_type_id);
+    if (params.query) qs.set('query', params.query);
+    return request<any[]>(`/refs/models/search?${qs}`);
+  },
+
+  getManufacturersList: async () =>
+    request<any[]>('/refs/manufacturers'),
+
+  // ─── ЗАЯВКИ (REQUESTS) ───────────────────────────────────────
+  importRequests: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<any>('/requests/import', { method: 'POST', body: formData });
+  },
+
+  validateRequestsFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<any>('/requests/import?mode=validate', { method: 'POST', body: formData });
+  },
+
+  getImportStatus: async (id: string) =>
+    request<any>(`/requests/import/${id}`),
+
+  getRequests: async (params?: { page?: number; pageSize?: number; importStatus?: string; objectCode?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params?.importStatus) qs.set('importStatus', params.importStatus);
+    if (params?.objectCode) qs.set('objectCode', params.objectCode);
+    return request<any>(`/requests?${qs}`);
+  },
+
+  getRequest: async (id: string) =>
+    request<any>(`/requests/${id}`),
+
+  bindRequest: async (id: string, addressId: string) =>
+    request<any>(`/requests/${id}/bind`, { method: 'POST', body: JSON.stringify({ addressId }) }),
+
+  assignEngineer: async (requestId: string, engineerId: string) =>
+    request<any>('/requests/assign', { method: 'POST', body: JSON.stringify({ requestId, engineerId }) }),
+
+  unassignEngineer: async (visitId: string, engineerId: string, requestId?: string, reason?: string) =>
+    request<any>('/requests/unassign', { method: 'POST', body: JSON.stringify({ visitId, engineerId, requestId, reason }) }),
+
+  declineRequest: async (requestId: string, reason: string) =>
+    request<any>('/requests/decline', { method: 'POST', body: JSON.stringify({ requestId, reason }) }),
+
+  searchRequestsByNumbers: async (externalRequestIds: string[]) =>
+    request<any[]>('/requests/search-by-numbers', { method: 'POST', body: JSON.stringify({ externalRequestIds }) }),
 };
