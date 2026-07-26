@@ -87,7 +87,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), async (req: Request, res: Response) => {
   const { email } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) {
     res.json({ message: 'Если email зарегистрирован, письмо будет отправлено' });
     return;
