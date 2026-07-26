@@ -200,7 +200,11 @@ export default function SummaryReportPage() {
       <Card>
         <Form layout="vertical">
           <Form.Item label="Тип отчёта" required>
-            <Radio.Group value={reportType} onChange={(e) => setReportType(e.target.value)} style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            <Radio.Group
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+              style={isMobile ? { display: 'flex', flexDirection: 'column', gap: 8 } : { display: 'flex', flexWrap: 'wrap', gap: 4 }}
+            >
               <Radio.Button value="period">{isMobile ? 'За период' : 'Отчёт за период'}</Radio.Button>
               <Radio.Button value="objects">{isMobile ? 'По объектам' : 'Отчёт по объектам'}</Radio.Button>
               <Radio.Button value="requests">{isMobile ? 'По заявкам' : 'По номерам заявок'}</Radio.Button>
