@@ -283,6 +283,7 @@ export default function VisitListPage() {
                         </span>
                       )}
                       {v.address?.objectCode && <Tag color="blue" style={{ marginRight: 4 }}>{v.address.objectCode}</Tag>}
+                      {v.importedRequests?.length > 0 && <Tag color="green" style={{ marginRight: 4 }}>{v.importedRequests[0].externalRequestId}</Tag>}
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.address?.fullAddress || 'Адрес'}</span>
                     </div>
                     <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>

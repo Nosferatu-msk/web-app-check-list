@@ -534,7 +534,12 @@ export default function VisitPage() {
     <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
-        <div className="page-title" style={{ margin: 0, flex: 1 }}>{isNew ? 'Новый визит' : 'Визит'}</div>
+        <div className="page-title" style={{ margin: 0, flex: 1 }}>
+          {isNew ? 'Новый визит' : 'Визит'}
+          {!isNew && visit?.importedRequests?.length > 0 && (
+            <Tag color="green" style={{ marginLeft: 8, fontSize: 13 }}>{visit.importedRequests[0].externalRequestId}</Tag>
+          )}
+        </div>
         <NotificationBell />
         <TorchButton />
       </div>
