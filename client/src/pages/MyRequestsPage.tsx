@@ -7,6 +7,8 @@ import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { VISIT_STATUS_LABELS } from '../../../shared/types/index';
 import NotificationBell from '../components/NotificationBell';
+import MobileHeader from '../components/MobileHeader';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function MyRequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -16,6 +18,7 @@ export default function MyRequestsPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { message, modal } = App.useApp();
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     try {
@@ -117,16 +120,26 @@ export default function MyRequestsPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Card
-        title="Мои заявки"
-        extra={
+    <div className="page-container">
+      {isMobile && (
+        <MobileHeader
+          title="Мои заявки"
+          showBack
+          onBack={() => navigate('/')}
+        />
+      )}
+
+      {!isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Мои заявки</div>
           <Space>
             <NotificationBell />
             <Button icon={<LogoutOutlined />} onClick={() => { logout(); navigate('/login'); }}>Выход</Button>
           </Space>
-        }
-      >
+        </div>
+      )}
+
+      <Card>
         {requests.length === 0 && !loading ? (
           <Empty description="Нет назначенных заявок" />
         ) : (

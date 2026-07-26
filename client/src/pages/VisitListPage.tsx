@@ -198,7 +198,7 @@ export default function VisitListPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
         {(user?.role === 'engineer' || user?.role === 'tm') && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/visit/new')} block size={isMobile ? 'middle' : 'large'}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/visit/new')} block size="middle">
             Новый визит
           </Button>
         )}

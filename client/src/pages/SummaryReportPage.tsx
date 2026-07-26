@@ -263,7 +263,7 @@ export default function SummaryReportPage() {
             icon={<FilePdfOutlined />}
             onClick={handleGenerate}
             loading={loading}
-            size="large"
+            size="middle"
             block
             disabled={reportType === 'objects' && selectedAddressIds.length === 0}
           >

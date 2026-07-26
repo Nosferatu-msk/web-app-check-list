@@ -7,6 +7,8 @@ import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { IMPORT_STATUS_LABELS, VISIT_STATUS_LABELS } from '../../../shared/types/index';
 import NotificationBell from '../components/NotificationBell';
+import MobileHeader from '../components/MobileHeader';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const IMPORT_STATUS_COLORS: Record<string, string> = {
   new: 'default',
@@ -36,6 +38,7 @@ export default function RequestsPage() {
 
   const isTm = user?.role === 'tm';
   const isAdmin = user?.role === 'admin';
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     try {
@@ -257,29 +260,42 @@ export default function RequestsPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Card
-        title="Заявки"
-        extra={
+    <div className="page-container">
+      {isMobile && (
+        <MobileHeader
+          title="Заявки"
+          showBack
+          onBack={() => navigate('/')}
+        />
+      )}
+
+      {!isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Заявки</div>
           <Space>
             <NotificationBell />
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
-            {(isTm || isAdmin) && (
-              <Upload
-                accept=".xlsx"
-                showUploadList={false}
-                beforeUpload={handleImport}
-                disabled={importing}
-              >
-                <Button icon={<UploadOutlined />} loading={importing}>
-                  Импорт Excel
-                </Button>
-              </Upload>
-            )}
             <Button onClick={() => { logout(); navigate('/login'); }}>Выход</Button>
           </Space>
-        }
-      >
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        {(isTm || isAdmin) && (
+          <Upload
+            accept=".xlsx"
+            showUploadList={false}
+            beforeUpload={handleImport}
+            disabled={importing}
+          >
+            <Button icon={<UploadOutlined />} loading={importing}>
+              Импорт Excel
+            </Button>
+          </Upload>
+        )}
+      </div>
+
+      <Card>
         <Space style={{ marginBottom: 16 }}>
           <Select
             placeholder="Статус импорта"
