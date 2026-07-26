@@ -124,9 +124,8 @@ export default function MyRequestsPage() {
       {isMobile && (
         <MobileHeader
           title="Мои заявки"
-          actions={
-            <Button type="text" size="small" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} />
-          }
+          showBack
+          onBack={() => navigate('/')}
         />
       )}
 

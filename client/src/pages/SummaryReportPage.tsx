@@ -149,9 +149,8 @@ export default function SummaryReportPage() {
       {isMobile && (
         <MobileHeader
           title="Сводный отчёт"
-          actions={
-            <Button type="text" size="small" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} />
-          }
+          showBack
+          onBack={() => navigate('/')}
         />
       )}
 
