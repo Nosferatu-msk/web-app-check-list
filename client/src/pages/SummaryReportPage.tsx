@@ -5,6 +5,8 @@ import { ArrowLeftOutlined, FilePdfOutlined, InboxOutlined, DeleteOutlined, Pape
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
+import MobileHeader from '../components/MobileHeader';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const { RangePicker } = DatePicker;
 
@@ -19,6 +21,7 @@ export default function SummaryReportPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { message, modal } = App.useApp();
+  const isMobile = useIsMobile();
 
   const [reportType, setReportType] = useState<'period' | 'objects'>('period');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
@@ -143,12 +146,23 @@ export default function SummaryReportPage() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div className="page-title">Формирование сводного отчёта</div>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
-      </div>
+      {isMobile && (
+        <MobileHeader
+          title="Сводный отчёт"
+          actions={
+            <Button type="text" size="small" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} />
+          }
+        />
+      )}
 
-      <Card style={{ maxWidth: 600 }}>
+      {!isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Формирование сводного отчёта</div>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
+        </div>
+      )}
+
+      <Card>
         <Form layout="vertical">
           <Form.Item label="Тип отчёта" required>
             <Radio.Group value={reportType} onChange={(e) => setReportType(e.target.value)}>

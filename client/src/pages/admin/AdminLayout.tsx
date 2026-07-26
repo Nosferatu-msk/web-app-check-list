@@ -53,7 +53,7 @@ export default function AdminLayout() {
       />
       <div style={{ padding: 16, borderTop: '1px solid #f0f0f0' }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} block style={{ marginBottom: 8 }}>
-          К визитам
+          Назад
         </Button>
         <Button onClick={handleLogout} block danger>
           Выход

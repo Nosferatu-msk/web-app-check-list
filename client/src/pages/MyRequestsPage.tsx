@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Table, Tag, Space, Card, Modal, Input, App, Empty } from 'antd';
-import { LogoutOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { LogoutOutlined, CheckOutlined, CloseOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -124,8 +124,9 @@ export default function MyRequestsPage() {
       {isMobile && (
         <MobileHeader
           title="Мои заявки"
-          showBack
-          onBack={() => navigate('/')}
+          actions={
+            <Button type="text" size="small" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} />
+          }
         />
       )}
 
