@@ -208,10 +208,11 @@ export const api = {
 
   // Unified summary report (new)
   generateUnifiedReport: async (data: {
-    type: 'period' | 'objects';
+    type: 'period' | 'objects' | 'requests';
     dateFrom: string;
     dateTo: string;
     addressIds?: string[];
+    requestIds?: string[];
     engineerId?: string;
     scanIds?: string[];
   }): Promise<void> => {
@@ -231,7 +232,7 @@ export const api = {
     const blob = await res.blob();
     const disposition = res.headers.get('content-disposition') || '';
     const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)/i);
-    const fileName = match ? decodeURIComponent(match[1]) : (data.type === 'period' ? 'svodnyj_otchet.pdf' : 'otchet_po_obektam.pdf');
+    const fileName = match ? decodeURIComponent(match[1]) : (data.type === 'period' ? 'svodnyj_otchet.pdf' : data.type === 'requests' ? 'otchet_po_zayavkam.pdf' : 'otchet_po_obektam.pdf');
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

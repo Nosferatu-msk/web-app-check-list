@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Radio, DatePicker, Select, Button, Space, App, Form, Upload, Modal, Checkbox } from 'antd';
-import { ArrowLeftOutlined, FilePdfOutlined, InboxOutlined, DeleteOutlined, PaperClipOutlined } from '@ant-design/icons';
+import { Card, Radio, DatePicker, Select, Button, Space, App, Form, Upload, Modal, Checkbox, Input, Tag, Table } from 'antd';
+import { ArrowLeftOutlined, FilePdfOutlined, InboxOutlined, DeleteOutlined, PaperClipOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -23,7 +23,7 @@ export default function SummaryReportPage() {
   const { message, modal } = App.useApp();
   const isMobile = useIsMobile();
 
-  const [reportType, setReportType] = useState<'period' | 'objects'>('period');
+  const [reportType, setReportType] = useState<'period' | 'objects' | 'requests'>('period');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
     dayjs().subtract(30, 'day'),
     dayjs(),
@@ -34,6 +34,10 @@ export default function SummaryReportPage() {
   const [selectedAddressIds, setSelectedAddressIds] = useState<string[]>([]);
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [addressSearch, setAddressSearch] = useState('');
+
+  const [requestNumbers, setRequestNumbers] = useState<string>('');
+  const [foundRequests, setFoundRequests] = useState<any[]>([]);
+  const [searchingRequests, setSearchingRequests] = useState(false);
 
   const [scanFiles, setScanFiles] = useState<ScanFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +66,33 @@ export default function SummaryReportPage() {
   const handleAddressSearch = (value: string) => {
     setAddressSearch(value);
     searchAddresses(value);
+  };
+
+  const handleSearchRequests = async () => {
+    const numbers = requestNumbers.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+    if (numbers.length === 0) {
+      message.warning('Введите номера заявок');
+      return;
+    }
+    setSearchingRequests(true);
+    try {
+      const results = await api.searchRequestsByNumbers(numbers);
+      setFoundRequests(results);
+      if (results.length === 0) {
+        message.warning('Заявки не найдены');
+      } else {
+        const notFound = numbers.filter(n => !results.some(r => r.externalRequestId === n));
+        if (notFound.length > 0) {
+          message.warning(`Не найдены: ${notFound.join(', ')}`);
+        } else {
+          message.success(`Найдено заявок: ${results.length}`);
+        }
+      }
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка поиска');
+    } finally {
+      setSearchingRequests(false);
+    }
   };
 
   const handleAddScans = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,6 +142,10 @@ export default function SummaryReportPage() {
       message.warning('Выберите хотя бы один объект');
       return;
     }
+    if (reportType === 'requests' && foundRequests.length === 0) {
+      message.warning('Найдите хотя бы одну заявку');
+      return;
+    }
 
     const totalSize = getTotalScanSize();
     if (totalSize > 50 * 1024 * 1024) {
@@ -131,6 +166,7 @@ export default function SummaryReportPage() {
         dateFrom: dateRange[0].format('YYYY-MM-DD'),
         dateTo: dateRange[1].format('YYYY-MM-DD'),
         addressIds: reportType === 'objects' ? selectedAddressIds : undefined,
+        requestIds: reportType === 'requests' ? foundRequests.map(r => r.id) : undefined,
         engineerId: engineerId || undefined,
         scanIds: scanIds.length > 0 ? scanIds : undefined,
       });
@@ -167,6 +203,7 @@ export default function SummaryReportPage() {
             <Radio.Group value={reportType} onChange={(e) => setReportType(e.target.value)}>
               <Radio.Button value="period">Отчёт за период</Radio.Button>
               <Radio.Button value="objects">Отчёт по объектам</Radio.Button>
+              <Radio.Button value="requests">По номерам заявок</Radio.Button>
             </Radio.Group>
           </Form.Item>
 
@@ -191,6 +228,45 @@ export default function SummaryReportPage() {
               {selectedAddressIds.length > 0 && (
                 <div style={{ marginTop: 4, fontSize: 12, color: '#888' }}>
                   Выбрано объектов: {selectedAddressIds.length}
+                </div>
+              )}
+            </Form.Item>
+          )}
+
+          {reportType === 'requests' && (
+            <Form.Item label="Номера заявок" required>
+              <Input.TextArea
+                rows={3}
+                placeholder="Введите номера заявок через запятую, пробел или новую строку&#10;Например: IS130366092, IS130366093"
+                value={requestNumbers}
+                onChange={(e) => { setRequestNumbers(e.target.value); setFoundRequests([]); }}
+              />
+              <Button
+                icon={<SearchOutlined />}
+                onClick={handleSearchRequests}
+                loading={searchingRequests}
+                style={{ marginTop: 8 }}
+                disabled={!requestNumbers.trim()}
+              >
+                Найти заявки
+              </Button>
+              {foundRequests.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>
+                    Найдено заявок: {foundRequests.length}
+                    {foundRequests.filter(r => r.visitId).length > 0 && (
+                      <span style={{ color: '#888' }}> (с визитами: {foundRequests.filter(r => r.visitId).length})</span>
+                    )}
+                  </div>
+                  {foundRequests.map((r: any) => (
+                    <div key={r.id} style={{ padding: '6px 0', borderBottom: '1px solid #f5f5f5', fontSize: 13 }}>
+                      <Tag color="blue">{r.externalRequestId}</Tag>
+                      <span style={{ color: '#888', marginRight: 8 }}>{r.equipmentType?.name}</span>
+                      {r.matchedAddress && <span style={{ color: '#555' }}>{r.matchedAddress.fullAddress}</span>}
+                      {r.visit && <Tag style={{ marginLeft: 4 }}>{r.visit.status}</Tag>}
+                      {!r.visitId && <Tag color="orange" style={{ marginLeft: 4 }}>без визита</Tag>}
+                    </div>
+                  ))}
                 </div>
               )}
             </Form.Item>
@@ -278,7 +354,7 @@ export default function SummaryReportPage() {
             loading={loading}
             size="middle"
             block
-            disabled={reportType === 'objects' && selectedAddressIds.length === 0}
+            disabled={(reportType === 'objects' && selectedAddressIds.length === 0) || (reportType === 'requests' && foundRequests.length === 0)}
           >
             СФОРМИРОВАТЬ И СКАЧАТЬ PDF
           </Button>
