@@ -55,9 +55,6 @@ export default function AdminLayout() {
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} block style={{ marginBottom: 8 }}>
           К визитам
         </Button>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-          <NotificationBell />
-        </div>
         <Button onClick={handleLogout} block danger>
           Выход
         </Button>

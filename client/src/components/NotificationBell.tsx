@@ -84,8 +84,8 @@ export default function NotificationBell() {
           position: 'absolute',
           top: '100%',
           right: 0,
-          width: 380,
-          maxHeight: 480,
+          width: 'min(380px, calc(100vw - 16px))',
+          maxHeight: 'min(480px, calc(100vh - 100px))',
           background: '#fff',
           borderRadius: 8,
           boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
@@ -122,14 +122,14 @@ export default function NotificationBell() {
                     onClick={() => !item.isRead && handleMarkRead(item.id)}
                   >
                     <List.Item.Meta
-                      avatar={<span style={{ fontSize: 20 }}>{TYPE_ICONS[item.type] || '📌'}</span>}
+                      avatar={<span style={{ fontSize: 20, flexShrink: 0 }}>{TYPE_ICONS[item.type] || '📌'}</span>}
                       title={
-                        <Typography.Text style={{ fontSize: 13 }}>
+                        <Typography.Text style={{ fontSize: 13, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                           {item.title}
                         </Typography.Text>
                       }
                       description={
-                        <div>
+                        <div style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
                           <div style={{ fontSize: 12, color: '#555' }}>{item.message}</div>
                           <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
                             {dayjs(item.createdAt).fromNow()}
