@@ -72,11 +72,12 @@ export function useSpeechRecognition({
     accumulatedRef.current = '';
 
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognitionAPI();
+    if (!SpeechRecognitionAPI) return;
+    const recognition = new (SpeechRecognitionAPI as any)();
     recognition.lang = 'ru-RU';
     recognition.interimResults = false;
     recognition.continuous = true;
-    recognition.maxAlternatives = 1;
+    (recognition as any).maxAlternatives = 1;
 
     recognition.onstart = () => {
       setState('listening');

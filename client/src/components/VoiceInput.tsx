@@ -17,17 +17,9 @@ const PRIVACY_KEY = 'voice_input_privacy_acknowledged';
 
 export default function VoiceInput({ value = '', onChange, rows = 3, placeholder, disabled }: VoiceInputProps) {
   const { message: antMessage } = App.useApp();
-  const { isListening, isSupported, interimText, start, stop, error } = useSpeechRecognition();
-
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const valueRef = useRef(value);
   valueRef.current = value;
-
-  useEffect(() => {
-    if (error) {
-      error.includes('запрещён') ? antMessage.error(error) : antMessage.warning(error);
-    }
-  }, [error]);
 
   const insertText = (chunk: string) => {
     if (!chunk) return;
@@ -39,7 +31,17 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
     const sep = before.endsWith(' ') || after.startsWith(' ') ? '' : ' ';
     const next = before + sep + chunk + (after && !after.startsWith(' ') ? ' ' : '') + after;
     onChange?.(next);
+    valueRef.current = next;
   };
+
+  const { state, isSupported, start, stop, error } = useSpeechRecognition({ onResult: insertText });
+  const isListening = state === 'listening';
+
+  useEffect(() => {
+    if (error) {
+      error.includes('запрещён') ? antMessage.error(error) : antMessage.warning(error);
+    }
+  }, [error]);
 
   const handleClick = () => {
     if (!navigator.onLine) return;
@@ -54,7 +56,7 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
       localStorage.setItem(PRIVACY_KEY, 'true');
     }
 
-    start(insertText);
+    start();
   };
 
   if (!isSupported) {
@@ -81,9 +83,9 @@ export default function VoiceInput({ value = '', onChange, rows = 3, placeholder
         disabled={disabled}
         style={{ paddingRight: 36 }}
       />
-      {isListening && interimText && (
-        <div style={{ position: 'absolute', bottom: 8, left: 12, right: 40, fontStyle: 'italic', color: '#999', fontSize: 13, pointerEvents: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {interimText}
+      {isListening && (
+        <div style={{ position: 'absolute', bottom: 8, left: 12, right: 40, fontStyle: 'italic', color: '#999', fontSize: 13, pointerEvents: 'none' }}>
+          Слушаю...
         </div>
       )}
       <Tooltip title={tip} placement="left">
