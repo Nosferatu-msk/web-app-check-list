@@ -32,6 +32,8 @@ export default function RequestsPage() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [importing, setImporting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{ row: number; externalRequestId: string; message: string }[]>([]);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { message, modal } = App.useApp();
@@ -62,10 +64,32 @@ export default function RequestsPage() {
   const handleImport = async (file: File) => {
     try {
       setImporting(true);
+      // Шаг 1: предварительная валидация
+      const validation = await api.validateRequestsFile(file);
+      if (validation.errors && validation.errors.length > 0) {
+        // Есть ошибки — показываем модальное окно
+        setValidationErrors(validation.errors);
+        setPendingImportFile(file);
+        setImporting(false);
+        return false;
+      }
+      // Ошибок нет — импортируем сразу
+      await doImport(file);
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка валидации файла');
+      setImporting(false);
+    }
+    return false;
+  };
+
+  const doImport = async (file: File) => {
+    try {
+      setImporting(true);
+      setValidationErrors([]);
+      setPendingImportFile(null);
       const result = await api.importRequests(file);
       if (result.status === 'processing') {
         message.info('Импорт запущен в фоновом режиме');
-        // Polling
         const poll = setInterval(async () => {
           const status = await api.getImportStatus(result.importLogId);
           if (status.status === 'completed' || status.status === 'error') {
@@ -80,7 +104,14 @@ export default function RequestsPage() {
           }
         }, 2000);
       } else {
-        message.success(`Импорт завершён. Создано: ${result.created}, ошибок: ${result.errors}`);
+        if (result.errors > 0 && result.errorDetails?.length > 0) {
+          // Показываем детали ошибок после импорта
+          setValidationErrors(result.errorDetails);
+          setPendingImportFile(null);
+          message.warning(`Импорт завершён. Создано: ${result.created}, ошибок: ${result.errors}`);
+        } else {
+          message.success(`Импорт завершён. Создано: ${result.created}`);
+        }
         setImporting(false);
         load();
       }
@@ -88,7 +119,18 @@ export default function RequestsPage() {
       message.error(err.message);
       setImporting(false);
     }
-    return false; // Prevent default upload
+  };
+
+  const handleConfirmImportWithErrors = () => {
+    if (pendingImportFile) {
+      Modal.confirm({
+        title: 'Импортировать с ошибками?',
+        content: `В файле есть ${validationErrors.length} строк с ошибками. Они будут пропущены. Остальные строки будут импортированы.`,
+        okText: 'Импортировать',
+        cancelText: 'Отмена',
+        onOk: () => doImport(pendingImportFile),
+      });
+    }
   };
 
   const handleAssign = async () => {
@@ -374,6 +416,57 @@ export default function RequestsPage() {
             </Select.Option>
           ))}
         </Select>
+      </Modal>
+
+      {/* Модальное окно ошибок валидации импорта */}
+      <Modal
+        title="Ошибки валидации файла"
+        open={validationErrors.length > 0 && !pendingImportFile}
+        onCancel={() => setValidationErrors([])}
+        footer={[
+          <Button key="close" onClick={() => setValidationErrors([])}>Закрыть</Button>,
+        ]}
+        width={700}
+      >
+        <p>Обнаружены ошибки в следующих строках:</p>
+        <Table
+          size="small"
+          pagination={false}
+          scroll={{ y: 300 }}
+          dataSource={validationErrors}
+          rowKey={(r) => `${r.row}-${r.externalRequestId}`}
+          columns={[
+            { title: 'Строка', dataIndex: 'row', width: 70 },
+            { title: '№ заявки', dataIndex: 'externalRequestId', width: 160, render: (v: string) => v || '—' },
+            { title: 'Ошибка', dataIndex: 'message' },
+          ]}
+        />
+      </Modal>
+
+      {/* Модальное окно подтверждения импорта с ошибками */}
+      <Modal
+        title="Обнаружены ошибки в файле"
+        open={validationErrors.length > 0 && pendingImportFile !== null}
+        onCancel={() => { setValidationErrors([]); setPendingImportFile(null); }}
+        footer={[
+          <Button key="cancel" onClick={() => { setValidationErrors([]); setPendingImportFile(null); }}>Отмена</Button>,
+          <Button key="import" type="primary" onClick={handleConfirmImportWithErrors}>Импортировать без ошибок</Button>,
+        ]}
+        width={700}
+      >
+        <p>В файле есть строки с ошибками ({validationErrors.length}). Они будут пропущены при импорте.</p>
+        <Table
+          size="small"
+          pagination={false}
+          scroll={{ y: 300 }}
+          dataSource={validationErrors}
+          rowKey={(r) => `${r.row}-${r.externalRequestId}`}
+          columns={[
+            { title: 'Строка', dataIndex: 'row', width: 70 },
+            { title: '№ заявки', dataIndex: 'externalRequestId', width: 160, render: (v: string) => v || '—' },
+            { title: 'Ошибка', dataIndex: 'message' },
+          ]}
+        />
       </Modal>
     </div>
   );

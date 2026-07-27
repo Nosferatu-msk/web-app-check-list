@@ -74,6 +74,7 @@ async function main() {
     { name: 'Грузопассажирский лифт', code: 'lift_cargo_pass', photosRequired: 2, specializationReq: 'gpm' },
     { name: 'Подъёмные платформы для инвалидов', code: 'lift_invalid', photosRequired: 2, specializationReq: 'gpm' },
     // Новые виды оборудования — ИСЖ
+    { name: 'ИСЖ объекта', code: 'iszh_object', photosRequired: 0, specializationReq: 'iszh' },
     { name: 'ИТП', code: 'itp', photosRequired: 1, specializationReq: 'iszh' },
     { name: 'Котёл газовый', code: 'boiler_gas', photosRequired: 1, specializationReq: 'iszh' },
     { name: 'Котёл жидкотопливный', code: 'boiler_liquid', photosRequired: 1, specializationReq: 'iszh' },
