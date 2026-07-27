@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Badge, List, Typography, Button, Spin, Empty, Modal, Drawer, Popconfirm, Tag } from 'antd';
+import { Badge, List, Typography, Button, Spin, Empty, Modal, Drawer, Tag } from 'antd';
 import { BellOutlined, CheckOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
@@ -109,6 +109,17 @@ export default function NotificationBell() {
     } catch { /* silent */ }
   };
 
+  const showClearConfirm = () => {
+    Modal.confirm({
+      title: 'Очистить уведомления?',
+      content: 'Все уведомления будут удалены из списка. Это действие нельзя отменить.',
+      okText: 'Очистить',
+      okType: 'danger',
+      cancelText: 'Отмена',
+      onOk: handleClearAll,
+    });
+  };
+
   const handleClickNotification = (item: any) => {
     if (!item.isRead) {
       handleMarkRead(item.id);
@@ -193,26 +204,17 @@ export default function NotificationBell() {
             {isMobile ? '✓ Прочитано' : 'Прочитать всё'}
           </Button>
         )}
-        <Popconfirm
-          title="Очистить уведомления?"
-          description="Все уведомления будут удалены из списка."
-          onConfirm={handleClearAll}
-          okText="Очистить"
-          cancelText="Отмена"
-          okButtonProps={{ danger: true }}
+        <Button
+          type="link"
+          size="small"
+          danger
+          icon={<DeleteOutlined />}
           disabled={notifications.length === 0}
+          block={isMobile}
+          onClick={showClearConfirm}
         >
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            disabled={notifications.length === 0}
-            block={isMobile}
-          >
-            {isMobile ? '🗑 Очистить' : 'Очистить'}
-          </Button>
-        </Popconfirm>
+          {isMobile ? '🗑 Очистить' : 'Очистить'}
+        </Button>
       </div>
     </>
   );
