@@ -108,7 +108,7 @@ router.post('/import', upload.single('file'), async (req: AuthRequest, res: Resp
             userId: tmId,
             type: 'request_imported',
             title: 'Импорт заявок',
-            message: `Импортировано ${result.created} заявок. Создано визитов.`,
+            message: `Импортировано ${result.created} заявок. Создано визитов: ${result.created}. Ошибок: ${result.errors}. Пропущено: ${result.skipped}.`,
             entityType: 'import_log',
             entityId: importLog.id,
           },
@@ -273,6 +273,10 @@ router.post('/:id/bind', async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Проверяем, является ли заявка видом "ИСЖ объекта"
+    const eq = await prisma.equipmentType.findUnique({ where: { id: request.equipmentTypeId } });
+    const isISZH = eq?.name.toLowerCase().includes('исж объекта') || !eq?.specializationReq;
+
     // Создаём визит
     const visit = await prisma.visit.create({
       data: {
@@ -283,6 +287,7 @@ router.post('/:id/bind', async (req: AuthRequest, res: Response) => {
         timeStart: '09:00',
         season: getCurrentSeason(),
         status: 'awaiting_assignment',
+        isMultiSpecialist: isISZH || false,
       },
     });
 
@@ -292,9 +297,7 @@ router.post('/:id/bind', async (req: AuthRequest, res: Response) => {
       data: { visitId: visit.id, importStatus: 'created' },
     });
 
-    // Создаём задачу
-    const eq = await prisma.equipmentType.findUnique({ where: { id: request.equipmentTypeId } });
-    const isISZH = eq?.name.toLowerCase().includes('исж объекта');
+    // Создаём задачу (кроме ИСЖ объекта)
     if (!isISZH) {
       await prisma.task.create({
         data: {
@@ -361,7 +364,7 @@ router.post('/assign', async (req: AuthRequest, res: Response) => {
 
     // Проверка специализации
     const requiredSpec = request.equipmentType.specializationReq;
-    if (requiredSpec && !request.equipmentType.name.toLowerCase().includes('исж объекта')) {
+    if (requiredSpec) {
       const engineer = await prisma.user.findUnique({ where: { id: engineerId } });
       if (!engineer) {
         res.status(404).json({ error: 'Инженер не найден' });
@@ -385,7 +388,7 @@ router.post('/assign', async (req: AuthRequest, res: Response) => {
     }
 
     // Проверка: на обычную заявку — один инженер
-    const isISZH = request.equipmentType.name.toLowerCase().includes('исж объекта');
+    const isISZH = !request.equipmentType.specializationReq;
     if (!isISZH && !visit.isMultiSpecialist && visit.visitEngineers.length > 0) {
       res.status(400).json({ error: 'На эту заявку уже назначен инженер' });
       return;
@@ -517,12 +520,35 @@ router.post('/unassign', async (req: AuthRequest, res: Response) => {
     }
 
     // Уведомление инженеру
+    // Получаем данные для текста уведомления
+    let requestNumber = '';
+    let address = '';
+    if (requestId) {
+      const reqData = await prisma.importedRequest.findUnique({
+        where: { id: requestId },
+        select: { externalRequestId: true, matchedAddress: { select: { fullAddress: true } } },
+      });
+      requestNumber = reqData?.externalRequestId || '';
+      address = reqData?.matchedAddress?.fullAddress || '';
+    } else {
+      // Если requestId не указан, получаем через визит
+      const visitData = await prisma.visit.findUnique({
+        where: { id: visitId },
+        include: {
+          importedRequests: { select: { externalRequestId: true } },
+          address: { select: { fullAddress: true } },
+        },
+      });
+      requestNumber = visitData?.importedRequests?.[0]?.externalRequestId || '';
+      address = visitData?.address?.fullAddress || '';
+    }
+
     await prisma.notification.create({
       data: {
         userId: engineerId,
         type: 'request_unassigned',
         title: 'Снятие с заявки',
-        message: `Вы сняты с заявки.`,
+        message: `Вы сняты с заявки № ${requestNumber}. Объект: ${address}.`,
         entityType: 'visit',
         entityId: visitId,
       },

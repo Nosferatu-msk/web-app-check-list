@@ -27,6 +27,7 @@ interface ParsedRequest {
   equipmentTypeCode: string | null;
   matchedAddressId: string | null;
   error: string | null;
+  isSkipped?: boolean;
 }
 
 /**
@@ -104,10 +105,12 @@ async function validateAndMapRow(
     return result;
   }
   if (existingRequestIds.has(row.externalRequestId)) {
+    result.isSkipped = true;
     result.error = `Заявка ${row.externalRequestId} уже импортирована ранее`;
     return result;
   }
   if (fileRequestIds.has(row.externalRequestId)) {
+    result.isSkipped = true;
     result.error = `Дублирующийся № заявки в файле: ${row.externalRequestId}`;
     return result;
   }
@@ -172,7 +175,7 @@ export async function importRequests(
   // Загрузка справочников
   const equipmentTypes = await prisma.equipmentType.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, code: true },
+    select: { id: true, name: true, code: true, specializationReq: true },
   });
   const equipmentTypeMap = new Map<string, { id: string; code: string }>();
   for (const eq of equipmentTypes) {
@@ -221,7 +224,11 @@ export async function importRequests(
   const objectGroups = new Map<string, ParsedRequest[]>();
   for (const parsed of parsedRows) {
     if (parsed.error) {
-      result.errors++;
+      if (parsed.isSkipped) {
+        result.skipped++;
+      } else {
+        result.errors++;
+      }
       result.errorDetails.push({
         row: parsed.row.rowNumber,
         externalRequestId: parsed.row.externalRequestId,
@@ -240,10 +247,7 @@ export async function importRequests(
     
     // Проверка, есть ли уже визит на этот объект из текущего импорта
     // (не создаём дубли)
-    const isISZH = group.some(g => {
-      const eq = equipmentTypes.find(e => e.id === g.equipmentTypeId);
-      return eq?.name.toLowerCase().includes('исж объекта');
-    });
+    const isISZH = group.some(g => !g.equipmentTypeId || !equipmentTypes.find(e => e.id === g.equipmentTypeId)?.specializationReq);
 
     // Создание визита
     const visit = await prisma.visit.create({
@@ -259,10 +263,10 @@ export async function importRequests(
       },
     });
 
-    // Создание задач для каждой заявки в группе (кроме ИСЖ объекта)
+    // Создание задач для каждой заявки в группе (кроме ИСЖ объекта — без специализации)
     for (const parsed of group) {
       const eq = equipmentTypes.find(e => e.id === parsed.equipmentTypeId);
-      const isISZHEquipment = eq?.name.toLowerCase().includes('исж объекта');
+      const isISZHEquipment = !eq?.specializationReq;
 
       // Создание записи imported_request
       const importedRequest = await prisma.importedRequest.create({
@@ -333,7 +337,7 @@ export async function validateRequestsFile(
   // Загрузка справочников
   const equipmentTypes = await prisma.equipmentType.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, code: true },
+    select: { id: true, name: true, code: true, specializationReq: true },
   });
   const equipmentTypeMap = new Map<string, { id: string; code: string }>();
   for (const eq of equipmentTypes) {
