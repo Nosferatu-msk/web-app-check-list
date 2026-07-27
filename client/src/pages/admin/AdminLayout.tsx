@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -19,6 +19,7 @@ const menuItems = [
   { key: '/admin/import', icon: <ImportOutlined />, label: 'Импорт CSV' },
   { key: '/admin/object-equipment', icon: <ToolOutlined />, label: 'Оборудование объектов' },
   { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Утверждение оборудования' },
+  { key: '/admin/system-notifications', icon: <RocketOutlined />, label: 'Системные уведомления' },
   { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
 ];
 

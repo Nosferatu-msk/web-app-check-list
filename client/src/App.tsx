@@ -32,6 +32,7 @@ import AdminTmAssignments from './pages/admin/AdminTmAssignments';
 import AdminImport from './pages/admin/AdminImport';
 import AdminObjectEquipment from './pages/admin/AdminObjectEquipment';
 import AdminProposals from './pages/admin/AdminProposals';
+import AdminSystemNotifications from './pages/admin/AdminSystemNotifications';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -107,6 +108,7 @@ export default function App() {
         <Route path="import" element={<AdminImport />} />
         <Route path="object-equipment" element={<AdminObjectEquipment />} />
         <Route path="proposals" element={<AdminProposals />} />
+        <Route path="system-notifications" element={<AdminSystemNotifications />} />
         <Route path="audit" element={<AdminAuditLog />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />

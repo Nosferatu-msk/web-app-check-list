@@ -20,7 +20,8 @@ export type NotificationType =
   | 'request_assigned'
   | 'request_unassigned'
   | 'request_declined'
-  | 'request_imported';
+  | 'request_imported'
+  | 'system_release';
 
 export type ImportStatus = 'new' | 'matched' | 'created' | 'error' | 'skipped';
 export type AssignmentAction = 'assigned' | 'unassigned' | 'declined';
@@ -372,7 +373,18 @@ export interface Notification {
   entityType?: string;
   entityId?: string;
   isRead: boolean;
+  isDeleted: boolean;
   createdAt: string;
+}
+
+export interface SystemRelease {
+  id: string;
+  version: string;
+  releaseNotes: string;
+  deployedAt: string;
+  deployedBy: string;
+  adminId?: string;
+  notificationCount: number;
 }
 
 export interface ImportedRequest {

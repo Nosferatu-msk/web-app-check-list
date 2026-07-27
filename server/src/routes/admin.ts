@@ -679,4 +679,79 @@ router.put('/models/:id/reject', async (req: AuthRequest, res: Response) => {
   res.json(updated);
 });
 
+// ─── SYSTEM RELEASES ─────────────────────────────────────────
+router.get('/system-releases', async (req: AuthRequest, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const pageSize = parseInt(req.query.pageSize as string) || 20;
+
+  const [data, total] = await Promise.all([
+    prisma.systemRelease.findMany({
+      orderBy: { deployedAt: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+      include: { admin: { select: { id: true, fullName: true } } },
+    }),
+    prisma.systemRelease.count(),
+  ]);
+
+  res.json({ data, total, page, pageSize });
+});
+
+const systemNotificationSchema = z.object({
+  title: z.string().min(1).max(255),
+  message: z.string().min(1).max(2000),
+  version: z.string().max(50).optional(),
+});
+
+router.post('/system-notifications', validate(systemNotificationSchema), async (req: AuthRequest, res: Response) => {
+  const { title, message, version } = req.body;
+
+  if (version) {
+    const existing = await prisma.systemRelease.findUnique({ where: { version } });
+    if (existing) {
+      return res.status(409).json({ error: `Версия ${version} уже существует` });
+    }
+  }
+
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true },
+  });
+
+  const release = await prisma.systemRelease.create({
+    data: {
+      version: version || `manual-${Date.now()}`,
+      releaseNotes: message,
+      deployedBy: 'admin_manual',
+      adminId: req.userId,
+      notificationCount: users.length,
+    },
+  });
+
+  if (users.length > 0) {
+    await prisma.notification.createMany({
+      data: users.map((u) => ({
+        userId: u.id,
+        type: 'system_release',
+        title,
+        message,
+        entityType: 'system_release',
+        entityId: release.version,
+      })),
+    });
+  }
+
+  await logAudit({
+    userId: req.userId,
+    action: 'create',
+    entityType: 'system_release',
+    entityId: release.id,
+    newValue: { version: release.version, title, recipients: users.length },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json({ success: true, notifications_created: users.length, release });
+});
+
 export default router;

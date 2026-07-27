@@ -11,7 +11,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 20;
   const offset = parseInt(req.query.offset as string) || 0;
 
-  const where: any = { userId: req.userId };
+  const where: any = { userId: req.userId, isDeleted: false };
   if (unreadOnly) where.isRead = false;
 
   const [data, totalCount, unreadCount] = await Promise.all([
@@ -22,7 +22,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       skip: offset,
     }),
     prisma.notification.count({ where }),
-    prisma.notification.count({ where: { userId: req.userId, isRead: false } }),
+    prisma.notification.count({ where: { userId: req.userId, isRead: false, isDeleted: false } }),
   ]);
 
   res.json({ data, totalCount, unreadCount });
@@ -54,11 +54,21 @@ router.patch('/:id/read', async (req: AuthRequest, res: Response) => {
 // ─── MARK ALL AS READ ────────────────────────────────────────
 router.patch('/read-all', async (req: AuthRequest, res: Response) => {
   const result = await prisma.notification.updateMany({
-    where: { userId: req.userId, isRead: false },
+    where: { userId: req.userId, isRead: false, isDeleted: false },
     data: { isRead: true },
   });
 
   res.json({ updated: result.count });
+});
+
+// ─── CLEAR ALL (soft delete) ─────────────────────────────────
+router.post('/clear-all', async (req: AuthRequest, res: Response) => {
+  const result = await prisma.notification.updateMany({
+    where: { userId: req.userId, isDeleted: false },
+    data: { isDeleted: true, isRead: true },
+  });
+
+  res.json({ cleared: result.count });
 });
 
 export default router;

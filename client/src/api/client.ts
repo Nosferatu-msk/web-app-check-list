@@ -279,6 +279,16 @@ export const api = {
     request<any>(`/notifications/${id}/read`, { method: 'PATCH' }),
   markAllNotificationsRead: () =>
     request<any>('/notifications/read-all', { method: 'PATCH' }),
+  clearAllNotifications: () =>
+    request<any>('/notifications/clear-all', { method: 'POST' }),
+
+  // Admin: system notifications
+  getSystemReleases: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any>(`/admin/system-releases${qs}`);
+  },
+  createSystemNotification: (data: { title: string; message: string; version?: string }) =>
+    request<any>('/admin/system-notifications', { method: 'POST', body: JSON.stringify(data) }),
 
   // Object equipment room confirmation
   confirmEquipmentRoom: (id: string, roomTypeCode: string) =>
