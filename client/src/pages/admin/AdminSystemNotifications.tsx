@@ -52,20 +52,18 @@ export default function AdminSystemNotifications() {
       title: 'Версия',
       dataIndex: 'version',
       key: 'version',
-      width: 100,
+      width: 90,
       render: (v: string, r: any) => (
-        <Space size={4}>
-          <RocketOutlined style={{ color: '#52c41a' }} />
-          <Tag color={r.deployedBy === 'ci_webhook' ? 'blue' : 'green'} style={{ marginRight: 0 }}>
-            {v || '—'}
-          </Tag>
-        </Space>
+        <Tag color={r.deployedBy === 'ci_webhook' ? 'blue' : 'green'} style={{ marginRight: 0 }}>
+          {v || '—'}
+        </Tag>
       ),
     },
     {
       title: 'Текст уведомления',
       dataIndex: 'releaseNotes',
       key: 'releaseNotes',
+      width: 300,
       ellipsis: true,
     },
     {
@@ -76,10 +74,10 @@ export default function AdminSystemNotifications() {
       render: (v: string) => dayjs(v).format('DD.MM.YYYY HH:mm'),
     },
     {
-      title: 'Получатели',
+      title: 'Кому',
       dataIndex: 'notificationCount',
       key: 'notificationCount',
-      width: 80,
+      width: 60,
       align: 'center' as const,
       render: (v: number) => <Tag style={{ marginRight: 0 }}>{v}</Tag>,
     },
@@ -87,10 +85,10 @@ export default function AdminSystemNotifications() {
       title: 'Источник',
       dataIndex: 'deployedBy',
       key: 'deployedBy',
-      width: 110,
-      render: (v: string, r: any) => v === 'ci_webhook'
+      width: 100,
+      render: (v: string) => v === 'ci_webhook'
         ? <Tag color="blue" style={{ marginRight: 0 }}>CI/CD</Tag>
-        : <Tag color="green" style={{ marginRight: 0 }}>Админ{r.admin?.fullName ? `: ${r.admin.fullName}` : ''}</Tag>,
+        : <Tag color="green" style={{ marginRight: 0 }}>Ручное</Tag>,
     },
   ];
 
@@ -115,7 +113,7 @@ export default function AdminSystemNotifications() {
         columns={columns}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 650 }}
+        scroll={{ x: 700 }}
         pagination={{
           current: page,
           pageSize: 20,
