@@ -18,8 +18,9 @@ export function useTorch(): UseTorchReturn {
   const overheatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isOnRef = useRef(false);
 
-  // Check torch support (cached)
-  const checkSupport = useCallback(async (): Promise<boolean> => {
+  // Check torch support without requesting camera access
+  // Actual getUserMedia check deferred to first toggle (avoids iOS permission prompt on page load)
+  const checkSupport = useCallback((): boolean => {
     if (supportedCache !== null) return supportedCache;
 
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -28,7 +29,7 @@ export function useTorch(): UseTorchReturn {
       return false;
     }
 
-    // Mobile check
+    // Mobile check — show button for mobile devices, actual torch support checked on first use
     const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad/i.test(navigator.userAgent);
     if (!isMobile) {
       supportedCache = false;
@@ -36,21 +37,10 @@ export function useTorch(): UseTorchReturn {
       return false;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: 'environment' } },
-      });
-      const track = stream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities() as MediaTrackCapabilities;
-      stream.getTracks().forEach(t => t.stop());
-      supportedCache = !!capabilities.torch;
-      setSupported(supportedCache);
-      return supportedCache;
-    } catch {
-      supportedCache = false;
-      setSupported(false);
-      return false;
-    }
+    // Assume supported for mobile — will verify on first toggle
+    supportedCache = true;
+    setSupported(true);
+    return true;
   }, []);
 
   // Check battery level
@@ -103,6 +93,8 @@ export function useTorch(): UseTorchReturn {
 
       if (!capabilities.torch) {
         stream.getTracks().forEach(t => t.stop());
+        supportedCache = false;
+        setSupported(false);
         setError('Устройство не поддерживает управление фонариком');
         return;
       }
