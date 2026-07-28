@@ -52,12 +52,12 @@ export default function AdminSystemNotifications() {
       title: 'Версия',
       dataIndex: 'version',
       key: 'version',
-      width: 120,
+      width: 100,
       render: (v: string, r: any) => (
-        <Space>
+        <Space size={4}>
           <RocketOutlined style={{ color: '#52c41a' }} />
-          <Tag color={r.deployedBy === 'ci_webhook' ? 'blue' : 'green'}>
-            {v}
+          <Tag color={r.deployedBy === 'ci_webhook' ? 'blue' : 'green'} style={{ marginRight: 0 }}>
+            {v || '—'}
           </Tag>
         </Space>
       ),
@@ -72,31 +72,31 @@ export default function AdminSystemNotifications() {
       title: 'Дата',
       dataIndex: 'deployedAt',
       key: 'deployedAt',
-      width: 160,
+      width: 130,
       render: (v: string) => dayjs(v).format('DD.MM.YYYY HH:mm'),
     },
     {
       title: 'Получатели',
       dataIndex: 'notificationCount',
       key: 'notificationCount',
-      width: 100,
+      width: 80,
       align: 'center' as const,
-      render: (v: number) => <Tag>{v}</Tag>,
+      render: (v: number) => <Tag style={{ marginRight: 0 }}>{v}</Tag>,
     },
     {
       title: 'Источник',
       dataIndex: 'deployedBy',
       key: 'deployedBy',
-      width: 120,
+      width: 110,
       render: (v: string, r: any) => v === 'ci_webhook'
-        ? <Tag color="blue">CI/CD</Tag>
-        : <Tag color="green">Админ{r.admin?.fullName ? `: ${r.admin.fullName}` : ''}</Tag>,
+        ? <Tag color="blue" style={{ marginRight: 0 }}>CI/CD</Tag>
+        : <Tag color="green" style={{ marginRight: 0 }}>Админ{r.admin?.fullName ? `: ${r.admin.fullName}` : ''}</Tag>,
     },
   ];
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <Title level={4} style={{ margin: 0 }}>Системные уведомления</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
           Создать уведомление
@@ -115,6 +115,7 @@ export default function AdminSystemNotifications() {
         columns={columns}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 650 }}
         pagination={{
           current: page,
           pageSize: 20,
