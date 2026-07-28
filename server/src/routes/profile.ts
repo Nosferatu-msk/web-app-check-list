@@ -109,7 +109,8 @@ router.delete('/favorites/*', async (req: AuthRequest, res: Response) => {
 // GET /api/profile/stats — quick stats for profile page
 router.get('/stats', async (req: AuthRequest, res: Response) => {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const msk = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+  const startOfMonth = new Date(Date.UTC(msk.getFullYear(), msk.getMonth(), 1) - 3 * 60 * 60 * 1000);
 
   const [visitsThisMonth, issuesFound] = await Promise.all([
     prisma.visit.count({

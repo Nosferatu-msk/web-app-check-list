@@ -171,8 +171,10 @@ function formatParamValue(key: string, val: unknown): string {
   return String(val);
 }
 
+const TZ = 'Europe/Moscow';
+
 function formatDate(d: Date): string {
-  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
 }
 
 export async function generateReportHtml(visitId: string): Promise<string> {
@@ -551,7 +553,7 @@ export function generateSummaryReportHtml(
   </table>` : '<h2>Замечания</h2><p style="color:#52c41a;font-size:14pt;">Замечаний не выявлено</p>'}
 
   <div style="margin-top:40px;color:#999;font-size:9pt;">
-    <p>Отчёт сформирован: ${new Date().toLocaleString('ru-RU')}</p>
+    <p>Отчёт сформирован: ${new Date().toLocaleString('ru-RU', { timeZone: TZ })}</p>
   </div>
 </body>
 </html>`;
@@ -704,7 +706,7 @@ export function generateObjectReportHtml(
   ${issuesSummaryHtml}
 
   <div style="margin-top:40px;color:#999;font-size:9pt;">
-    <p>Отчёт сформирован: ${new Date().toLocaleString('ru-RU')}</p>
+    <p>Отчёт сформирован: ${new Date().toLocaleString('ru-RU', { timeZone: TZ })}</p>
   </div>
 </body>
 </html>`;

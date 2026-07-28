@@ -478,10 +478,11 @@ router.get('/audit-log/export', async (req: AuthRequest, res: Response) => {
     include: { user: { select: { fullName: true, email: true } } },
   });
   const fmt = (d: Date) => {
+    const msk = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return `${pad(msk.getDate())}.${pad(msk.getMonth() + 1)}.${msk.getFullYear()} ${pad(msk.getHours())}:${pad(msk.getMinutes())}:${pad(msk.getSeconds())}`;
   };
-  const today = new Date();
+  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const header = 'Дата;Пользователь;Email;Действие;Сущность;ID сущности;IP-адрес';
   const rows = data.map(r => [

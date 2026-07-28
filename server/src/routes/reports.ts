@@ -14,6 +14,8 @@ import { PDFDocument } from 'pdf-lib';
 const router = Router();
 router.use(authMiddleware);
 
+const TZ = 'Europe/Moscow';
+
 const reportsDir = path.resolve('./reports');
 if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
 
@@ -85,7 +87,7 @@ router.post('/:id/report/send', async (req: AuthRequest, res: Response) => {
     await generatePdf(html, pdfPath);
   }
 
-  const subject = `Акт выполненных работ: ${visit.address.fullAddress} от ${visit.dateStart.toLocaleDateString('ru-RU')}`;
+  const subject = `Акт выполненных работ: ${visit.address.fullAddress} от ${visit.dateStart.toLocaleDateString('ru-RU', { timeZone: TZ })}`;
   const text = comment || `Направляем акт выполненных работ по адресу: ${visit.address.fullAddress}`;
 
   try {
@@ -351,8 +353,8 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
 
     const html = await generateUnifiedReportHtml(unifiedVisits, {
       type,
-      dateFrom: from.toLocaleDateString('ru-RU'),
-      dateTo: to.toLocaleDateString('ru-RU'),
+      dateFrom: from.toLocaleDateString('ru-RU', { timeZone: TZ }),
+      dateTo: to.toLocaleDateString('ru-RU', { timeZone: TZ }),
       generatedBy: { fullName: user?.fullName || 'Неизвестно', role: user?.role || 'unknown' },
       recMap,
     });

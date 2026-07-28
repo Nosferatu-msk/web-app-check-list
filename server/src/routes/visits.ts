@@ -232,7 +232,8 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
   if (!(await canAccessVisit(existing.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const now = new Date();
-  const timeEnd = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const msk = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+  const timeEnd = `${String(msk.getHours()).padStart(2, '0')}:${String(msk.getMinutes()).padStart(2, '0')}`;
   const visit = await prisma.visit.update({
     where: { id: req.params.id as string },
     data: { status: 'completed', timeEnd },

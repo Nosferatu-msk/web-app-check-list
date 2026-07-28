@@ -172,8 +172,10 @@ function formatParamValue(key: string, val: unknown): string {
   return String(val);
 }
 
+const TZ = 'Europe/Moscow';
+
 function formatDate(d: Date): string {
-  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
 }
 
 function conclusionBadge(conclusion?: string | null): string {
@@ -458,7 +460,7 @@ export async function generateUnifiedReportHtml(
   <div class="title-page">
     <h1>${reportTitle}</h1>
     <p>${subtitle}</p>
-    <p style="margin-top:30px;"><strong>Дата формирования:</strong> ${new Date().toLocaleDateString('ru-RU')}</p>
+    <p style="margin-top:30px;"><strong>Дата формирования:</strong> ${new Date().toLocaleDateString('ru-RU', { timeZone: TZ })}</p>
     <p><strong>Сформировал:</strong> ${generatedBy.fullName} (${roleLabel})</p>
     ${simplifiedWarning}
   </div>
@@ -473,7 +475,7 @@ export async function generateUnifiedReportHtml(
   ${sectionsHtml}
 
   <div class="meta">
-    <p>Отчёт сформирован: ${new Date().toLocaleString('ru-RU')}</p>
+    <p>Отчёт сформирован: ${new Date().toLocaleString('ru-RU', { timeZone: TZ })}</p>
   </div>
 </body>
 </html>`;
