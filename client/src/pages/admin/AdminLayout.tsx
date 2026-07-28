@@ -18,7 +18,7 @@ const menuItems = [
   { key: '/admin/tm-assignments', icon: <TeamOutlined />, label: 'Привязки ТМ' },
   { key: '/admin/import', icon: <ImportOutlined />, label: 'Импорт CSV' },
   { key: '/admin/object-equipment', icon: <ToolOutlined />, label: 'Оборудование объектов' },
-  { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Утверждение оборудования' },
+  { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Модерация оборудования' },
   { key: '/admin/system-notifications', icon: <RocketOutlined />, label: 'Системные уведомления' },
   { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
 ];
