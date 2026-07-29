@@ -573,18 +573,23 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       const serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
       const locationDescription = r.location_description || r.locationDescription || r['местоположение'] || null;
 
-      const duplicateWhere: any = {
-        addressId: address.id,
-        equipmentTypeCode: eqType.code,
-      };
-      if (serialNumber) {
-        duplicateWhere.serialNumber = serialNumber;
-      } else if (locationDescription) {
-        duplicateWhere.locationDescription = locationDescription;
-      }
+      // Проверка дубликатов по обоим уникальным ограничениям
+      const existingBySerial = serialNumber
+        ? await prisma.objectEquipment.findFirst({ where: { addressId: address.id, equipmentTypeCode: eqType.code, serialNumber } })
+        : null;
+      const existingByLocation = await prisma.objectEquipment.findFirst({
+        where: {
+          addressId: address.id,
+          equipmentTypeCode: eqType.code,
+          locationDescription: locationDescription || null,
+        },
+      });
 
-      const existing = await prisma.objectEquipment.findFirst({ where: duplicateWhere });
-      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
+      if (existingBySerial || existingByLocation) {
+        result.duplicates++;
+        dupRows.push(i + 2);
+        continue;
+      }
 
       if (isValidateMode(req)) continue;
 
