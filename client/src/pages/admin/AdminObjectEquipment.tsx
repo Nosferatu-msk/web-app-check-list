@@ -57,6 +57,17 @@ export default function AdminObjectEquipment() {
   const eqTypeMap = new Map(equipmentTypes.map((e: any) => [e.code, e.name]));
   const rmTypeMap = new Map(roomTypes.map((r: any) => [r.code, r.name]));
 
+  const handleEdit = async (record: any) => {
+    setEditing(record);
+    // Загружаем адрес текущей записи, чтобы Select мог отобразить его
+    if (record.addressId && !addresses.find((a: any) => a.id === record.addressId)) {
+      const addr = await api.adminGet(`addresses/${record.addressId}`);
+      if (addr) setAddresses((prev) => [...prev, addr]);
+    }
+    form.setFieldsValue(record);
+    setModalOpen(true);
+  };
+
   return (
     <div>
       <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
@@ -86,7 +97,7 @@ export default function AdminObjectEquipment() {
         { title: 'Местоположение', dataIndex: 'locationDescription', ellipsis: true },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (
           <Space>
-            <Button type="text" icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue(r); setModalOpen(true); }} />
+            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
             <Popconfirm title="Удалить?" onConfirm={() => handleDelete(r.id)}><Button type="text" danger icon={<DeleteOutlined />} /></Popconfirm>
           </Space>
         )},
