@@ -535,6 +535,33 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
+    // Предзагрузка справочников для оптимизации
+    const [addresses, equipmentTypes, roomTypes, existingEquipment] = await Promise.all([
+      prisma.address.findMany({ select: { id: true, objectCode: true } }),
+      prisma.equipmentType.findMany({ select: { id: true, code: true, name: true } }),
+      prisma.roomType.findMany({ select: { id: true, code: true, name: true } }),
+      prisma.objectEquipment.findMany({
+        select: { addressId: true, equipmentTypeCode: true, serialNumber: true, locationDescription: true },
+      }),
+    ]);
+
+    // Создаём Map для быстрого поиска
+    const addressByCode = new Map(addresses.map(a => [a.objectCode, a.id]));
+    const eqTypeByCodeOrName = new Map<string, string>();
+    for (const et of equipmentTypes) {
+      eqTypeByCodeOrName.set(et.code.toUpperCase(), et.code);
+      eqTypeByCodeOrName.set(et.name.toUpperCase(), et.code);
+    }
+    const roomTypeByCodeOrName = new Map<string, string>();
+    for (const rt of roomTypes) {
+      roomTypeByCodeOrName.set(rt.code.toUpperCase(), rt.code);
+      roomTypeByCodeOrName.set(rt.name.toUpperCase(), rt.code);
+    }
+    // Set для проверки дубликатов: "addressId|equipmentTypeCode|serialNumber|locationDescription"
+    const existingKeys = new Set(existingEquipment.map(e =>
+      `${e.addressId}|${e.equipmentTypeCode}|${e.serialNumber || ''}|${e.locationDescription || ''}`
+    ));
+
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const objectCode = r.object_code || r.objectCode || r['код объекта'];
@@ -546,46 +573,36 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         continue;
       }
 
-      const address = await prisma.address.findFirst({ where: { objectCode } });
-      if (!address) {
+      const addressId = addressByCode.get(objectCode);
+      if (!addressId) {
         result.errors.push({ row: i + 2, message: `Адрес с object_code "${objectCode}" не найден` });
         continue;
       }
 
-      const eqType = await prisma.equipmentType.findFirst({ where: { code: equipmentType } })
-        || await prisma.equipmentType.findFirst({ where: { name: { equals: equipmentType, mode: 'insensitive' } } });
-      if (!eqType) {
+      const eqTypeCode = eqTypeByCodeOrName.get(equipmentType.toUpperCase());
+      if (!eqTypeCode) {
         result.errors.push({ row: i + 2, message: `Тип оборудования "${equipmentType}" не найден` });
         continue;
       }
 
       let roomTypeCode: string | null = null;
       if (roomType) {
-        const rmType = await prisma.roomType.findFirst({ where: { code: roomType } })
-          || await prisma.roomType.findFirst({ where: { name: { equals: roomType, mode: 'insensitive' } } });
-        if (!rmType) {
+        const rtCode = roomTypeByCodeOrName.get(roomType.toUpperCase());
+        if (!rtCode) {
           result.errors.push({ row: i + 2, message: `Тип помещения "${roomType}" не найден` });
           continue;
         }
-        roomTypeCode = rmType.code;
+        roomTypeCode = rtCode;
       }
 
       const serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
       const locationDescription = r.location_description || r.locationDescription || r['местоположение'] || null;
 
       // Проверка дубликатов по обоим уникальным ограничениям
-      const existingBySerial = serialNumber
-        ? await prisma.objectEquipment.findFirst({ where: { addressId: address.id, equipmentTypeCode: eqType.code, serialNumber } })
-        : null;
-      const existingByLocation = await prisma.objectEquipment.findFirst({
-        where: {
-          addressId: address.id,
-          equipmentTypeCode: eqType.code,
-          locationDescription: locationDescription || null,
-        },
-      });
+      const keyBySerial = `${addressId}|${eqTypeCode}|${serialNumber || ''}|`;
+      const keyByLocation = `${addressId}|${eqTypeCode}||${locationDescription || ''}`;
 
-      if (existingBySerial || existingByLocation) {
+      if (existingKeys.has(keyBySerial) || existingKeys.has(keyByLocation)) {
         result.duplicates++;
         dupRows.push(i + 2);
         continue;
@@ -595,8 +612,8 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
 
       await prisma.objectEquipment.create({
         data: {
-          addressId: address.id,
-          equipmentTypeCode: eqType.code,
+          addressId,
+          equipmentTypeCode: eqTypeCode,
           roomTypeCode,
           brand: r.brand || r['марка'] || null,
           model: r.model || r['модель'] || null,
@@ -604,6 +621,11 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
           locationDescription,
         },
       });
+
+      // Добавляем в Set для проверки дубликатов внутри файла
+      existingKeys.add(keyBySerial);
+      existingKeys.add(keyByLocation);
+
       result.success++;
     }
 
