@@ -118,6 +118,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
 
+  // Для globalStats — те же фильтры, но БЕЗ фильтра по статусам
+  const { status: _statusFilter, ...statsWhere } = where;
+
   const [data, total, statusCounts] = await Promise.all([
     prisma.visit.findMany({
       where, skip: (page - 1) * pageSize, take: pageSize,
@@ -134,7 +137,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     prisma.visit.count({ where }),
     prisma.visit.groupBy({
       by: ['status'],
-      where,
+      where: statsWhere,
       _count: { status: true },
     }),
   ]);
