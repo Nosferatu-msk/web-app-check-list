@@ -557,10 +557,14 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       roomTypeByCodeOrName.set(rt.code.toUpperCase(), rt.code);
       roomTypeByCodeOrName.set(rt.name.toUpperCase(), rt.code);
     }
-    // Set для проверки дубликатов: "addressId|equipmentTypeCode|serialNumber|locationDescription"
-    const existingKeys = new Set(existingEquipment.map(e =>
-      `${e.addressId}|${e.equipmentTypeCode}|${e.serialNumber || ''}|${e.locationDescription || ''}`
-    ));
+    // Set для проверки дубликатов: используем префиксы SN/LOC для различения типов ключей
+    const existingKeys = new Set<string>();
+    for (const e of existingEquipment) {
+      if (e.serialNumber) {
+        existingKeys.add(`${e.addressId}|${e.equipmentTypeCode}|SN|${e.serialNumber}`);
+      }
+      existingKeys.add(`${e.addressId}|${e.equipmentTypeCode}|LOC|${e.locationDescription || '__NULL__'}`);
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -599,10 +603,13 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       const locationDescription = r.location_description || r.locationDescription || r['местоположение'] || null;
 
       // Проверка дубликатов по обоим уникальным ограничениям
-      const keyBySerial = `${addressId}|${eqTypeCode}|${serialNumber || ''}|`;
-      const keyByLocation = `${addressId}|${eqTypeCode}||${locationDescription || ''}`;
+      // Ключи должны точно соответствовать структуре БД (с учётом NULL)
+      const keyBySerial = serialNumber
+        ? `${addressId}|${eqTypeCode}|SN|${serialNumber}`
+        : null;
+      const keyByLocation = `${addressId}|${eqTypeCode}|LOC|${locationDescription || '__NULL__'}`;
 
-      if (existingKeys.has(keyBySerial) || existingKeys.has(keyByLocation)) {
+      if ((keyBySerial && existingKeys.has(keyBySerial)) || existingKeys.has(keyByLocation)) {
         result.duplicates++;
         dupRows.push(i + 2);
         continue;
@@ -610,23 +617,33 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
 
       if (isValidateMode(req)) continue;
 
-      await prisma.objectEquipment.create({
-        data: {
-          addressId,
-          equipmentTypeCode: eqTypeCode,
-          roomTypeCode,
-          brand: r.brand || r['марка'] || null,
-          model: r.model || r['модель'] || null,
-          serialNumber,
-          locationDescription,
-        },
-      });
+      try {
+        await prisma.objectEquipment.create({
+          data: {
+            addressId,
+            equipmentTypeCode: eqTypeCode,
+            roomTypeCode,
+            brand: r.brand || r['марка'] || null,
+            model: r.model || r['модель'] || null,
+            serialNumber,
+            locationDescription,
+          },
+        });
 
-      // Добавляем в Set для проверки дубликатов внутри файла
-      existingKeys.add(keyBySerial);
-      existingKeys.add(keyByLocation);
+        // Добавляем в Set для проверки дубликатов внутри файла
+        if (keyBySerial) existingKeys.add(keyBySerial);
+        existingKeys.add(keyByLocation);
 
-      result.success++;
+        result.success++;
+      } catch (err: any) {
+        // Если всё же дубликат (unique constraint) — пропускаем
+        if (err.code === 'P2002') {
+          result.duplicates++;
+          dupRows.push(i + 2);
+        } else {
+          throw err;
+        }
+      }
     }
 
     if (isValidateMode(req)) {
