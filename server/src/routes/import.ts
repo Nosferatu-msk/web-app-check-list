@@ -552,7 +552,8 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         continue;
       }
 
-      const eqType = await prisma.equipmentType.findFirst({ where: { code: equipmentType } });
+      const eqType = await prisma.equipmentType.findFirst({ where: { code: equipmentType } })
+        || await prisma.equipmentType.findFirst({ where: { name: { equals: equipmentType, mode: 'insensitive' } } });
       if (!eqType) {
         result.errors.push({ row: i + 2, message: `Тип оборудования "${equipmentType}" не найден` });
         continue;
@@ -560,12 +561,13 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
 
       let roomTypeCode: string | null = null;
       if (roomType) {
-        const rmType = await prisma.roomType.findFirst({ where: { code: roomType } });
+        const rmType = await prisma.roomType.findFirst({ where: { code: roomType } })
+          || await prisma.roomType.findFirst({ where: { name: { equals: roomType, mode: 'insensitive' } } });
         if (!rmType) {
           result.errors.push({ row: i + 2, message: `Тип помещения "${roomType}" не найден` });
           continue;
         }
-        roomTypeCode = roomType;
+        roomTypeCode = rmType.code;
       }
 
       const serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
@@ -573,7 +575,7 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
 
       const duplicateWhere: any = {
         addressId: address.id,
-        equipmentTypeCode: equipmentType,
+        equipmentTypeCode: eqType.code,
       };
       if (serialNumber) {
         duplicateWhere.serialNumber = serialNumber;
@@ -589,7 +591,7 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       await prisma.objectEquipment.create({
         data: {
           addressId: address.id,
-          equipmentTypeCode: equipmentType,
+          equipmentTypeCode: eqType.code,
           roomTypeCode,
           brand: r.brand || r['марка'] || null,
           model: r.model || r['модель'] || null,
