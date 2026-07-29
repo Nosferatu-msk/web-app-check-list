@@ -108,6 +108,15 @@ export default function VisitListPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Автообновление при возврате на вкладку
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [load]);
+
   const handleLogout = () => { logout(); navigate('/login'); };
 
   const handleDelete = (e: React.MouseEvent, visitId: string) => {

@@ -51,9 +51,15 @@ export function useOnlineStatus(): OnlineState {
       setIsOnline(false);
       setSyncStatus('idle');
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        sync();
+      }
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Listen to sync status changes from sync engine
     const unsub = onSyncStatusChange((status, pending, error) => {
@@ -78,6 +84,7 @@ export function useOnlineStatus(): OnlineState {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       unsub();
       clearInterval(interval);
     };

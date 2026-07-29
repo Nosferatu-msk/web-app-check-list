@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Spin } from 'antd';
 import SyncBanner from './components/SyncBanner';
+import PWAUpdateBanner from './components/PWAUpdateBanner';
 import SpecializationGate from './components/SpecializationGate';
 import BottomNav from './components/BottomNav';
 import { useIsMobile } from './hooks/useIsMobile';
@@ -39,7 +40,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
-  return <><SyncBanner />{children}</>;
+  return <><SyncBanner /><PWAUpdateBanner />{children}</>;
 }
 
 function EngineerMobileLayout({ children }: { children: React.ReactNode }) {

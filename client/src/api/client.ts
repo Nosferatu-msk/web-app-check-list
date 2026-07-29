@@ -69,7 +69,7 @@ export const api = {
     request<any[]>(`/refs/recommendations?equipment_type_id=${equipmentTypeId}`),
   searchAddresses: (q: string) => request<any[]>(`/refs/addresses/search?q=${encodeURIComponent(q)}`),
   getObjectEquipment: (addressId: string, params?: { exclude_visit_id?: string; specialization?: string; binding_level?: string; room_type_code?: string; is_outdoor_unit?: string }) => {
-    const entries: Record<string, string> = { address_id: addressId };
+    const entries: Record<string, string> = { address_id: addressId, _t: String(Date.now()) };
     if (params?.exclude_visit_id) entries.exclude_visit_id = params.exclude_visit_id;
     if (params?.specialization) entries.specialization = params.specialization;
     if (params?.binding_level) entries.binding_level = params.binding_level;
@@ -79,7 +79,7 @@ export const api = {
     return request<any[]>(`/refs/object-equipment?${qs}`);
   },
   getEquipmentRooms: (addressId: string, params?: { exclude_visit_id?: string }) => {
-    const entries: Record<string, string> = { address_id: addressId };
+    const entries: Record<string, string> = { address_id: addressId, _t: String(Date.now()) };
     if (params?.exclude_visit_id) entries.exclude_visit_id = params.exclude_visit_id;
     const qs = new URLSearchParams(entries).toString();
     return request<any[]>(`/refs/object-equipment/rooms?${qs}`);
