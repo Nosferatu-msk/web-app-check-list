@@ -618,7 +618,10 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       data: { userId: req.userId!, entityType: 'object_equipment', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
     });
     res.json(result);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) {
+    console.error('[import/object-equipment] Error:', err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── IMPORT MANUFACTURERS ──────────────────────────────────
