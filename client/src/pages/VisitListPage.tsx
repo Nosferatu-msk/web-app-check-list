@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination } from 'antd';
-import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input } from 'antd';
+import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -63,6 +63,9 @@ export default function VisitListPage() {
   const [reassignModal, setReassignModal] = useState<{ visible: boolean; visitId?: string }>({ visible: false });
   const [reassignTarget, setReassignTarget] = useState<string>('');
   const [showDeleted, setShowDeleted] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [globalStats, setGlobalStats] = useState({ total: 0, planned: 0, inProgress: 0, completed: 0 });
@@ -81,6 +84,8 @@ export default function VisitListPage() {
       const params: Record<string, string> = { page: String(currentPage), pageSize: String(pageSize) };
       if (selectedEngineer) params.user_id = selectedEngineer;
       if (showDeleted) params.include_deleted = 'true';
+      if (selectedStatuses.length > 0) params.statuses = selectedStatuses.join(',');
+      if (searchQuery) params.search = searchQuery;
       const res = await api.getVisits(params);
       setVisits(res.data || []);
       setTotal(res.total || 0);
@@ -91,11 +96,17 @@ export default function VisitListPage() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [selectedEngineer, isManager, showDeleted, currentPage]);
+  }, [selectedEngineer, isManager, showDeleted, currentPage, selectedStatuses, searchQuery]);
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => { setCurrentPage(1); }, [selectedEngineer, showDeleted]);
+  useEffect(() => { setCurrentPage(1); }, [selectedEngineer, showDeleted, selectedStatuses, searchQuery]);
+
+  // Debounce для поиска
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -210,6 +221,26 @@ export default function VisitListPage() {
             Новый визит
           </Button>
         )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Input
+            prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+            placeholder="Поиск по адресу или коду объекта"
+            allowClear
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{ flex: 1, minWidth: 180 }}
+          />
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="Статусы"
+            maxTagCount="responsive"
+            value={selectedStatuses}
+            onChange={(v) => setSelectedStatuses(v || [])}
+            style={{ minWidth: 160, flex: 1 }}
+            options={Object.entries(VISIT_STATUS_LABELS).map(([key, label]) => ({ value: key, label }))}
+          />
+        </div>
         {isManager && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {engineers.length > 0 && (
@@ -222,13 +253,15 @@ export default function VisitListPage() {
                 options={engineers.map((e: any) => ({ value: e.id, label: e.fullName }))}
               />
             )}
-            <Switch
-              checked={showDeleted}
-              onChange={setShowDeleted}
-              checkedChildren="Удалённые"
-              unCheckedChildren="Активные"
-              style={{ flexShrink: 0 }}
-            />
+            {isAdmin && (
+              <Switch
+                checked={showDeleted}
+                onChange={setShowDeleted}
+                checkedChildren="Удалённые"
+                unCheckedChildren="Активные"
+                style={{ flexShrink: 0 }}
+              />
+            )}
           </div>
         )}
       </div>

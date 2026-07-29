@@ -81,6 +81,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 20;
   const status = req.query.status as string;
+  const statuses = req.query.statuses as string;
+  const search = req.query.search as string;
   const dateFrom = req.query.date_from as string;
   const dateTo = req.query.date_to as string;
   const includeDeleted = req.query.include_deleted === 'true';
@@ -101,7 +103,18 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     if (req.query.user_id) where.userId = req.query.user_id;
   }
 
-  if (status) where.status = status;
+  if (statuses) {
+    const statusList = statuses.split(',').filter(Boolean);
+    if (statusList.length > 0) where.status = { in: statusList };
+  } else if (status) {
+    where.status = status;
+  }
+  if (search) {
+    where.OR = [
+      { address: { fullAddress: { contains: search, mode: 'insensitive' } } },
+      { address: { objectCode: { contains: search, mode: 'insensitive' } } },
+    ];
+  }
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
 
