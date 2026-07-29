@@ -149,8 +149,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   };
   for (const sc of statusCounts) {
     const count = sc._count.status;
-    if (sc.status === 'planned') globalStats.planned += count;
-    else if (['not_started', 'in_progress'].includes(sc.status)) globalStats.inProgress += count;
+    if (['planned', 'not_started', 'awaiting_assignment'].includes(sc.status)) globalStats.planned += count;
+    else if (sc.status === 'in_progress') globalStats.inProgress += count;
     else if (['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(sc.status)) globalStats.completed += count;
   }
   res.json({ data, total, page, pageSize, globalStats });

@@ -220,8 +220,7 @@ export async function importRequests(
     parsedRows.push(parsed);
   }
 
-  // Группировка по объекту: objectCode → parsed rows
-  const objectGroups = new Map<string, ParsedRequest[]>();
+  // Создание визитов — по одному на каждую заявку
   for (const parsed of parsedRows) {
     if (parsed.error) {
       if (parsed.isSkipped) {
@@ -236,18 +235,10 @@ export async function importRequests(
       });
       continue;
     }
-    const key = parsed.row.objectCode.trim().toUpperCase();
-    if (!objectGroups.has(key)) objectGroups.set(key, []);
-    objectGroups.get(key)!.push(parsed);
-  }
 
-  // Создание визитов и задач по группам
-  for (const [objectCode, group] of objectGroups) {
-    const addressId = group[0].matchedAddressId!;
-    
-    // Проверка, есть ли уже визит на этот объект из текущего импорта
-    // (не создаём дубли)
-    const isISZH = group.some(g => !g.equipmentTypeId || !equipmentTypes.find(e => e.id === g.equipmentTypeId)?.specializationReq);
+    const addressId = parsed.matchedAddressId!;
+    const eq = equipmentTypes.find(e => e.id === parsed.equipmentTypeId);
+    const isISZHEquipment = !eq?.specializationReq;
 
     // Создание визита
     const visit = await prisma.visit.create({
@@ -259,45 +250,39 @@ export async function importRequests(
         timeStart: '09:00',
         season: getCurrentSeason(),
         status: 'awaiting_assignment',
-        isMultiSpecialist: isISZH || group.length > 1,
+        isMultiSpecialist: false,
       },
     });
 
-    // Создание задач для каждой заявки в группе (кроме ИСЖ объекта — без специализации)
-    for (const parsed of group) {
-      const eq = equipmentTypes.find(e => e.id === parsed.equipmentTypeId);
-      const isISZHEquipment = !eq?.specializationReq;
+    // Создание записи imported_request
+    await prisma.importedRequest.create({
+      data: {
+        externalRequestId: parsed.row.externalRequestId,
+        externalStatus: parsed.row.externalStatus || null,
+        equipmentTypeId: parsed.equipmentTypeId!,
+        equipmentTypeCode: parsed.equipmentTypeCode,
+        objectCode: parsed.row.objectCode,
+        addressRaw: parsed.row.addressRaw,
+        matchedAddressId: addressId,
+        visitId: visit.id,
+        importStatus: 'created',
+        importedBy: userId,
+      },
+    });
 
-      // Создание записи imported_request
-      const importedRequest = await prisma.importedRequest.create({
+    // Создание задачи (кроме ИСЖ объекта)
+    if (!isISZHEquipment) {
+      await prisma.task.create({
         data: {
-          externalRequestId: parsed.row.externalRequestId,
-          externalStatus: parsed.row.externalStatus || null,
-          equipmentTypeId: parsed.equipmentTypeId!,
-          equipmentTypeCode: parsed.equipmentTypeCode,
-          objectCode: parsed.row.objectCode,
-          addressRaw: parsed.row.addressRaw,
-          matchedAddressId: addressId,
           visitId: visit.id,
-          importStatus: 'created',
-          importedBy: userId,
+          equipmentTypeId: parsed.equipmentTypeId!,
+          externalRequestId: parsed.row.externalRequestId,
+          status: 'not_started',
         },
       });
-
-      // Создание задачи (кроме ИСЖ объекта)
-      if (!isISZHEquipment) {
-        await prisma.task.create({
-          data: {
-            visitId: visit.id,
-            equipmentTypeId: parsed.equipmentTypeId!,
-            externalRequestId: parsed.row.externalRequestId,
-            status: 'not_started',
-          },
-        });
-      }
-
-      result.created++;
     }
+
+    result.created++;
   }
 
   // Обновление import_log
