@@ -62,6 +62,11 @@ export default function VisitPage() {
   const [otherRoomsEquipment, setOtherRoomsEquipment] = useState<any[]>([]);
   const [otherRoomsLoading, setOtherRoomsLoading] = useState(false);
   const [transferringId, setTransferringId] = useState<string | null>(null);
+  const [newRoomMode, setNewRoomMode] = useState(false);
+  const [newRoomTypeCode, setNewRoomTypeCode] = useState<string | null>(null);
+  const [newRoomObjectEquipment, setNewRoomObjectEquipment] = useState<any[]>([]);
+  const [newRoomSelectedEquipIds, setNewRoomSelectedEquipIds] = useState<string[]>([]);
+  const [newRoomTransferring, setNewRoomTransferring] = useState(false);
 
   const handleAutoSave = useCallback(async () => {
     if (isNew) return;
@@ -226,6 +231,45 @@ export default function VisitPage() {
     }
     setTransferringId(null);
   }, [visit, message, loadOtherRoomsEquipment, loadRoomEquipment]);
+
+  const handleCreateRoomAndTransfer = useCallback(async () => {
+    if (!newRoomTypeCode || newRoomSelectedEquipIds.length === 0) return;
+    setNewRoomTransferring(true);
+    try {
+      // Переносим каждое выбранное оборудование в новое помещение
+      for (const eqId of newRoomSelectedEquipIds) {
+        await api.createRoomChangeProposal({
+          objectEquipmentId: eqId,
+          newRoomTypeCode,
+        });
+      }
+      message.success(`Оборудование (${newRoomSelectedEquipIds.length} шт.) перенесено в помещение "${rmTypeMap.get(newRoomTypeCode)?.name || newRoomTypeCode}"`);
+      // Сбрасываем состояние
+      setNewRoomMode(false);
+      setNewRoomTypeCode(null);
+      setNewRoomObjectEquipment([]);
+      setNewRoomSelectedEquipIds([]);
+      // Обновляем списки
+      if (visit?.addressId && visit?.id) {
+        await loadEquipmentRooms(visit.addressId, visit.id);
+        await loadObjectEquipment(visit.addressId, visit.id);
+      }
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка переноса');
+    }
+    setNewRoomTransferring(false);
+  }, [newRoomTypeCode, newRoomSelectedEquipIds, rmTypeMap, message, visit, loadEquipmentRooms, loadObjectEquipment]);
+
+  const handleSelectNewRoomType = useCallback(async (roomTypeCode: string) => {
+    setNewRoomTypeCode(roomTypeCode);
+    // Загружаем оборудование с уровня объекта для переноса
+    if (visit?.addressId && visit?.id) {
+      const eq = await api.getObjectEquipment(visit.addressId, { exclude_visit_id: visit.id });
+      // Фильтруем только оборудование без помещения (уровень объекта)
+      const objectLevelEq = eq.filter((e: any) => !e.roomTypeCode);
+      setNewRoomObjectEquipment(objectLevelEq);
+    }
+  }, [visit]);
 
   const handleOpenAddModal = useCallback(async () => {
     let currentVisit = visit;
@@ -687,7 +731,7 @@ export default function VisitPage() {
       <Modal
         title="Добавление оборудования"
         open={addModalOpen}
-        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); setSelectedRoom(null); }}
+        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); setSelectedRoom(null); setNewRoomMode(false); setNewRoomTypeCode(null); setNewRoomObjectEquipment([]); setNewRoomSelectedEquipIds([]); }}
         footer={null}
         width={600}
       >
@@ -697,27 +741,128 @@ export default function VisitPage() {
             label: '📍 Уровень помещения',
             children: roomsLoading ? (
               <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
+            ) : newRoomMode ? (
+              // Режим создания нового помещения
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <Button size="small" onClick={() => { setNewRoomMode(false); setNewRoomTypeCode(null); setNewRoomObjectEquipment([]); setNewRoomSelectedEquipIds([]); }}>
+                    ← Назад
+                  </Button>
+                  <span style={{ fontWeight: 500 }}>Создать помещение</span>
+                </div>
+                {!newRoomTypeCode ? (
+                  <>
+                    <div style={{ marginBottom: 12 }}>Выберите тип помещения:</div>
+                    <Select
+                      style={{ width: '100%' }}
+                      placeholder="Выберите тип помещения"
+                      onChange={handleSelectNewRoomType}
+                      options={roomTypes.map((rt: any) => ({ value: rt.code, label: rt.name }))}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: 12 }}>
+                      Помещение: <Tag color="green">{rmTypeMap.get(newRoomTypeCode)?.name || newRoomTypeCode}</Tag>
+                    </div>
+                    {newRoomObjectEquipment.length === 0 ? (
+                      <Empty description="Нет оборудования на уровне объекта для переноса" />
+                    ) : (
+                      <>
+                        <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>
+                          Выберите оборудование с уровня объекта для переноса:
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <Checkbox
+                            checked={newRoomSelectedEquipIds.length === newRoomObjectEquipment.length}
+                            onChange={(e) => setNewRoomSelectedEquipIds(e.target.checked ? newRoomObjectEquipment.map(eq => eq.id) : [])}
+                          >
+                            Выбрать все ({newRoomObjectEquipment.length})
+                          </Checkbox>
+                        </div>
+                        <List
+                          size="small"
+                          bordered
+                          dataSource={newRoomObjectEquipment}
+                          style={{ maxHeight: 300, overflowY: 'auto' }}
+                          renderItem={(eq: any) => {
+                            const eqType = eqTypeMap.get(eq.equipmentTypeCode);
+                            const checked = newRoomSelectedEquipIds.includes(eq.id);
+                            return (
+                              <List.Item
+                                style={{ cursor: 'pointer', padding: '8px 4px' }}
+                                onClick={() => {
+                                  if (checked) setNewRoomSelectedEquipIds(newRoomSelectedEquipIds.filter(id => id !== eq.id));
+                                  else setNewRoomSelectedEquipIds([...newRoomSelectedEquipIds, eq.id]);
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                                  <Checkbox checked={checked} />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 500 }}>
+                                      {eqType?.name || eq.equipmentTypeCode}
+                                      {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: '#888' }}>
+                                      {eq.serialNumber && <span>SN: {eq.serialNumber}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              </List.Item>
+                            );
+                          }}
+                        />
+                        <Button
+                          type="primary"
+                          block
+                          style={{ marginTop: 12 }}
+                          disabled={newRoomSelectedEquipIds.length === 0}
+                          loading={newRoomTransferring}
+                          onClick={handleCreateRoomAndTransfer}
+                        >
+                          Перенести в помещение {newRoomSelectedEquipIds.length > 0 ? `(${newRoomSelectedEquipIds.length})` : ''}
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+              </>
             ) : equipmentRooms.length === 0 ? (
-              <Empty description="Нет доступных помещений с оборудованием" />
+              <Empty description="Нет доступных помещений с оборудованием">
+                <Button type="dashed" icon={<PlusOutlined />} onClick={() => setNewRoomMode(true)}>
+                  Создать помещение
+                </Button>
+              </Empty>
             ) : (
               <>
                 {!selectedRoom ? (
-                  <List
-                    header={<div style={{ fontWeight: 500 }}>Выберите помещение:</div>}
-                    bordered
-                    dataSource={equipmentRooms}
-                    renderItem={(room: any) => (
-                      <List.Item
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => handleSelectRoom(room.code)}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                          <span>{room.name}</span>
-                          <Tag>{room.count} ед.</Tag>
-                        </div>
-                      </List.Item>
-                    )}
-                  />
+                  <>
+                    <List
+                      header={<div style={{ fontWeight: 500 }}>Выберите помещение:</div>}
+                      bordered
+                      dataSource={equipmentRooms}
+                      renderItem={(room: any) => (
+                        <List.Item
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleSelectRoom(room.code)}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                            <span>{room.name}</span>
+                            <Tag>{room.count} ед.</Tag>
+                          </div>
+                        </List.Item>
+                      )}
+                    />
+                    <Button
+                      type="dashed"
+                      icon={<PlusOutlined />}
+                      block
+                      style={{ marginTop: 12 }}
+                      onClick={() => setNewRoomMode(true)}
+                    >
+                      Создать новое помещение
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
