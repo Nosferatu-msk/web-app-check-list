@@ -105,7 +105,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
 
-  const [data, total] = await Promise.all([
+  const [data, total, statusCounts] = await Promise.all([
     prisma.visit.findMany({
       where, skip: (page - 1) * pageSize, take: pageSize,
       orderBy: { dateStart: 'desc' },
@@ -119,8 +119,25 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       },
     }),
     prisma.visit.count({ where }),
+    prisma.visit.groupBy({
+      by: ['status'],
+      where,
+      _count: { status: true },
+    }),
   ]);
-  res.json({ data, total, page, pageSize });
+  const globalStats = {
+    total,
+    planned: 0,
+    inProgress: 0,
+    completed: 0,
+  };
+  for (const sc of statusCounts) {
+    const count = sc._count.status;
+    if (sc.status === 'planned') globalStats.planned += count;
+    else if (['not_started', 'in_progress'].includes(sc.status)) globalStats.inProgress += count;
+    else if (['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(sc.status)) globalStats.completed += count;
+  }
+  res.json({ data, total, page, pageSize, globalStats });
 });
 
 const taskInclude = {

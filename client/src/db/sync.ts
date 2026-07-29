@@ -245,15 +245,29 @@ export async function pullVisitsFromServer(): Promise<number> {
   const token = localStorage.getItem('accessToken');
   if (!token) return 0;
 
-  const res = await fetch('/api/visits?pageSize=100', {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  if (!res.ok) return 0;
+  const pageSize = 100;
+  let page = 1;
+  let allData: any[] = [];
+  let totalCount = 0;
 
-  const { data } = await res.json();
+  while (true) {
+    const res = await fetch(`/api/visits?page=${page}&pageSize=${pageSize}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return 0;
+
+    const json = await res.json();
+    const { data, total } = json;
+    allData = allData.concat(data || []);
+    totalCount = total || 0;
+
+    if (allData.length >= totalCount || !data?.length) break;
+    page++;
+  }
+
   let count = 0;
 
-  for (const sv of data) {
+  for (const sv of allData) {
     const existing = await db.visits.where('serverId').equals(sv.id).first();
     if (existing && !existing.dirty) {
       // Update from server (only if not dirty)

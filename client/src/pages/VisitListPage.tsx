@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown } from 'antd';
+import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination } from 'antd';
 import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
@@ -63,6 +63,10 @@ export default function VisitListPage() {
   const [reassignModal, setReassignModal] = useState<{ visible: boolean; visitId?: string }>({ visible: false });
   const [reassignTarget, setReassignTarget] = useState<string>('');
   const [showDeleted, setShowDeleted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [globalStats, setGlobalStats] = useState({ total: 0, planned: 0, inProgress: 0, completed: 0 });
+  const pageSize = 20;
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { message, modal } = App.useApp();
@@ -74,20 +78,24 @@ export default function VisitListPage() {
 
   const load = useCallback(async () => {
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { page: String(currentPage), pageSize: String(pageSize) };
       if (selectedEngineer) params.user_id = selectedEngineer;
       if (showDeleted) params.include_deleted = 'true';
       const res = await api.getVisits(params);
       setVisits(res.data || []);
+      setTotal(res.total || 0);
+      if (res.globalStats) setGlobalStats(res.globalStats);
       if (isManager) {
         const users = await api.getEngineers();
         setEngineers((users || []).filter((u: any) => u.isActive !== false));
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [selectedEngineer, isManager, showDeleted]);
+  }, [selectedEngineer, isManager, showDeleted, currentPage]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => { setCurrentPage(1); }, [selectedEngineer, showDeleted]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -120,11 +128,11 @@ export default function VisitListPage() {
     }
   };
 
-  const stats = {
-    total: visits.length,
-    planned: visits.filter((v: any) => v.status === 'planned').length,
-    inProgress: visits.filter((v: any) => ['not_started', 'in_progress'].includes(v.status)).length,
-    completed: visits.filter((v: any) => ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(v.status)).length,
+  const stats = isManager ? globalStats : {
+    total: total,
+    planned: 0,
+    inProgress: 0,
+    completed: 0,
   };
 
   const pageTitle = isAdmin ? 'Все визиты' : isTm ? 'Визиты инженеров' : 'Мои визиты';
@@ -228,9 +236,10 @@ export default function VisitListPage() {
       {loading ? <Spin /> : visits.length === 0 ? (
         <Empty description="Нет визитов" />
       ) : (
-        <List
-          dataSource={visits}
-          renderItem={(v: any) => {
+        <>
+          <List
+            dataSource={visits}
+            renderItem={(v: any) => {
             const statusLabel = VISIT_STATUS_LABELS[v.status as keyof typeof VISIT_STATUS_LABELS] || v.status;
             const statusColor = STATUS_COLORS[v.status] || 'default';
             const statusIcon = STATUS_ICONS[v.status] || null;
@@ -352,6 +361,19 @@ export default function VisitListPage() {
             );
           }}
         />
+        {total > pageSize && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+            <Pagination
+              current={currentPage}
+              total={total}
+              pageSize={pageSize}
+              onChange={(p) => setCurrentPage(p)}
+              showSizeChanger={false}
+              showTotal={(t, range) => `${range[0]}–${range[1]} из ${t}`}
+            />
+          </div>
+        )}
+        </>
       )}
 
       <Modal
