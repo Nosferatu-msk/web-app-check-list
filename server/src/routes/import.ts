@@ -590,7 +590,7 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       }
 
       let roomTypeCode: string | null = null;
-      if (roomType) {
+      if (roomType && roomType.toUpperCase() !== 'ОБЪЕКТ') {
         const rtCode = roomTypeByCodeOrName.get(roomType.toUpperCase());
         if (!rtCode) {
           result.errors.push({ row: i + 2, message: `Тип помещения "${roomType}" не найден` });

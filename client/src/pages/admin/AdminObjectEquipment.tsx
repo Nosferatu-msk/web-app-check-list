@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Space, App, Popconfirm, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, Space, App, Popconfirm, Tag, Divider, List } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 
 export default function AdminObjectEquipment() {
@@ -14,6 +14,8 @@ export default function AdminObjectEquipment() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [equipmentTypes, setEquipmentTypes] = useState<any[]>([]);
   const [roomTypes, setRoomTypes] = useState<any[]>([]);
+  const [objectEquipment, setObjectEquipment] = useState<any[]>([]);
+  const [modalAddressId, setModalAddressId] = useState<string>('');
 
   const load = async () => {
     setLoading(true);
@@ -65,7 +67,38 @@ export default function AdminObjectEquipment() {
       if (addr) setAddresses((prev) => [...prev, addr]);
     }
     form.setFieldsValue(record);
+    setModalAddressId(record.addressId);
+    // Загружаем оборудование объекта
+    if (record.addressId) {
+      const eq = await api.adminGet('object-equipment', { address_id: record.addressId });
+      setObjectEquipment(eq || []);
+    } else {
+      setObjectEquipment([]);
+    }
     setModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditing(null);
+    form.resetFields();
+    setModalAddressId('');
+    setObjectEquipment([]);
+    setModalOpen(true);
+  };
+
+  const handleModalAddressChange = async (addressId: string) => {
+    setModalAddressId(addressId);
+    if (addressId) {
+      const eq = await api.adminGet('object-equipment', { address_id: addressId });
+      setObjectEquipment(eq || []);
+    } else {
+      setObjectEquipment([]);
+    }
+  };
+
+  const handleMoveEquipment = (item: any) => {
+    setEditing(item);
+    form.setFieldsValue(item);
   };
 
   return (
@@ -84,7 +117,7 @@ export default function AdminObjectEquipment() {
             options={addresses.map((a: any) => ({ value: a.id, label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress }))}
             notFoundContent="Введите минимум 2 символа"
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>Добавить</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew}>Добавить</Button>
         </Space>
       </div>
 
@@ -103,22 +136,62 @@ export default function AdminObjectEquipment() {
         )},
       ]} />
 
-      <Modal title={editing ? 'Редактировать оборудование' : 'Добавить оборудование'} open={modalOpen} onOk={handleSave} onCancel={() => setModalOpen(false)} width={600}>
+      <Modal title={editing ? 'Редактировать оборудование' : 'Добавить оборудование'} open={modalOpen} onOk={handleSave} onCancel={() => { setModalOpen(false); setEditing(null); form.resetFields(); }} width={700}>
         <Form form={form} layout="vertical">
           <Form.Item name="addressId" label="Объект" rules={[{ required: true }]}>
             <Select
               showSearch
               onSearch={searchAddresses}
+              onChange={handleModalAddressChange}
               filterOption={false}
               options={addresses.map((a: any) => ({ value: a.id, label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress }))}
               notFoundContent="Введите минимум 2 символа"
             />
           </Form.Item>
+
+          {/* Список оборудования объекта для переноса */}
+          {objectEquipment.length > 0 && !editing && (
+            <>
+              <Divider orientation="left" style={{ margin: '8px 0 16px' }}>Оборудование на объекте</Divider>
+              <List
+                size="small"
+                bordered
+                style={{ marginBottom: 16, maxHeight: 200, overflowY: 'auto' }}
+                dataSource={objectEquipment}
+                renderItem={(item: any) => (
+                  <List.Item
+                    actions={[
+                      <Button key="move" type="link" size="small" icon={<SwapOutlined />} onClick={() => handleMoveEquipment(item)}>
+                        Перенести
+                      </Button>
+                    ]}
+                  >
+                    <List.Item.Meta
+                      title={<>{eqTypeMap.get(item.equipmentTypeCode) || item.equipmentTypeCode} {item.brand && `— ${item.brand}`}</>}
+                      description={
+                        <span>
+                          {item.roomTypeCode ? (
+                            <Tag color="blue">{rmTypeMap.get(item.roomTypeCode) || item.roomTypeCode}</Tag>
+                          ) : (
+                            <Tag color="orange">Уровень объекта</Tag>
+                          )}
+                          {item.model && <span style={{ marginLeft: 8 }}>{item.model}</span>}
+                          {item.serialNumber && <span style={{ marginLeft: 8, color: '#888' }}>S/N: {item.serialNumber}</span>}
+                        </span>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+              <Divider orientation="left" style={{ margin: '8px 0 16px' }}>Создать новое</Divider>
+            </>
+          )}
+
           <Form.Item name="equipmentTypeCode" label="Тип оборудования" rules={[{ required: true }]}>
             <Select options={equipmentTypes.map((e: any) => ({ value: e.code, label: e.name }))} />
           </Form.Item>
           <Form.Item name="roomTypeCode" label="Тип помещения">
-            <Select allowClear options={roomTypes.map((r: any) => ({ value: r.code, label: r.name }))} placeholder="Можно не указывать" />
+            <Select allowClear options={roomTypes.map((r: any) => ({ value: r.code, label: r.name }))} placeholder="Не указано = уровень объекта" />
           </Form.Item>
           <Form.Item name="brand" label="Марка"><Input /></Form.Item>
           <Form.Item name="model" label="Модель"><Input /></Form.Item>
