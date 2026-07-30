@@ -193,6 +193,28 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       });
       const addressIds = tmObjects.map(t => t.addressId);
       where.matchedAddressId = { in: addressIds };
+
+      // ТМ видит только заявки, назначенные на своих инженеров (или неназначенные)
+      const tmEngineers = await prisma.tmEngineer.findMany({
+        where: { tmId: req.userId! },
+        select: { engineerId: true },
+      });
+      const tmEngineerIds = tmEngineers.map(te => te.engineerId);
+      if (tmEngineerIds.length > 0) {
+        where.visit = {
+          ...(where.visit || {}),
+          OR: [
+            { visitEngineers: { none: {} } },
+            { visitEngineers: { none: { engineerId: { notIn: tmEngineerIds } } } },
+          ],
+        };
+      } else {
+        // У ТМ нет инженеров — показываем только неназначенные заявки
+        where.visit = {
+          ...(where.visit || {}),
+          visitEngineers: { none: {} },
+        };
+      }
     } else if (req.userRole === 'engineer') {
       // Инженер видит только назначенные ему заявки (через visit_engineers)
       const visitEngineers = await prisma.visitEngineer.findMany({
