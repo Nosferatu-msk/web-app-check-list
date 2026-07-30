@@ -184,7 +184,17 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         include: {
           equipmentType: { select: { id: true, name: true, code: true, specializationReq: true } },
           matchedAddress: { select: { id: true, fullAddress: true, objectCode: true } },
-          visit: { select: { id: true, status: true, isMultiSpecialist: true } },
+          visit: {
+            select: {
+              id: true, status: true, isMultiSpecialist: true,
+              visitEngineers: {
+                select: {
+                  id: true, engineerId: true, isPrimary: true,
+                  engineer: { select: { id: true, fullName: true } },
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
