@@ -2,7 +2,6 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import prisma from '../models/prisma.js';
-import { Prisma } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/audit.js';
 import { parseRequestsExcel, importRequests, validateRequestsFile } from '../services/requestImport.js';
@@ -205,15 +204,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     }
 
     // Сортировка
-    const dir = sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
     let orderBy: any = { createdAt: 'desc' };
     if (sortField) {
       switch (sortField) {
         case 'externalRequestId':
-          orderBy = Prisma.sql`"external_request_id"::int ${dir}`;
+          orderBy = { externalRequestId: sortOrder };
           break;
         case 'objectCode':
-          orderBy = Prisma.sql`"object_code"::int ${dir}`;
+          orderBy = { objectCode: sortOrder };
           break;
         case 'address':
           orderBy = { matchedAddress: { fullAddress: sortOrder } };

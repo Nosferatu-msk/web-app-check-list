@@ -82,7 +82,9 @@ export default function RequestsPage() {
         const users = await api.getEngineers();
         setEngineers((users || []).filter((u: any) => u.isActive !== false));
       }
-    } catch { /* ignore */ }
+    } catch (err: any) {
+      message.error('Ошибка загрузки заявок');
+    }
     setLoading(false);
   }, [page, pageSize, executionStatusFilter, sortField, sortOrder, engineerFilter, isTm, isAdmin]);
 
