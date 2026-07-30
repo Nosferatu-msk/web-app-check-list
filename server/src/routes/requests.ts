@@ -387,13 +387,6 @@ router.post('/assign', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Проверка: на обычную заявку — один инженер
-    const isISZH = !request.equipmentType.specializationReq;
-    if (!isISZH && !visit.isMultiSpecialist && visit.visitEngineers.length > 0) {
-      res.status(400).json({ error: 'На эту заявку уже назначен инженер' });
-      return;
-    }
-
     // Создаём запись visit_engineer
     const isPrimary = visit.visitEngineers.length === 0;
     const visitEngineer = await prisma.visitEngineer.create({

@@ -269,21 +269,17 @@ export default function RequestsPage() {
         if (!record.visit) return null;
         
         const hasEngineers = record.visit.visitEngineers?.length > 0;
-        const isISZH = record.equipmentType?.name?.toLowerCase().includes('исж объекта');
-        const canAssignMore = isISZH || record.visit.isMultiSpecialist || !hasEngineers;
 
         return (
-          <Space>
-            {canAssignMore && (
-              <Button
-                size="small"
-                type="primary"
-                icon={<UserAddOutlined />}
-                onClick={() => setAssignModal({ visible: true, requestId: record.id, visitId: record.visit.id })}
-              >
-                Назначить
-              </Button>
-            )}
+          <Space wrap>
+            <Button
+              size="small"
+              type="primary"
+              icon={<UserAddOutlined />}
+              onClick={() => setAssignModal({ visible: true, requestId: record.id, visitId: record.visit.id })}
+            >
+              Назначить
+            </Button>
             {hasEngineers && record.visit.visitEngineers.map((ve: any) => (
               <Button
                 key={ve.id}
