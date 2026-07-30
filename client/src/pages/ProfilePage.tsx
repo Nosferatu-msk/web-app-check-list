@@ -519,7 +519,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="page-container" style={{ maxWidth: 600, margin: '0 auto', padding: 16 }}>
+    <div className="page-container" style={{ maxWidth: 1400, margin: '0 auto', padding: 16 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
