@@ -18,13 +18,35 @@ const IMPORT_STATUS_COLORS: Record<string, string> = {
   skipped: 'warning',
 };
 
+const EXECUTION_STATUS_LABELS: Record<string, string> = {
+  not_assigned: 'Не назначена',
+  assigned: 'Назначена',
+  in_progress: 'В работе',
+  completed: 'Завершена',
+};
+
+const EXECUTION_STATUS_COLORS: Record<string, string> = {
+  not_assigned: 'default',
+  assigned: 'processing',
+  in_progress: 'warning',
+  completed: 'success',
+};
+
+function getExecutionStatus(record: any): string {
+  if (!record.visit || record.visit.status === 'awaiting_assignment') return 'not_assigned';
+  if (record.visit.status === 'planned') return 'assigned';
+  if (record.visit.status === 'in_progress') return 'in_progress';
+  if (['completed', 'sent', 'corrected_by_tm'].includes(record.visit.status)) return 'completed';
+  return 'not_assigned';
+}
+
 export default function RequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [importStatusFilter, setImportStatusFilter] = useState<string>('');
+  const [executionStatusFilter, setExecutionStatusFilter] = useState<string>('');
   const [engineers, setEngineers] = useState<any[]>([]);
   const [assignModal, setAssignModal] = useState<{ visible: boolean; requestId?: string; visitId?: string }>({ visible: false });
   const [selectedEngineer, setSelectedEngineer] = useState<string>('');
@@ -49,7 +71,7 @@ export default function RequestsPage() {
     try {
       setLoading(true);
       const params: any = { page, pageSize };
-      if (importStatusFilter) params.importStatus = importStatusFilter;
+      if (executionStatusFilter) params.executionStatus = executionStatusFilter;
       if (sortField) { params.sortField = sortField; params.sortOrder = sortOrder; }
       if (engineerFilter) params.engineerId = engineerFilter;
       const res = await api.getRequests(params);
@@ -62,7 +84,7 @@ export default function RequestsPage() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [page, pageSize, importStatusFilter, sortField, sortOrder, engineerFilter, isTm, isAdmin]);
+  }, [page, pageSize, executionStatusFilter, sortField, sortOrder, engineerFilter, isTm, isAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -200,13 +222,17 @@ export default function RequestsPage() {
     },
     {
       title: 'Статус',
-      dataIndex: 'importStatus',
-      key: 'importStatus',
-      width: 110,
+      key: 'executionStatus',
+      width: 120,
       sorter: true,
-      render: (status: string) => (
-        <Tag color={IMPORT_STATUS_COLORS[status]}>{IMPORT_STATUS_LABELS[status as keyof typeof IMPORT_STATUS_LABELS] || status}</Tag>
-      ),
+      render: (_: any, record: any) => {
+        const status = getExecutionStatus(record);
+        return (
+          <Tag color={EXECUTION_STATUS_COLORS[status]}>
+            {EXECUTION_STATUS_LABELS[status] || status}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Оборудование',
@@ -346,13 +372,13 @@ export default function RequestsPage() {
       <Card>
         <Space style={{ marginBottom: 16 }} wrap>
           <Select
-            placeholder="Статус импорта"
+            placeholder="Статус исполнения"
             style={{ width: 200 }}
             allowClear
-            value={importStatusFilter || undefined}
-            onChange={(v) => { setImportStatusFilter(v || ''); setPage(1); }}
+            value={executionStatusFilter || undefined}
+            onChange={(v) => { setExecutionStatusFilter(v || ''); setPage(1); }}
           >
-            {Object.entries(IMPORT_STATUS_LABELS).map(([key, label]) => (
+            {Object.entries(EXECUTION_STATUS_LABELS).map(([key, label]) => (
               <Select.Option key={key} value={key}>{label}</Select.Option>
             ))}
           </Select>

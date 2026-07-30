@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import prisma from '../models/prisma.js';
+import { Prisma } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/audit.js';
 import { parseRequestsExcel, importRequests, validateRequestsFile } from '../services/requestImport.js';
@@ -154,6 +155,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 10;
     const importStatus = req.query.importStatus as string | undefined;
+    const executionStatus = req.query.executionStatus as string | undefined;
     const objectCode = req.query.objectCode as string | undefined;
     const sortField = req.query.sortField as string | undefined;
     const sortOrder = (req.query.sortOrder as string) === 'ascend' ? 'asc' : 'desc';
@@ -164,6 +166,24 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     if (objectCode) where.objectCode = objectCode;
     if (engineerFilter) {
       where.visit = { visitEngineers: { some: { engineerId: engineerFilter } } };
+    }
+
+    // Фильтр по статусу исполнения
+    if (executionStatus) {
+      switch (executionStatus) {
+        case 'not_assigned':
+          where.OR = [{ visitId: null }, { visit: { status: 'awaiting_assignment' } }];
+          break;
+        case 'assigned':
+          where.visit = { ...(where.visit || {}), status: 'planned' };
+          break;
+        case 'in_progress':
+          where.visit = { ...(where.visit || {}), status: 'in_progress' };
+          break;
+        case 'completed':
+          where.visit = { ...(where.visit || {}), status: { in: ['completed', 'sent', 'corrected_by_tm'] } };
+          break;
+      }
     }
 
     // Фильтрация по территории ТМ
@@ -185,13 +205,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     }
 
     // Сортировка
+    const dir = sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
     let orderBy: any = { createdAt: 'desc' };
     if (sortField) {
       switch (sortField) {
-        case 'externalRequestId': orderBy = { externalRequestId: sortOrder }; break;
-        case 'importStatus': orderBy = { importStatus: sortOrder }; break;
-        case 'objectCode': orderBy = { objectCode: sortOrder }; break;
-        case 'address': orderBy = { matchedAddress: { fullAddress: sortOrder } }; break;
+        case 'externalRequestId':
+          orderBy = Prisma.sql`"external_request_id"::int ${dir}`;
+          break;
+        case 'objectCode':
+          orderBy = Prisma.sql`"object_code"::int ${dir}`;
+          break;
+        case 'address':
+          orderBy = { matchedAddress: { fullAddress: sortOrder } };
+          break;
       }
     }
 
