@@ -181,7 +181,7 @@ export default function SummaryReportPage() {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ maxWidth: 1400 }}>
       {isMobile && (
         <MobileHeader
           title="Сводный отчёт"

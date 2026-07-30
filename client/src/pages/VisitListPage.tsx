@@ -159,7 +159,7 @@ export default function VisitListPage() {
   const roleLabel = ROLE_LABELS[user?.role || 'engineer'];
 
   return (
-    <div className={`page-container${user?.role === 'engineer' && isMobile ? ' page-with-bottom-nav' : ''}`}>
+    <div className={`page-container${user?.role === 'engineer' && isMobile ? ' page-with-bottom-nav' : ''}`} style={!isMobile ? { maxWidth: 1400 } : undefined}>
       {/* Мобильный заголовок */}
       {isMobile && (
         <MobileHeader

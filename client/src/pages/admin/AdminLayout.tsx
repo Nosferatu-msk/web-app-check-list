@@ -111,11 +111,12 @@ export default function AdminLayout() {
         <Content
           className="admin-content"
           style={{
-            margin: '16px',
+            margin: '16px auto',
             padding: '20px',
             background: '#fff',
             borderRadius: 12,
             minHeight: 360,
+            maxWidth: 1400,
           }}
         >
           <Outlet />

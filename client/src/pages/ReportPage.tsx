@@ -125,7 +125,7 @@ export default function ReportPage() {
   if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>;
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ maxWidth: 1400 }}>
       <Card>
         {generated ? (
           <>
