@@ -31,6 +31,9 @@ export default function RequestsPage() {
   const [bindModal, setBindModal] = useState<{ visible: boolean; requestId?: string }>({ visible: false });
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [sortField, setSortField] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<string>('');
+  const [engineerFilter, setEngineerFilter] = useState<string>('');
   const [importing, setImporting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{ row: number; externalRequestId: string; message: string }[]>([]);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
@@ -47,6 +50,8 @@ export default function RequestsPage() {
       setLoading(true);
       const params: any = { page, pageSize };
       if (importStatusFilter) params.importStatus = importStatusFilter;
+      if (sortField) { params.sortField = sortField; params.sortOrder = sortOrder; }
+      if (engineerFilter) params.engineerId = engineerFilter;
       const res = await api.getRequests(params);
       setRequests(res.data || []);
       setTotal(res.total || 0);
@@ -57,7 +62,7 @@ export default function RequestsPage() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [page, pageSize, importStatusFilter, isTm, isAdmin]);
+  }, [page, pageSize, importStatusFilter, sortField, sortOrder, engineerFilter, isTm, isAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -191,12 +196,14 @@ export default function RequestsPage() {
       key: 'externalRequestId',
       width: 130,
       ellipsis: true,
+      sorter: true,
     },
     {
       title: 'Статус',
       dataIndex: 'importStatus',
       key: 'importStatus',
       width: 110,
+      sorter: true,
       render: (status: string) => (
         <Tag color={IMPORT_STATUS_COLORS[status]}>{IMPORT_STATUS_LABELS[status as keyof typeof IMPORT_STATUS_LABELS] || status}</Tag>
       ),
@@ -213,12 +220,14 @@ export default function RequestsPage() {
       dataIndex: 'objectCode',
       key: 'objectCode',
       width: 90,
+      sorter: true,
     },
     {
       title: 'Адрес',
       key: 'address',
       width: 220,
       ellipsis: true,
+      sorter: true,
       render: (_: any, record: any) => record.matchedAddress?.fullAddress || record.addressRaw || '-',
     },
     {
@@ -335,7 +344,7 @@ export default function RequestsPage() {
       </div>
 
       <Card>
-        <Space style={{ marginBottom: 16 }}>
+        <Space style={{ marginBottom: 16 }} wrap>
           <Select
             placeholder="Статус импорта"
             style={{ width: 200 }}
@@ -347,6 +356,19 @@ export default function RequestsPage() {
               <Select.Option key={key} value={key}>{label}</Select.Option>
             ))}
           </Select>
+          <Select
+            placeholder="Инженер"
+            style={{ width: 220 }}
+            allowClear
+            showSearch
+            optionFilterProp="children"
+            value={engineerFilter || undefined}
+            onChange={(v) => { setEngineerFilter(v || ''); setPage(1); }}
+          >
+            {engineers.map((eng) => (
+              <Select.Option key={eng.id} value={eng.id}>{eng.fullName}</Select.Option>
+            ))}
+          </Select>
         </Space>
 
         <Table
@@ -354,6 +376,16 @@ export default function RequestsPage() {
           dataSource={requests}
           rowKey="id"
           loading={loading}
+          onChange={(_pagination, _filters, sorter: any) => {
+            if (sorter && sorter.field) {
+              setSortField(sorter.field as string);
+              setSortOrder(sorter.order || '');
+            } else {
+              setSortField('');
+              setSortOrder('');
+            }
+            setPage(1);
+          }}
           pagination={{
             current: page,
             pageSize,

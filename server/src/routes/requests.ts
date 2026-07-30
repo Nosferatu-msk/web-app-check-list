@@ -152,13 +152,19 @@ router.get('/import/:id', async (req: AuthRequest, res: Response) => {
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const pageSize = parseInt(req.query.pageSize as string) || 50;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
     const importStatus = req.query.importStatus as string | undefined;
     const objectCode = req.query.objectCode as string | undefined;
+    const sortField = req.query.sortField as string | undefined;
+    const sortOrder = (req.query.sortOrder as string) === 'ascend' ? 'asc' : 'desc';
+    const engineerFilter = req.query.engineerId as string | undefined;
 
     const where: any = {};
     if (importStatus) where.importStatus = importStatus;
     if (objectCode) where.objectCode = objectCode;
+    if (engineerFilter) {
+      where.visit = { visitEngineers: { some: { engineerId: engineerFilter } } };
+    }
 
     // Фильтрация по территории ТМ
     if (req.userRole === 'tm') {
@@ -176,6 +182,17 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       });
       const visitIds = visitEngineers.map(ve => ve.visitId);
       where.visitId = { in: visitIds };
+    }
+
+    // Сортировка
+    let orderBy: any = { createdAt: 'desc' };
+    if (sortField) {
+      switch (sortField) {
+        case 'externalRequestId': orderBy = { externalRequestId: sortOrder }; break;
+        case 'importStatus': orderBy = { importStatus: sortOrder }; break;
+        case 'objectCode': orderBy = { objectCode: sortOrder }; break;
+        case 'address': orderBy = { matchedAddress: { fullAddress: sortOrder } }; break;
+      }
     }
 
     const [data, total] = await Promise.all([
@@ -196,7 +213,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
