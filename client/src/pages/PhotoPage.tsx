@@ -207,7 +207,7 @@ export default function PhotoPage() {
             <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
               <Button icon={<CameraOutlined />} onClick={() => beforeRef.current?.click()} loading={uploading} block={isMobile}>Камера</Button>
               <Button icon={<PictureOutlined />} onClick={() => beforeGalleryRef.current?.click()} loading={uploading} block={isMobile}>Галерея</Button>
-              <input ref={beforeRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
+              <input ref={beforeRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
               <input ref={beforeGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
             </Space>
           )}
@@ -225,7 +225,7 @@ export default function PhotoPage() {
               <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
                 <Button icon={<CameraOutlined />} onClick={() => afterRef.current?.click()} loading={uploading} block={isMobile}>Камера</Button>
                 <Button icon={<PictureOutlined />} onClick={() => afterGalleryRef.current?.click()} loading={uploading} block={isMobile}>Галерея</Button>
-                <input ref={afterRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
+                <input ref={afterRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
                 <input ref={afterGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
               </Space>
             )}
