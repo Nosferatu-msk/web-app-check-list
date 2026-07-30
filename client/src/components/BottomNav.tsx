@@ -54,7 +54,6 @@ export default function BottomNav() {
   const items: NavItem[] = [
     { key: 'visits', icon: <UnorderedListOutlined />, label: 'Визиты', path: '/' },
     { key: 'requests', icon: <FormOutlined />, label: 'Заявки', path: '/my-requests' },
-    { key: 'reports', icon: <BarChartOutlined />, label: 'Отчёты', path: '/reports/summary' },
     { key: 'profile', icon: <UserOutlined />, label: 'Профиль', path: '/profile' },
   ];
 
