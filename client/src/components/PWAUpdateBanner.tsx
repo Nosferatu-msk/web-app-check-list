@@ -32,12 +32,16 @@ export default function PWAUpdateBanner() {
       </span>
       <Space size={8} style={{ justifyContent: isMobile ? 'center' : 'flex-end' }}>
         <Button
-          type="primary"
           size={isMobile ? 'middle' : 'small'}
           icon={<ReloadOutlined />}
           onClick={update}
           block={isMobile}
-          style={{ fontWeight: 600 }}
+          style={{
+            fontWeight: 600,
+            background: '#fff',
+            color: '#1677ff',
+            borderColor: '#fff',
+          }}
         >
           Обновить
         </Button>
@@ -46,7 +50,7 @@ export default function PWAUpdateBanner() {
           size={isMobile ? 'middle' : 'small'}
           icon={<CloseOutlined />}
           onClick={close}
-          style={{ color: '#aaa' }}
+          style={{ color: '#ccc' }}
         />
       </Space>
     </div>
