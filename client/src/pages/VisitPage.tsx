@@ -262,12 +262,10 @@ export default function VisitPage() {
 
   const handleSelectNewRoomType = useCallback(async (roomTypeCode: string) => {
     setNewRoomTypeCode(roomTypeCode);
-    // Загружаем оборудование с уровня объекта для переноса
+    // Загружаем всё оборудование объекта для переноса (включая из других помещений)
     if (visit?.addressId && visit?.id) {
       const eq = await api.getObjectEquipment(visit.addressId, { exclude_visit_id: visit.id });
-      // Фильтруем только оборудование без помещения (уровень объекта)
-      const objectLevelEq = eq.filter((e: any) => !e.roomTypeCode);
-      setNewRoomObjectEquipment(objectLevelEq);
+      setNewRoomObjectEquipment(eq);
     }
   }, [visit]);
 
@@ -766,11 +764,11 @@ export default function VisitPage() {
                       Помещение: <Tag color="green">{rmTypeMap.get(newRoomTypeCode)?.name || newRoomTypeCode}</Tag>
                     </div>
                     {newRoomObjectEquipment.length === 0 ? (
-                      <Empty description="Нет оборудования на уровне объекта для переноса" />
+                      <Empty description="Нет оборудования на объекте" />
                     ) : (
                       <>
                         <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>
-                          Выберите оборудование с уровня объекта для переноса:
+                          Выберите оборудование для переноса в новое помещение:
                         </div>
                         <div style={{ marginBottom: 8 }}>
                           <Checkbox
@@ -804,7 +802,12 @@ export default function VisitPage() {
                                       {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
                                     </div>
                                     <div style={{ fontSize: 12, color: '#888' }}>
-                                      {eq.serialNumber && <span>SN: {eq.serialNumber}</span>}
+                                      {eq.roomTypeCode ? (
+                                        <span>📍 {rmTypeMap.get(eq.roomTypeCode)?.name || eq.roomTypeCode}</span>
+                                      ) : (
+                                        <span>🏠 Уровень объекта</span>
+                                      )}
+                                      {eq.serialNumber && <span> · SN: {eq.serialNumber}</span>}
                                     </div>
                                   </div>
                                 </div>
