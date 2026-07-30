@@ -503,12 +503,21 @@ export const api = {
   getImportStatus: async (id: string) =>
     request<any>(`/requests/import/${id}`),
 
-  getRequests: async (params?: { page?: number; pageSize?: number; importStatus?: string; objectCode?: string }) => {
+  getRequests: async (params?: {
+    page?: number; pageSize?: number;
+    importStatus?: string; executionStatus?: string;
+    objectCode?: string; sortField?: string; sortOrder?: string;
+    engineerId?: string;
+  }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
     if (params?.importStatus) qs.set('importStatus', params.importStatus);
+    if (params?.executionStatus) qs.set('executionStatus', params.executionStatus);
     if (params?.objectCode) qs.set('objectCode', params.objectCode);
+    if (params?.sortField) qs.set('sortField', params.sortField);
+    if (params?.sortOrder) qs.set('sortOrder', params.sortOrder);
+    if (params?.engineerId) qs.set('engineerId', params.engineerId);
     return request<any>(`/requests?${qs}`);
   },
 
