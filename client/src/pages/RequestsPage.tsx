@@ -23,7 +23,7 @@ export default function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(10);
   const [importStatusFilter, setImportStatusFilter] = useState<string>('');
   const [engineers, setEngineers] = useState<any[]>([]);
   const [assignModal, setAssignModal] = useState<{ visible: boolean; requestId?: string; visitId?: string }>({ visible: false });
@@ -189,46 +189,49 @@ export default function RequestsPage() {
       title: '№ заявки',
       dataIndex: 'externalRequestId',
       key: 'externalRequestId',
-      width: 150,
+      width: 130,
+      ellipsis: true,
     },
     {
       title: 'Статус',
       dataIndex: 'importStatus',
       key: 'importStatus',
-      width: 120,
+      width: 110,
       render: (status: string) => (
         <Tag color={IMPORT_STATUS_COLORS[status]}>{IMPORT_STATUS_LABELS[status as keyof typeof IMPORT_STATUS_LABELS] || status}</Tag>
       ),
     },
     {
-      title: 'Вид оборудования',
+      title: 'Оборудование',
       key: 'equipment',
-      width: 200,
+      width: 140,
+      ellipsis: true,
       render: (_: any, record: any) => record.equipmentType?.name || '-',
     },
     {
-      title: 'Код объекта',
+      title: 'Код',
       dataIndex: 'objectCode',
       key: 'objectCode',
-      width: 120,
+      width: 90,
     },
     {
       title: 'Адрес',
       key: 'address',
-      width: 300,
+      width: 220,
+      ellipsis: true,
       render: (_: any, record: any) => record.matchedAddress?.fullAddress || record.addressRaw || '-',
     },
     {
       title: 'Визит',
       key: 'visit',
-      width: 150,
+      width: 120,
       render: (_: any, record: any) => {
         if (!record.visit) return '-';
         const statusLabel = VISIT_STATUS_LABELS[record.visit.status as keyof typeof VISIT_STATUS_LABELS] || record.visit.status;
         return (
           <Space direction="vertical" size={0}>
             <Tag>{statusLabel}</Tag>
-            {record.visit.isMultiSpecialist && <Tag color="purple">Мультиспец.</Tag>}
+            {record.visit.isMultiSpecialist && <Tag color="purple" style={{ fontSize: 11 }}>Мультиспец.</Tag>}
           </Space>
         );
       },
@@ -236,7 +239,7 @@ export default function RequestsPage() {
     {
       title: 'Инженеры',
       key: 'engineers',
-      width: 200,
+      width: 160,
       render: (_: any, record: any) => {
         if (!record.visit?.visitEngineers || record.visit.visitEngineers.length === 0) {
           return <Tag color="orange">Не назначен</Tag>;
@@ -244,9 +247,9 @@ export default function RequestsPage() {
         return (
           <Space direction="vertical" size={2}>
             {record.visit.visitEngineers.map((ve: any) => (
-              <Space key={ve.id}>
-                <span>{ve.engineer?.fullName}</span>
-                {ve.isPrimary && <Badge status="success" text="основной" />}
+              <Space key={ve.id} size={4}>
+                <span style={{ fontSize: 13 }}>{ve.engineer?.fullName}</span>
+                {ve.isPrimary && <Badge status="success" text={<span style={{ fontSize: 11 }}>осн.</span>} />}
               </Space>
             ))}
           </Space>
@@ -256,8 +259,7 @@ export default function RequestsPage() {
     {
       title: 'Действия',
       key: 'actions',
-      width: 200,
-      fixed: 'right',
+      width: 150,
       render: (_: any, record: any) => {
         if (record.importStatus === 'error') {
           return (
@@ -267,18 +269,18 @@ export default function RequestsPage() {
           );
         }
         if (!record.visit) return null;
-        
+
         const hasEngineers = record.visit.visitEngineers?.length > 0;
 
         return (
-          <Space wrap>
+          <Space wrap size={4}>
             <Button
               size="small"
               type="primary"
               icon={<UserAddOutlined />}
               onClick={() => setAssignModal({ visible: true, requestId: record.id, visitId: record.visit.id })}
             >
-              Назначить
+              +
             </Button>
             {hasEngineers && record.visit.visitEngineers.map((ve: any) => (
               <Button
@@ -286,10 +288,9 @@ export default function RequestsPage() {
                 size="small"
                 danger
                 icon={<UserDeleteOutlined />}
+                title={`Снять: ${ve.engineer?.fullName}`}
                 onClick={() => handleUnassign(record.visit.id, ve.engineerId, record.id)}
-              >
-                Снять {ve.engineer?.fullName?.split(' ')[0]}
-              </Button>
+              />
             ))}
           </Space>
         );
@@ -298,7 +299,7 @@ export default function RequestsPage() {
   ];
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={!isMobile ? { maxWidth: 1400 } : undefined}>
       {isMobile && (
         <MobileHeader
           title="Заявки"
@@ -360,7 +361,7 @@ export default function RequestsPage() {
             showSizeChanger: true,
             onChange: (p, ps) => { setPage(p); setPageSize(ps); },
           }}
-          scroll={{ x: 1400 }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
