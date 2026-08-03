@@ -75,7 +75,7 @@ function TmAdminRoute({ children }: { children: React.ReactNode }) {
 function EngineerRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
-  if (user?.role !== 'engineer') return <>{children}</>;
+  if (user?.role !== 'engineer') return <Navigate to="/" />;
   return <SpecializationGate><EngineerMobileLayout>{children}</EngineerMobileLayout></SpecializationGate>;
 }
 
@@ -97,9 +97,12 @@ function TmMtrRoute({ children }: { children: React.ReactNode }) {
 function SmartRedirect() {
   const { user, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  if (user?.role === 'engineer') return <VisitListPage />;
   if (user?.role === 'engineer_mtr') return <Navigate to="/mtr/visits" />;
   if (user?.role === 'tm_mtr') return <Navigate to="/mtr/tm/visits" />;
-  return <Navigate to="/" />;
+  if (user?.role === 'tm') return <Navigate to="/requests" />;
+  if (user?.role === 'admin') return <Navigate to="/admin" />;
+  return <Navigate to="/login" />;
 }
 
 export default function App() {
@@ -112,7 +115,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/" element={<ProtectedRoute><EngineerRoute><VisitListPage /></EngineerRoute></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><SmartRedirect /></ProtectedRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><EngineerRoute><MyRequestsPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/visit/new" element={<ProtectedRoute><EngineerRoute><VisitPage /></EngineerRoute></ProtectedRoute>} />
