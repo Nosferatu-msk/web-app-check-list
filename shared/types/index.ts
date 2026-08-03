@@ -1,4 +1,4 @@
-export type UserRole = 'engineer' | 'tm' | 'admin';
+export type UserRole = 'engineer' | 'tm' | 'admin' | 'engineer_mtr' | 'tm_mtr';
 export type Season = 'summer' | 'winter';
 export type VisitStatus = 'planned' | 'not_started' | 'in_progress' | 'completed' | 'sent' | 'sent_by_engineer' | 'sent_by_tm' | 'corrected_by_tm' | 'awaiting_assignment';
 export type TaskStatus = 'not_started' | 'in_progress' | 'completed';
@@ -25,6 +25,7 @@ export type NotificationType =
 
 export type ImportStatus = 'new' | 'matched' | 'created' | 'error' | 'skipped';
 export type AssignmentAction = 'assigned' | 'unassigned' | 'declined';
+export type MtrVisitStatus = 'draft' | 'in_progress' | 'completed' | 'sent' | 'rejected' | 'accepted';
 
 export interface User {
   id: string;
@@ -171,6 +172,7 @@ export interface Photo {
   id: string;
   taskId?: string;
   taskEquipmentItemId?: string;
+  mtrVisitId?: string;
   fileName: string;
   filePath: string;
   moment: PhotoMoment;
@@ -262,6 +264,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   engineer: 'Инженер',
   tm: 'Территориальный менеджер',
   admin: 'Администратор',
+  engineer_mtr: 'Инженер МТР',
+  tm_mtr: 'ТМ МТР',
 };
 
 export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
@@ -438,6 +442,87 @@ export interface ImportRequestsResult {
   errors: number;
   errorDetails: { row: number; externalRequestId: string; message: string }[];
 }
+
+// ==================== МТР (Мелкий текущий ремонт) ====================
+
+export interface MtrWorkType {
+  id: string;
+  name: string;
+  category?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MtrVisit {
+  id: string;
+  engineerId: string;
+  addressId: string;
+  requestNumber: string;
+  dateStart: string;
+  timeStart: string;
+  status: MtrVisitStatus;
+  isDraft: boolean;
+  assignedById?: string | null;
+  assignedAt?: string | null;
+  sentAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  isDeleted: boolean;
+  deletedById?: string | null;
+  deletedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  engineer?: { id: string; fullName: string; email: string };
+  address?: Address;
+  assignedBy?: { id: string; fullName: string; email: string } | null;
+  deletedBy?: { id: string; fullName: string; email: string } | null;
+  works?: MtrVisitWork[];
+  photos?: Photo[];
+}
+
+export interface MtrVisitWork {
+  id: string;
+  mtrVisitId: string;
+  mtrWorkTypeId: string;
+  quantity: number;
+  comment?: string | null;
+  sortOrder: number;
+  createdAt: string;
+  mtrWorkType?: MtrWorkType;
+}
+
+export interface MtrTmObject {
+  id: string;
+  tmId: string;
+  addressId: string;
+  createdAt: string;
+  tm?: { id: string; fullName: string; email: string };
+  address?: Address;
+}
+
+export interface MtrTmEngineer {
+  id: string;
+  tmId: string;
+  engineerId: string;
+  createdAt: string;
+  tm?: { id: string; fullName: string; email: string };
+  engineer?: { id: string; fullName: string; email: string };
+}
+
+export const MTR_VISIT_STATUS_LABELS: Record<MtrVisitStatus, string> = {
+  draft: 'Черновик',
+  in_progress: 'В работе',
+  completed: 'Завершён',
+  sent: 'Отправлен',
+  rejected: 'Отклонён',
+  accepted: 'Принят',
+};
+
+export const MTR_ROLE_LABELS: Record<'engineer_mtr' | 'tm_mtr', string> = {
+  engineer_mtr: 'Инженер МТР',
+  tm_mtr: 'ТМ МТР',
+};
 
 export function determineSeason(date: Date): Season {
   const month = date.getMonth() + 1;

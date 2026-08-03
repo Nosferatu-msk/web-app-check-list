@@ -11,6 +11,8 @@ enum UserRole {
   engineer
   tm
   admin
+  engineer_mtr
+  tm_mtr
 }
 
 enum Season {
@@ -47,6 +49,15 @@ enum PhotoMoment {
   after
 }
 
+enum MtrVisitStatus {
+  draft
+  in_progress
+  completed
+  sent
+  rejected
+  accepted
+}
+
 model User {
   id                 String   @id @default(uuid())
   fullName           String   @map("full_name")
@@ -63,30 +74,36 @@ model User {
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
-  visits                   Visit[]              @relation("UserVisits")
-  assignedVisits           Visit[]              @relation("AssignedVisits")
+  visits                   Visit[]                @relation("UserVisits")
+  assignedVisits           Visit[]                @relation("AssignedVisits")
   auditLogs                AuditLog[]
   resetTokens              PasswordResetToken[]
-  tmObjects                TmObject[]           @relation("TmObjectRelation")
-  tmEngineers              TmEngineer[]         @relation("TmEngineerTmRelation")
-  engineersAsTm            TmEngineer[]         @relation("TmEngineerEngineerRelation")
-  deletedVisits            Visit[]              @relation("DeletedBy")
-  equipmentProposals       EquipmentProposal[]  @relation("proposedBy")
-  reviewedProposals        EquipmentProposal[]  @relation("reviewedBy")
+  tmObjects                TmObject[]             @relation("TmObjectRelation")
+  tmEngineers              TmEngineer[]           @relation("TmEngineerTmRelation")
+  engineersAsTm            TmEngineer[]           @relation("TmEngineerEngineerRelation")
+  deletedVisits            Visit[]                @relation("DeletedBy")
+  equipmentProposals       EquipmentProposal[]    @relation("proposedBy")
+  reviewedProposals        EquipmentProposal[]    @relation("reviewedBy")
   favoriteObjects          UserFavoriteObject[]
-  confirmedObjectEquipment ObjectEquipment[]    @relation("objectEquipmentRoomConfirm")
-  createdObjectEquipment   ObjectEquipment[]    @relation("objectEquipmentCreatedBy")
-  reportAttachments        ReportAttachment[]   @relation("ReportAttachmentUploader")
-  reportTasks              ReportTask[]         @relation("ReportTaskCreator")
-  submittedModels          Model[]              @relation("ModelSubmittedBy")
-  reviewedModels           Model[]              @relation("ModelReviewedBy")
+  confirmedObjectEquipment ObjectEquipment[]      @relation("objectEquipmentRoomConfirm")
+  createdObjectEquipment   ObjectEquipment[]      @relation("objectEquipmentCreatedBy")
+  reportAttachments        ReportAttachment[]     @relation("ReportAttachmentUploader")
+  reportTasks              ReportTask[]           @relation("ReportTaskCreator")
+  submittedModels          Model[]                @relation("ModelSubmittedBy")
+  reviewedModels           Model[]                @relation("ModelReviewedBy")
   notifications            Notification[]
-  importedRequests         ImportedRequest[]    @relation("ImportedBy")
-  visitEngineers           VisitEngineer[]      @relation("VisitEngineerRelation")
-  assignedVisitEngineers   VisitEngineer[]      @relation("VisitEngineerAssigner")
+  importedRequests         ImportedRequest[]      @relation("ImportedBy")
+  visitEngineers           VisitEngineer[]        @relation("VisitEngineerRelation")
+  assignedVisitEngineers   VisitEngineer[]        @relation("VisitEngineerAssigner")
   assignmentLogsEngineer   RequestAssignmentLog[] @relation("AssignmentLogEngineer")
   assignmentLogsPerformer  RequestAssignmentLog[] @relation("AssignmentLogPerformer")
   systemReleases           SystemRelease[]        @relation("SystemReleaseAdmin")
+  mtrVisits                MtrVisit[]             @relation("MtrVisitEngineer")
+  mtrAssignedVisits        MtrVisit[]             @relation("MtrVisitAssignedBy")
+  mtrDeletedVisits         MtrVisit[]             @relation("MtrVisitDeletedBy")
+  mtrTmObjects             MtrTmObject[]          @relation("MtrTmObjectRelation")
+  mtrTmEngineersAsTm       MtrTmEngineer[]        @relation("MtrTmEngineerTmRelation")
+  mtrEngineersAsTm         MtrTmEngineer[]        @relation("MtrTmEngineerEngineerRelation")
 
   @@map("users")
 }
@@ -109,7 +126,9 @@ model Address {
   objectEquipment    ObjectEquipment[]
   equipmentProposals EquipmentProposal[]
   favoriteObjects    UserFavoriteObject[]
-  importedRequests   ImportedRequest[]  @relation("matchedAddress")
+  importedRequests   ImportedRequest[]    @relation("matchedAddress")
+  mtrTmObjects       MtrTmObject[]
+  mtrVisits          MtrVisit[]
 
   @@index([city, street])
   @@map("addresses")
@@ -123,10 +142,10 @@ model EquipmentType {
   isActive          Boolean @default(true) @map("is_active")
   specializationReq String? @map("specialization_req")
 
-  tasks             Task[]
-  recommendations   Recommendation[]
-  models            Model[]
-  importedRequests  ImportedRequest[]
+  tasks            Task[]
+  recommendations  Recommendation[]
+  models           Model[]
+  importedRequests ImportedRequest[]
 
   @@map("equipment_types")
 }
@@ -155,31 +174,31 @@ model Recommendation {
 }
 
 model Visit {
-  id                 String      @id @default(uuid())
-  userId             String?     @map("user_id")
-  addressId          String      @map("address_id")
-  engineerName       String      @map("engineer_name") @default("")
-  dateStart          DateTime    @map("date_start")
-  timeStart          String      @map("time_start")
-  timeEnd            String?     @map("time_end")
-  season             Season
-  status             VisitStatus @default(in_progress)
-  assignedById       String?     @map("assigned_by_id")
-  assignedAt         DateTime?   @map("assigned_at")
-  sentByEngineerAt   DateTime?   @map("sent_by_engineer_at")
-  sentByTmAt         DateTime?   @map("sent_by_tm_at")
-  tmCorrected        Boolean     @default(false) @map("tm_corrected")
-  isMultiSpecialist  Boolean     @default(false) @map("is_multi_specialist")
-  isDeleted          Boolean     @default(false) @map("is_deleted")
-  deletedById        String?     @map("deleted_by_id")
-  deletedAt          DateTime?   @map("deleted_at")
-  createdAt          DateTime    @default(now()) @map("created_at")
-  updatedAt          DateTime    @updatedAt @map("updated_at")
+  id                String      @id @default(uuid())
+  userId            String?     @map("user_id")
+  addressId         String      @map("address_id")
+  engineerName      String      @default("") @map("engineer_name")
+  dateStart         DateTime    @map("date_start")
+  timeStart         String      @map("time_start")
+  timeEnd           String?     @map("time_end")
+  season            Season
+  status            VisitStatus @default(in_progress)
+  assignedById      String?     @map("assigned_by_id")
+  assignedAt        DateTime?   @map("assigned_at")
+  sentByEngineerAt  DateTime?   @map("sent_by_engineer_at")
+  sentByTmAt        DateTime?   @map("sent_by_tm_at")
+  tmCorrected       Boolean     @default(false) @map("tm_corrected")
+  isMultiSpecialist Boolean     @default(false) @map("is_multi_specialist")
+  isDeleted         Boolean     @default(false) @map("is_deleted")
+  deletedById       String?     @map("deleted_by_id")
+  deletedAt         DateTime?   @map("deleted_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
-  user             User?            @relation("UserVisits", fields: [userId], references: [id])
-  assignedBy       User?            @relation("AssignedVisits", fields: [assignedById], references: [id])
-  deletedBy        User?            @relation("DeletedBy", fields: [deletedById], references: [id])
-  address          Address          @relation(fields: [addressId], references: [id])
+  user             User?             @relation("UserVisits", fields: [userId], references: [id])
+  assignedBy       User?             @relation("AssignedVisits", fields: [assignedById], references: [id])
+  deletedBy        User?             @relation("DeletedBy", fields: [deletedById], references: [id])
+  address          Address           @relation(fields: [addressId], references: [id])
   tasks            Task[]
   visitEngineers   VisitEngineer[]
   importedRequests ImportedRequest[]
@@ -233,15 +252,18 @@ model Photo {
   moment              PhotoMoment
   fileSize            Int?        @map("file_size")
   mimeType            String?     @map("mime_type")
+  mtrVisitId          String?     @map("mtr_visit_id")
   createdAt           DateTime    @default(now()) @map("created_at")
 
   task              Task?              @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskEquipmentItem TaskEquipmentItem? @relation(fields: [taskEquipmentItemId], references: [id], onDelete: Cascade)
+  mtrVisit          MtrVisit?          @relation(fields: [mtrVisitId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, moment])
   @@unique([taskEquipmentItemId, moment])
   @@index([taskId, moment])
   @@index([taskEquipmentItemId, moment])
+  @@index([mtrVisitId])
   @@map("photos")
 }
 
@@ -523,13 +545,13 @@ model Notification {
 }
 
 model SystemRelease {
-  id                String    @id @default(uuid())
-  version           String    @unique
-  releaseNotes      String    @map("release_notes")
-  deployedAt        DateTime  @default(now()) @map("deployed_at")
-  deployedBy        String    @map("deployed_by")
-  adminId           String?   @map("admin_id")
-  notificationCount Int       @default(0) @map("notification_count")
+  id                String   @id @default(uuid())
+  version           String   @unique
+  releaseNotes      String   @map("release_notes")
+  deployedAt        DateTime @default(now()) @map("deployed_at")
+  deployedBy        String   @map("deployed_by")
+  adminId           String?  @map("admin_id")
+  notificationCount Int      @default(0) @map("notification_count")
 
   admin User? @relation("SystemReleaseAdmin", fields: [adminId], references: [id])
 
@@ -553,10 +575,10 @@ model ImportedRequest {
   importedAt        DateTime @default(now()) @map("imported_at")
   createdAt         DateTime @default(now()) @map("created_at")
 
-  equipmentType  EquipmentType @relation(fields: [equipmentTypeId], references: [id])
-  matchedAddress Address?      @relation("matchedAddress", fields: [matchedAddressId], references: [id])
-  visit          Visit?        @relation(fields: [visitId], references: [id])
-  importedByUser User?         @relation("ImportedBy", fields: [importedBy], references: [id])
+  equipmentType  EquipmentType          @relation(fields: [equipmentTypeId], references: [id])
+  matchedAddress Address?               @relation("matchedAddress", fields: [matchedAddressId], references: [id])
+  visit          Visit?                 @relation(fields: [visitId], references: [id])
+  importedByUser User?                  @relation("ImportedBy", fields: [importedBy], references: [id])
   assignmentLogs RequestAssignmentLog[]
 
   @@index([importStatus])
@@ -585,13 +607,13 @@ model VisitEngineer {
 }
 
 model RequestAssignmentLog {
-  id              String   @id @default(uuid())
-  importedRequestId String  @map("imported_request_id")
-  action          String
-  engineerId      String?  @map("engineer_id")
-  performedBy     String?  @map("performed_by")
-  reason          String?
-  createdAt       DateTime @default(now()) @map("created_at")
+  id                String   @id @default(uuid())
+  importedRequestId String   @map("imported_request_id")
+  action            String
+  engineerId        String?  @map("engineer_id")
+  performedBy       String?  @map("performed_by")
+  reason            String?
+  createdAt         DateTime @default(now()) @map("created_at")
 
   importedRequest ImportedRequest @relation(fields: [importedRequestId], references: [id], onDelete: Cascade)
   engineer        User?           @relation("AssignmentLogEngineer", fields: [engineerId], references: [id])
@@ -600,4 +622,97 @@ model RequestAssignmentLog {
   @@index([importedRequestId])
   @@index([createdAt])
   @@map("request_assignment_log")
+}
+
+model MtrWorkType {
+  id        String   @id @default(uuid())
+  name      String
+  category  String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  visitWorks MtrVisitWork[]
+
+  @@map("mtr_work_types")
+}
+
+model MtrVisit {
+  id              String         @id @default(uuid())
+  engineerId      String         @map("engineer_id")
+  addressId       String         @map("address_id")
+  requestNumber   String         @unique @map("request_number")
+  dateStart       DateTime       @map("date_start")
+  timeStart       String         @map("time_start")
+  status          MtrVisitStatus @default(draft)
+  isDraft         Boolean        @default(true) @map("is_draft")
+  assignedById    String?        @map("assigned_by_id")
+  assignedAt      DateTime?      @map("assigned_at")
+  sentAt          DateTime?      @map("sent_at")
+  rejectedAt      DateTime?      @map("rejected_at")
+  rejectionReason String?        @map("rejection_reason")
+  isDeleted       Boolean        @default(false) @map("is_deleted")
+  deletedById     String?        @map("deleted_by_id")
+  deletedAt       DateTime?      @map("deleted_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  engineer   User           @relation("MtrVisitEngineer", fields: [engineerId], references: [id])
+  address    Address        @relation(fields: [addressId], references: [id])
+  assignedBy User?          @relation("MtrVisitAssignedBy", fields: [assignedById], references: [id])
+  deletedBy  User?          @relation("MtrVisitDeletedBy", fields: [deletedById], references: [id])
+  works      MtrVisitWork[]
+  photos     Photo[]
+
+  @@index([engineerId])
+  @@index([addressId])
+  @@index([status])
+  @@index([requestNumber])
+  @@map("mtr_visits")
+}
+
+model MtrVisitWork {
+  id            String   @id @default(uuid())
+  mtrVisitId    String   @map("mtr_visit_id")
+  mtrWorkTypeId String   @map("mtr_work_type_id")
+  quantity      Int      @default(1)
+  comment       String?
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  mtrVisit    MtrVisit    @relation(fields: [mtrVisitId], references: [id], onDelete: Cascade)
+  mtrWorkType MtrWorkType @relation(fields: [mtrWorkTypeId], references: [id])
+
+  @@index([mtrVisitId])
+  @@map("mtr_visit_works")
+}
+
+model MtrTmObject {
+  id        String   @id @default(uuid())
+  tmId      String   @map("tm_id")
+  addressId String   @map("address_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tm      User    @relation("MtrTmObjectRelation", fields: [tmId], references: [id], onDelete: Cascade)
+  address Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@unique([tmId, addressId])
+  @@index([tmId])
+  @@index([addressId])
+  @@map("mtr_tm_objects")
+}
+
+model MtrTmEngineer {
+  id         String   @id @default(uuid())
+  tmId       String   @map("tm_id")
+  engineerId String   @map("engineer_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tm       User @relation("MtrTmEngineerTmRelation", fields: [tmId], references: [id], onDelete: Cascade)
+  engineer User @relation("MtrTmEngineerEngineerRelation", fields: [engineerId], references: [id], onDelete: Cascade)
+
+  @@unique([engineerId])
+  @@index([tmId])
+  @@index([engineerId])
+  @@map("mtr_tm_engineers")
 }

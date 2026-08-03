@@ -5,7 +5,7 @@ interface User {
   id: string;
   fullName: string;
   email: string;
-  role: 'engineer' | 'tm' | 'admin';
+  role: 'engineer' | 'tm' | 'admin' | 'engineer_mtr' | 'tm_mtr';
   specializationVik?: boolean;
   specializationIszh?: boolean;
   specializationGpm?: boolean;

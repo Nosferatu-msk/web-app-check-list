@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined, ExperimentOutlined, LinkOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -19,6 +19,8 @@ const menuItems = [
   { key: '/admin/import', icon: <ImportOutlined />, label: 'Импорт CSV' },
   { key: '/admin/object-equipment', icon: <ToolOutlined />, label: 'Оборудование объектов' },
   { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Модерация оборудования' },
+  { key: '/mtr/admin/work-types', icon: <ExperimentOutlined />, label: 'МТР: Виды работ' },
+  { key: '/mtr/admin/assignments', icon: <LinkOutlined />, label: 'МТР: Привязки' },
   { key: '/admin/system-notifications', icon: <RocketOutlined />, label: 'Системные уведомления' },
   { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
 ];

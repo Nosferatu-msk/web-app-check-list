@@ -35,6 +35,11 @@ import AdminObjectEquipment from './pages/admin/AdminObjectEquipment';
 import AdminProposals from './pages/admin/AdminProposals';
 import AdminSystemNotifications from './pages/admin/AdminSystemNotifications';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
+import MtrVisitListPage from './pages/mtr/MtrVisitListPage';
+import MtrVisitPage from './pages/mtr/MtrVisitPage';
+import MtrTmVisitListPage from './pages/mtr/MtrTmVisitListPage';
+import MtrAdminWorkTypes from './pages/mtr/MtrAdminWorkTypes';
+import MtrAdminAssignments from './pages/mtr/MtrAdminAssignments';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -72,6 +77,29 @@ function EngineerRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
   if (user?.role !== 'engineer') return <>{children}</>;
   return <SpecializationGate><EngineerMobileLayout>{children}</EngineerMobileLayout></SpecializationGate>;
+}
+
+function EngineerMtrRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuthStore();
+  const isMobile = useIsMobile();
+  if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  if (user?.role !== 'engineer_mtr') return <Navigate to="/" />;
+  return <>{children}{isMobile && <BottomNav />}</>;
+}
+
+function TmMtrRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuthStore();
+  if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  if (user?.role !== 'tm_mtr' && user?.role !== 'admin') return <Navigate to="/" />;
+  return <>{children}</>;
+}
+
+function SmartRedirect() {
+  const { user, isLoading } = useAuthStore();
+  if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  if (user?.role === 'engineer_mtr') return <Navigate to="/mtr/visits" />;
+  if (user?.role === 'tm_mtr') return <Navigate to="/mtr/tm/visits" />;
+  return <Navigate to="/" />;
 }
 
 export default function App() {
@@ -112,7 +140,14 @@ export default function App() {
         <Route path="system-notifications" element={<AdminSystemNotifications />} />
         <Route path="audit" element={<AdminAuditLog />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" />} />
+      {/* MTR routes */}
+      <Route path="/mtr/visits" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitListPage /></EngineerMtrRoute></ProtectedRoute>} />
+      <Route path="/mtr/visits/new" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitPage /></EngineerMtrRoute></ProtectedRoute>} />
+      <Route path="/mtr/visits/:id" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitPage /></EngineerMtrRoute></ProtectedRoute>} />
+      <Route path="/mtr/tm/visits" element={<ProtectedRoute><TmMtrRoute><MtrTmVisitListPage /></TmMtrRoute></ProtectedRoute>} />
+      <Route path="/mtr/admin/work-types" element={<ProtectedRoute><AdminRoute><MtrAdminWorkTypes /></AdminRoute></ProtectedRoute>} />
+      <Route path="/mtr/admin/assignments" element={<ProtectedRoute><AdminRoute><MtrAdminAssignments /></AdminRoute></ProtectedRoute>} />
+      <Route path="*" element={<ProtectedRoute><SmartRedirect /></ProtectedRoute>} />
     </Routes>
   );
 }

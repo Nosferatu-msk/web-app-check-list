@@ -18,6 +18,7 @@ export default function BottomNav() {
   const [hidden, setHidden] = useState(false);
 
   const isEngineer = user?.role === 'engineer';
+  const isEngineerMtr = user?.role === 'engineer_mtr';
 
   useEffect(() => {
     const handleViewportResize = () => {
@@ -49,13 +50,18 @@ export default function BottomNav() {
     };
   }, []);
 
-  if (!isEngineer) return null;
+  if (!isEngineer && !isEngineerMtr) return null;
 
-  const items: NavItem[] = [
-    { key: 'visits', icon: <UnorderedListOutlined />, label: 'Визиты', path: '/' },
-    { key: 'requests', icon: <FormOutlined />, label: 'Заявки', path: '/my-requests' },
-    { key: 'profile', icon: <UserOutlined />, label: 'Профиль', path: '/profile' },
-  ];
+  const items: NavItem[] = isEngineerMtr
+    ? [
+        { key: 'visits', icon: <UnorderedListOutlined />, label: 'Визиты', path: '/mtr/visits' },
+        { key: 'profile', icon: <UserOutlined />, label: 'Профиль', path: '/profile' },
+      ]
+    : [
+        { key: 'visits', icon: <UnorderedListOutlined />, label: 'Визиты', path: '/' },
+        { key: 'requests', icon: <FormOutlined />, label: 'Заявки', path: '/my-requests' },
+        { key: 'profile', icon: <UserOutlined />, label: 'Профиль', path: '/profile' },
+      ];
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';

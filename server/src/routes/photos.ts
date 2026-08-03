@@ -142,6 +142,112 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
   }
 });
 
+// ─── MTR: фото для визита МТР ───────────────────────────────
+// ВАЖНО: эти маршруты должны быть зарегистрированы ДО /:taskId/photos,
+// иначе Express перехватит "mtr-visits" как :taskId
+router.post('/mtr-visits/:visitId/photos', upload.single('photo'), handleMulterError, async (req: AuthRequest, res: Response) => {
+  try {
+    const visitId = req.params.visitId as string;
+    const moment = req.body.moment as 'before' | 'after';
+    if (!moment || !['before', 'after'].includes(moment)) {
+      res.status(400).json({ error: 'Укажите moment: before или after' });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ error: 'Файл не загружен' });
+      return;
+    }
+
+    const visit = await prisma.mtrVisit.findUnique({
+      where: { id: visitId },
+      include: { address: true },
+    });
+    if (!visit) {
+      res.status(404).json({ error: 'Визит МТР не найден' });
+      return;
+    }
+
+    if (req.userRole === 'engineer_mtr' && visit.engineerId !== req.userId) {
+      res.status(403).json({ error: 'Доступ запрещён' });
+      return;
+    }
+
+    const fileName = `mtr_${visit.requestNumber}_${moment}_${Date.now()}.jpg`;
+    const oldPath = req.file.path;
+    const newPath = path.join(path.dirname(oldPath), fileName);
+    fs.renameSync(oldPath, newPath);
+
+    const photo = await prisma.photo.create({
+      data: {
+        mtrVisitId: visitId,
+        fileName,
+        filePath: newPath,
+        moment,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+      },
+    });
+
+    await logAudit({
+      userId: req.userId,
+      action: 'upload_photo',
+      entityType: 'photo',
+      entityId: photo.id,
+      newValue: { fileName, moment, mtrVisitId: visitId },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.status(201).json(photo);
+  } catch (err) {
+    console.error('Upload MTR visit photo error:', err);
+    res.status(500).json({ error: 'Ошибка загрузки фото' });
+  }
+});
+
+router.get('/mtr-visits/:visitId/photos', async (req: AuthRequest, res: Response) => {
+  const photos = await prisma.photo.findMany({
+    where: { mtrVisitId: req.params.visitId as string },
+  });
+  res.json(photos);
+});
+
+router.delete('/mtr-visits/:visitId/photos/:photoId', async (req: AuthRequest, res: Response) => {
+  const photo = await prisma.photo.findUnique({ where: { id: req.params.photoId as string } });
+  if (!photo || photo.mtrVisitId !== req.params.visitId) {
+    res.status(404).json({ error: 'Фото не найдено' });
+    return;
+  }
+
+  const visit = await prisma.mtrVisit.findUnique({ where: { id: req.params.visitId as string } });
+  if (!visit) {
+    res.status(404).json({ error: 'Визит МТР не найден' });
+    return;
+  }
+  if (req.userRole === 'engineer_mtr' && visit.engineerId !== req.userId) {
+    res.status(403).json({ error: 'Доступ запрещён' });
+    return;
+  }
+  if (visit.status !== 'draft' && visit.status !== 'in_progress') {
+    res.status(400).json({ error: 'Можно удалять фото только в визиты в статусе «Черновик» или «В работе»' });
+    return;
+  }
+
+  try { fs.unlinkSync(photo.filePath); } catch { /* ignore */ }
+  await prisma.photo.delete({ where: { id: photo.id } });
+
+  await logAudit({
+    userId: req.userId,
+    action: 'delete_photo',
+    entityType: 'photo',
+    entityId: photo.id,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json({ message: 'Фото удалено' });
+});
+
 // POST /api/tasks/:taskId/photos — загрузка фото для индивидуальной задачи
 router.post('/:taskId/photos', upload.single('photo'), handleMulterError, async (req: AuthRequest, res: Response) => {
   try {

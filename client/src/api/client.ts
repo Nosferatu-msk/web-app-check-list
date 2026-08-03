@@ -538,4 +538,97 @@ export const api = {
 
   searchRequestsByNumbers: async (externalRequestIds: string[]) =>
     request<any[]>('/requests/search-by-numbers', { method: 'POST', body: JSON.stringify({ externalRequestIds }) }),
+
+  // ─── MTR (Мелкий текущий ремонт) ───────────────────────────
+  mtr: {
+    // Engineer
+    getVisits: (params?: { status?: string; page?: number; pageSize?: number; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set('status', params.status);
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+      if (params?.search) qs.set('search', params.search);
+      const query = qs.toString();
+      return request<any>(`/mtr/visits${query ? '?' + query : ''}`);
+    },
+    createVisit: (data: { addressId: string; requestNumber: string; dateStart: string; timeStart: string }) =>
+      request<any>('/mtr/visits', { method: 'POST', body: JSON.stringify(data) }),
+    getVisit: (id: string) => request<any>(`/mtr/visits/${id}`),
+    updateVisit: (id: string, data: any) =>
+      request<any>(`/mtr/visits/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteVisit: (id: string) =>
+      request<any>(`/mtr/visits/${id}`, { method: 'DELETE' }),
+    addWork: (visitId: string, data: { mtrWorkTypeId: string; quantity?: number; comment?: string }) =>
+      request<any>(`/mtr/visits/${visitId}/works`, { method: 'POST', body: JSON.stringify(data) }),
+    removeWork: (visitId: string, workId: string) =>
+      request<any>(`/mtr/visits/${visitId}/works/${workId}`, { method: 'DELETE' }),
+    completeVisit: (id: string) =>
+      request<any>(`/mtr/visits/${id}/complete`, { method: 'PUT' }),
+    saveDraft: (id: string) =>
+      request<any>(`/mtr/visits/${id}/save-draft`, { method: 'PUT' }),
+
+    // Photos
+    uploadMtrPhoto: (visitId: string, formData: FormData) =>
+      request<any>(`/photos/mtr-visits/${visitId}/photos`, { method: 'POST', body: formData }),
+    getMtrPhotos: (visitId: string) => request<any[]>(`/photos/mtr-visits/${visitId}/photos`),
+    deleteMtrPhoto: (visitId: string, photoId: string) =>
+      request<any>(`/photos/mtr-visits/${visitId}/photos/${photoId}`, { method: 'DELETE' }),
+
+    // Work types search
+    searchWorkTypes: (q: string) => request<any[]>(`/mtr/work-types/search?q=${encodeURIComponent(q)}`),
+
+    // TM
+    getTmVisits: (params?: { status?: string; engineer_id?: string; page?: number; pageSize?: number; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set('status', params.status);
+      if (params?.engineer_id) qs.set('engineer_id', params.engineer_id);
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+      if (params?.search) qs.set('search', params.search);
+      const query = qs.toString();
+      return request<any>(`/mtr/tm/visits${query ? '?' + query : ''}`);
+    },
+    acceptVisit: (id: string) =>
+      request<any>(`/mtr/tm/visits/${id}/accept`, { method: 'PUT' }),
+    rejectVisit: (id: string, reason: string) =>
+      request<any>(`/mtr/tm/visits/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+    getTmEngineers: () => request<any[]>('/mtr/tm/engineers'),
+
+    // Admin
+    getWorkTypes: (params?: { search?: string; is_active?: boolean; page?: number; pageSize?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.search) qs.set('search', params.search);
+      if (params?.is_active !== undefined) qs.set('is_active', String(params.is_active));
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+      const query = qs.toString();
+      return request<any>(`/mtr/admin/work-types${query ? '?' + query : ''}`);
+    },
+    createWorkType: (data: { name: string; category?: string; isActive?: boolean }) =>
+      request<any>('/mtr/admin/work-types', { method: 'POST', body: JSON.stringify(data) }),
+    updateWorkType: (id: string, data: any) =>
+      request<any>(`/mtr/admin/work-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteWorkType: (id: string) =>
+      request<any>(`/mtr/admin/work-types/${id}`, { method: 'DELETE' }),
+    getTmObjects: (params?: { tm_id?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.tm_id) qs.set('tm_id', params.tm_id);
+      const query = qs.toString();
+      return request<any>(`/mtr/admin/tm-objects${query ? '?' + query : ''}`);
+    },
+    createTmObject: (data: { tmId: string; addressId: string }) =>
+      request<any>('/mtr/admin/tm-objects', { method: 'POST', body: JSON.stringify(data) }),
+    deleteTmObject: (id: string) =>
+      request<any>(`/mtr/admin/tm-objects/${id}`, { method: 'DELETE' }),
+    getTmEngineersAdmin: (params?: { tm_id?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.tm_id) qs.set('tm_id', params.tm_id);
+      const query = qs.toString();
+      return request<any>(`/mtr/admin/tm-engineers${query ? '?' + query : ''}`);
+    },
+    createTmEngineer: (data: { tmId: string; engineerId: string }) =>
+      request<any>('/mtr/admin/tm-engineers', { method: 'POST', body: JSON.stringify(data) }),
+    deleteTmEngineer: (id: string) =>
+      request<any>(`/mtr/admin/tm-engineers/${id}`, { method: 'DELETE' }),
+  },
 };
