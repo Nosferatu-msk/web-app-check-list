@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Tag, Space, Input, App, Modal, List, Typography, Spin, Image, Badge } from 'antd';
+import { Button, Tag, Input, App, Modal, List, Typography, Spin, Badge } from 'antd';
 import {
   ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PlusOutlined,
   SaveOutlined, CheckCircleOutlined, SearchOutlined, CloudOutlined,
@@ -11,8 +11,9 @@ import { useAuthStore } from '../../store/authStore';
 import { MtrVisit, MtrVisitWork, Photo, MTR_VISIT_STATUS_LABELS } from '../../../../shared/types/index';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import MobileHeader from '../../components/MobileHeader';
-import { db, localId } from '../../db/index';
+import TorchButton from '../../components/TorchButton';
+import NotificationBell from '../../components/NotificationBell';
+import { db } from '../../db/index';
 import { getCachedRefData } from '../../db/sync';
 
 const { Text } = Typography;
@@ -64,6 +65,8 @@ export default function MtrVisitPage() {
 
   // Local photo blob URLs
   const [localPhotoUrls, setLocalPhotoUrls] = useState<Record<string, string>>({});
+  // Server photo blob URLs
+  const [serverPhotoUrls, setServerPhotoUrls] = useState<Record<string, string>>({});
 
   const isEditable = visit && (visit.status === 'draft' || visit.status === 'in_progress');
 
@@ -170,6 +173,34 @@ export default function MtrVisitPage() {
     return () => {
       // Cleanup blob URLs
       Object.values(localPhotoUrls).forEach((url) => {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+    };
+  }, [visit?.photos]);
+
+  // Generate blob URLs for server photos (online mode)
+  useEffect(() => {
+    if (!visit?.photos || isOffline()) return;
+    const serverPhotos = visit.photos.filter((p: any) => !p._isLocal);
+    if (serverPhotos.length === 0) return;
+
+    const loadUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const photo of serverPhotos) {
+        if (serverPhotoUrls[photo.id]) continue; // already loaded
+        try {
+          urls[photo.id] = await api.getPhotoBlobUrl(photo.id);
+        } catch { /* ignore */ }
+      }
+      if (Object.keys(urls).length > 0) {
+        setServerPhotoUrls((prev) => ({ ...prev, ...urls }));
+      }
+    };
+    loadUrls();
+
+    return () => {
+      // Cleanup blob URLs
+      Object.values(serverPhotoUrls).forEach((url) => {
         if (url.startsWith('blob:')) URL.revokeObjectURL(url);
       });
     };
@@ -394,16 +425,14 @@ export default function MtrVisitPage() {
   // ─── Create form (new visit) ──────────────────────────────
   if (isNew) {
     return (
-      <div className="page-container" style={!isMobile ? { maxWidth: 600, margin: '0 auto', padding: 24 } : { padding: 16 }}>
-        {isMobile && (
-          <MobileHeader title="Новый визит МТР" showBack onBack={() => navigate('/mtr/visits')} />
-        )}
-        {!isMobile && (
-          <div style={{ marginBottom: 24 }}>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/mtr/visits')}>Назад</Button>
-            <h2 style={{ margin: '16px 0 0' }}>Новый визит МТР</h2>
-          </div>
-        )}
+      <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`}>
+        {/* Header — matches VisitPage pattern */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/mtr/visits')}>Назад</Button>
+          <div className="page-title" style={{ margin: 0, flex: 1 }}>Новый визит МТР</div>
+          <NotificationBell />
+          <TorchButton />
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Адрес */}
@@ -481,19 +510,19 @@ export default function MtrVisitPage() {
 
   // ─── Visit detail ─────────────────────────────────────────
   return (
-    <div className="page-container" style={!isMobile ? { maxWidth: 800, margin: '0 auto', padding: 24 } : { padding: 16 }}>
-      {isMobile && (
-        <MobileHeader
-          title={visit.requestNumber}
-          showBack
-          onBack={() => navigate('/mtr/visits')}
-        />
-      )}
-      {!isMobile && (
-        <div style={{ marginBottom: 24 }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/mtr/visits')}>Назад</Button>
+    <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`}>
+      {/* Header — matches VisitPage pattern */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/mtr/visits')}>Назад</Button>
+        <div className="page-title" style={{ margin: 0, flex: 1 }}>
+          Визит МТР
+          <Tag color={STATUS_COLORS[visit.status] || 'default'} style={{ marginLeft: 8, fontSize: 13 }}>
+            {MTR_VISIT_STATUS_LABELS[visit.status as keyof typeof MTR_VISIT_STATUS_LABELS] || visit.status}
+          </Tag>
         </div>
-      )}
+        <NotificationBell />
+        <TorchButton />
+      </div>
 
       {/* Offline indicator */}
       {!isOnline && (
@@ -505,14 +534,9 @@ export default function MtrVisitPage() {
         </div>
       )}
 
-      {/* Header info */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
-          <h2 style={{ margin: 0 }}>{visit.requestNumber}</h2>
-          <Tag color={STATUS_COLORS[visit.status] || 'default'} style={{ fontSize: 14, padding: '2px 12px' }}>
-            {MTR_VISIT_STATUS_LABELS[visit.status as keyof typeof MTR_VISIT_STATUS_LABELS] || visit.status}
-          </Tag>
-        </div>
+      {/* Visit info card — white card like VisitPage */}
+      <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>{visit.requestNumber}</div>
         <div style={{ color: '#666', marginBottom: 4 }}>{visit.address?.fullAddress}</div>
         <div style={{ color: '#999', fontSize: 14 }}>
           {dayjs(visit.dateStart).format('DD.MM.YYYY')} в {visit.timeStart}
@@ -524,10 +548,10 @@ export default function MtrVisitPage() {
         )}
       </div>
 
-      {/* Фото ДО */}
-      <div style={{ marginBottom: 24 }}>
+      {/* Фото ДО — white card section */}
+      <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Фото ДО</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ДО</h3>
           {canAddPhotoBefore && (
             <Button
               icon={<CameraOutlined />}
@@ -552,39 +576,61 @@ export default function MtrVisitPage() {
           }}
         />
         {photosBefore.length > 0 ? (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {photosBefore.map((photo) => (
-              <div key={photo.id} style={{ position: 'relative' }}>
-                <Image
-                  src={(photo as any)._isLocal ? (localPhotoUrls[photo.id] || '') : `/api/photos/${photo.id}/file`}
-                  width={isMobile ? 80 : 120}
-                  height={isMobile ? 80 : 120}
-                  style={{ objectFit: 'cover', borderRadius: 8 }}
-                />
-                {canDeletePhotoBefore && (
-                  <Button
-                    type="primary"
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    style={{ position: 'absolute', top: 4, right: 4, borderRadius: '50%', width: 28, height: 28, padding: 0 }}
-                    onClick={() => handleDeletePhoto(photo.id)}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {photosBefore.map((photo) => {
+              const photoUrl = (photo as any)._isLocal
+                ? (localPhotoUrls[photo.id] || '')
+                : (serverPhotoUrls[photo.id] || '');
+              return (
+                <div key={photo.id} style={{ position: 'relative', display: 'inline-block' }}>
+                  <img
+                    src={photoUrl}
+                    alt="Фото ДО"
+                    style={{
+                      width: isMobile ? 100 : 140,
+                      height: isMobile ? 100 : 140,
+                      objectFit: 'cover',
+                      borderRadius: 8,
+                      display: 'block',
+                      background: '#f5f5f5',
+                    }}
                   />
-                )}
-              </div>
-            ))}
+                  {canDeletePhotoBefore && (
+                    <Button
+                      type="primary"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        borderRadius: '50%',
+                        width: 28,
+                        height: 28,
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onClick={() => handleDeletePhoto(photo.id)}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <div style={{ padding: 20, textAlign: 'center', background: '#fafafa', borderRadius: 8, color: '#999' }}>
+          <div style={{ padding: 24, textAlign: 'center', background: '#fafafa', borderRadius: 8, color: '#999' }}>
             {canAddPhotoBefore ? 'Добавьте фото «до»' : 'Нет фото'}
           </div>
         )}
       </div>
 
-      {/* Работы */}
-      <div style={{ marginBottom: 24 }}>
+      {/* Работы — white card section */}
+      <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Работы ({works.length})</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}>🔧 Работы ({works.length})</h3>
           {canAddWork && (
             <Button
               type="primary"
@@ -618,16 +664,16 @@ export default function MtrVisitPage() {
             )}
           />
         ) : (
-          <div style={{ padding: 20, textAlign: 'center', background: '#fafafa', borderRadius: 8, color: '#999' }}>
+          <div style={{ padding: 24, textAlign: 'center', background: '#fafafa', borderRadius: 8, color: '#999' }}>
             {canAddWork ? 'Добавьте работы' : 'Сначала добавьте фото «до»'}
           </div>
         )}
       </div>
 
-      {/* Фото ПОСЛЕ */}
-      <div style={{ marginBottom: 24 }}>
+      {/* Фото ПОСЛЕ — white card section */}
+      <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Фото ПОСЛЕ</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ПОСЛЕ</h3>
           {canAddPhotoAfter && (
             <Button
               icon={<CameraOutlined />}
@@ -652,55 +698,81 @@ export default function MtrVisitPage() {
           }}
         />
         {photosAfter.length > 0 ? (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {photosAfter.map((photo) => (
-              <div key={photo.id} style={{ position: 'relative' }}>
-                <Image
-                  src={(photo as any)._isLocal ? (localPhotoUrls[photo.id] || '') : `/api/photos/${photo.id}/file`}
-                  width={isMobile ? 80 : 120}
-                  height={isMobile ? 80 : 120}
-                  style={{ objectFit: 'cover', borderRadius: 8 }}
-                />
-                {canDeletePhotoAfter && (
-                  <Button
-                    type="primary"
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    style={{ position: 'absolute', top: 4, right: 4, borderRadius: '50%', width: 28, height: 28, padding: 0 }}
-                    onClick={() => handleDeletePhoto(photo.id)}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {photosAfter.map((photo) => {
+              const photoUrl = (photo as any)._isLocal
+                ? (localPhotoUrls[photo.id] || '')
+                : (serverPhotoUrls[photo.id] || '');
+              return (
+                <div key={photo.id} style={{ position: 'relative', display: 'inline-block' }}>
+                  <img
+                    src={photoUrl}
+                    alt="Фото ПОСЛЕ"
+                    style={{
+                      width: isMobile ? 100 : 140,
+                      height: isMobile ? 100 : 140,
+                      objectFit: 'cover',
+                      borderRadius: 8,
+                      display: 'block',
+                      background: '#f5f5f5',
+                    }}
                   />
-                )}
-              </div>
-            ))}
+                  {canDeletePhotoAfter && (
+                    <Button
+                      type="primary"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        borderRadius: '50%',
+                        width: 28,
+                        height: 28,
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onClick={() => handleDeletePhoto(photo.id)}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <div style={{ padding: 20, textAlign: 'center', background: '#fafafa', borderRadius: 8, color: '#999' }}>
+          <div style={{ padding: 24, textAlign: 'center', background: '#fafafa', borderRadius: 8, color: '#999' }}>
             {canAddPhotoAfter ? 'Добавьте фото «после»' : 'Сначала добавьте работы'}
           </div>
         )}
       </div>
 
-      {/* Действия */}
+      {/* Действия — matches VisitPage pattern */}
       {isEditable && (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
-          <Button icon={<SaveOutlined />} onClick={handleSaveDraft} loading={saving}>
-            Сохранить черновик
-          </Button>
+        <div style={{ marginTop: 16 }}>
           <Button
             type="primary"
+            size="large"
             icon={<CheckCircleOutlined />}
             onClick={handleComplete}
             disabled={!canComplete}
             loading={saving}
+            block
           >
-            Завершить визит
+            ✅ Завершить визит
           </Button>
-          {(visit.status === 'draft' || visit.status === 'in_progress') && (
-            <Button danger onClick={handleDeleteVisit}>
-              Удалить визит
+          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+            <Button icon={<SaveOutlined />} onClick={handleSaveDraft} loading={saving} style={{ flex: 1 }}>
+              Сохранить черновик
             </Button>
-          )}
+            {(visit.status === 'draft' || visit.status === 'in_progress') && (
+              <Button danger onClick={handleDeleteVisit} style={{ flex: 1 }}>
+                Удалить визит
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
