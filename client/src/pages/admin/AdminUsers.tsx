@@ -146,8 +146,8 @@ export default function AdminUsers() {
         { title: 'ФИО', dataIndex: 'fullName' },
         { title: 'Email', dataIndex: 'email' },
         { title: 'Роль', dataIndex: 'role', render: (v: string) => {
-          const colors: Record<string, string> = { admin: 'red', tm: 'orange', engineer: 'blue' };
-          const labels: Record<string, string> = { admin: 'Администратор', tm: 'ТМ', engineer: 'Инженер' };
+          const colors: Record<string, string> = { admin: 'red', tm: 'orange', engineer: 'blue', engineer_mtr: 'geekblue', tm_mtr: 'volcano' };
+          const labels: Record<string, string> = { admin: 'Администратор', tm: 'ТМ ТО', engineer: 'Инженер ТО', engineer_mtr: 'Инженер МТР', tm_mtr: 'ТМ МТР' };
           return <Tag color={colors[v] || 'default'}>{labels[v] || v}</Tag>;
         }},
         { title: 'Спец.', key: 'specialization', render: (_: any, r: any) => {
@@ -169,7 +169,13 @@ export default function AdminUsers() {
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>
           <Form.Item name="password" label={editing ? 'Новый пароль (оставьте пустым)' : 'Пароль'} rules={editing ? [] : [{ required: true, min: 6 }]}><Input.Password /></Form.Item>
           <Form.Item name="role" label="Роль" rules={[{ required: true }]}>
-            <Select options={[{ label: 'Инженер', value: 'engineer' }, { label: 'Территориальный менеджер', value: 'tm' }, { label: 'Администратор', value: 'admin' }]} onChange={handleRoleChange} />
+            <Select options={[
+              { label: 'Инженер ТО', value: 'engineer' },
+              { label: 'ТМ ТО', value: 'tm' },
+              { label: 'Инженер МТР', value: 'engineer_mtr' },
+              { label: 'ТМ МТР', value: 'tm_mtr' },
+              { label: 'Администратор', value: 'admin' },
+            ]} onChange={handleRoleChange} />
           </Form.Item>
 
           {isEngineer && (

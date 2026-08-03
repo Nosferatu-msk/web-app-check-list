@@ -185,7 +185,7 @@ const userSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6).optional().or(z.literal('')).transform(v => v || undefined),
-  role: z.enum(['engineer', 'tm', 'admin']),
+  role: z.enum(['engineer', 'tm', 'admin', 'engineer_mtr', 'tm_mtr']),
   isActive: z.boolean().optional(),
   mustChangePassword: z.boolean().optional(),
   specializationVik: z.boolean().optional(),
