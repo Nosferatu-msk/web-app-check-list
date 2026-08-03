@@ -167,13 +167,42 @@ router.get('/object-equipment/rooms', async (req: AuthRequest, res: Response) =>
 
   const excludeVisitId = req.query.exclude_visit_id as string;
 
-  // Получаем всё оборудование с привязкой к помещению
+  // Фильтрация по специализации инженера
+  let allowedCodes: string[] | null = null;
+  if (req.userRole === 'engineer') {
+    const engineer = await prisma.user.findUnique({
+      where: { id: req.userId as string },
+      select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
+    });
+    if (engineer) {
+      const activeSpecs: string[] = [];
+      if (engineer.specializationVik) activeSpecs.push('vik');
+      if (engineer.specializationIszh) activeSpecs.push('iszh');
+      if (engineer.specializationGpm) activeSpecs.push('gpm');
+      if (engineer.specializationDgu) activeSpecs.push('dgu');
+      if (engineer.specializationIbp) activeSpecs.push('ibp');
+      if (activeSpecs.length > 0 && activeSpecs.length < 5) {
+        const eqTypes = await prisma.equipmentType.findMany({
+          where: { specializationReq: { in: activeSpecs }, isActive: true },
+          select: { code: true },
+        });
+        allowedCodes = eqTypes.map(e => e.code);
+      }
+    }
+  }
+
+  const roomWhere: any = {
+    addressId,
+    isActive: true,
+    roomTypeCode: { not: null },
+  };
+  if (allowedCodes) {
+    roomWhere.equipmentTypeCode = { in: allowedCodes };
+  }
+
+  // Получаем оборудование с привязкой к помещению
   const equipment = await prisma.objectEquipment.findMany({
-    where: {
-      addressId,
-      isActive: true,
-      roomTypeCode: { not: null },
-    },
+    where: roomWhere,
     select: { roomTypeCode: true, id: true },
   });
 
@@ -245,6 +274,30 @@ router.get('/object-equipment/other-rooms', async (req: AuthRequest, res: Respon
     return;
   }
 
+  // Фильтрация по специализации инженера
+  let allowedCodes: string[] | null = null;
+  if (req.userRole === 'engineer') {
+    const engineer = await prisma.user.findUnique({
+      where: { id: req.userId as string },
+      select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
+    });
+    if (engineer) {
+      const activeSpecs: string[] = [];
+      if (engineer.specializationVik) activeSpecs.push('vik');
+      if (engineer.specializationIszh) activeSpecs.push('iszh');
+      if (engineer.specializationGpm) activeSpecs.push('gpm');
+      if (engineer.specializationDgu) activeSpecs.push('dgu');
+      if (engineer.specializationIbp) activeSpecs.push('ibp');
+      if (activeSpecs.length > 0 && activeSpecs.length < 5) {
+        const eqTypes = await prisma.equipmentType.findMany({
+          where: { specializationReq: { in: activeSpecs }, isActive: true },
+          select: { code: true },
+        });
+        allowedCodes = eqTypes.map(e => e.code);
+      }
+    }
+  }
+
   const where: any = {
     addressId,
     isActive: true,
@@ -253,6 +306,10 @@ router.get('/object-equipment/other-rooms', async (req: AuthRequest, res: Respon
       { roomTypeCode: { not: currentRoomTypeCode } },
     ],
   };
+
+  if (allowedCodes) {
+    where.equipmentTypeCode = { in: allowedCodes };
+  }
 
   // Исключить оборудование, уже добавленное в визит
   if (excludeVisitId) {
