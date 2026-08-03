@@ -139,14 +139,14 @@ export default function App() {
         <Route path="proposals" element={<AdminProposals />} />
         <Route path="system-notifications" element={<AdminSystemNotifications />} />
         <Route path="audit" element={<AdminAuditLog />} />
+        <Route path="mtr-work-types" element={<MtrAdminWorkTypes />} />
+        <Route path="mtr-assignments" element={<MtrAdminAssignments />} />
       </Route>
       {/* MTR routes */}
       <Route path="/mtr/visits" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitListPage /></EngineerMtrRoute></ProtectedRoute>} />
       <Route path="/mtr/visits/new" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitPage /></EngineerMtrRoute></ProtectedRoute>} />
       <Route path="/mtr/visits/:id" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitPage /></EngineerMtrRoute></ProtectedRoute>} />
       <Route path="/mtr/tm/visits" element={<ProtectedRoute><TmMtrRoute><MtrTmVisitListPage /></TmMtrRoute></ProtectedRoute>} />
-      <Route path="/mtr/admin/work-types" element={<ProtectedRoute><AdminRoute><MtrAdminWorkTypes /></AdminRoute></ProtectedRoute>} />
-      <Route path="/mtr/admin/assignments" element={<ProtectedRoute><AdminRoute><MtrAdminAssignments /></AdminRoute></ProtectedRoute>} />
       <Route path="*" element={<ProtectedRoute><SmartRedirect /></ProtectedRoute>} />
     </Routes>
   );

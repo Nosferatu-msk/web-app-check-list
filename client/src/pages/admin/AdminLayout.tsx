@@ -19,8 +19,8 @@ const menuItems = [
   { key: '/admin/import', icon: <ImportOutlined />, label: 'Импорт CSV' },
   { key: '/admin/object-equipment', icon: <ToolOutlined />, label: 'Оборудование объектов' },
   { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Модерация оборудования' },
-  { key: '/mtr/admin/work-types', icon: <ExperimentOutlined />, label: 'МТР: Виды работ' },
-  { key: '/mtr/admin/assignments', icon: <LinkOutlined />, label: 'МТР: Привязки' },
+  { key: '/admin/mtr-work-types', icon: <ExperimentOutlined />, label: 'МТР: Виды работ' },
+  { key: '/admin/mtr-assignments', icon: <LinkOutlined />, label: 'МТР: Привязки' },
   { key: '/admin/system-notifications', icon: <RocketOutlined />, label: 'Системные уведомления' },
   { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
 ];
