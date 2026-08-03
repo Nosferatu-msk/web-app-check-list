@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Button, Table, Space, Input, App, Modal, Select, Tabs } from 'antd';
+import { Button, Table, Space, Input, App, Modal, Select, Tabs, Popconfirm } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 import { MtrTmObject, MtrTmEngineer } from '../../../../shared/types/index';
@@ -9,7 +9,9 @@ export default function MtrAdminAssignments() {
 
   return (
     <div>
-      <h2 style={{ marginTop: 0, marginBottom: 16 }}>Привязки МТР</h2>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <h2>Привязки МТР</h2>
+      </div>
       <Tabs
         defaultActiveKey="objects"
         items={[
@@ -91,22 +93,14 @@ function TmObjectsTab() {
     setSaving(false);
   };
 
-  const handleDelete = (record: MtrTmObject) => {
-    modal.confirm({
-      title: 'Удалить привязку?',
-      okText: 'Удалить',
-      okType: 'danger',
-      cancelText: 'Отмена',
-      onOk: async () => {
-        try {
-          await api.mtr.deleteTmObject(record.id);
-          message.success('Привязка удалена');
-          await load();
-        } catch (err: any) {
-          message.error(err.message);
-        }
-      },
-    });
+  const handleDelete = async (record: MtrTmObject) => {
+    try {
+      await api.mtr.deleteTmObject(record.id);
+      message.success('Привязка удалена');
+      await load();
+    } catch (err: any) {
+      message.error(err.message);
+    }
   };
 
   const columns = [
@@ -122,11 +116,13 @@ function TmObjectsTab() {
       render: (_: any, record: MtrTmObject) => record.address?.fullAddress || '—',
     },
     {
-      title: 'Действия',
+      title: '',
       key: 'actions',
       width: 80,
       render: (_: any, record: MtrTmObject) => (
-        <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+        <Popconfirm title="Удалить привязку?" onConfirm={() => handleDelete(record)}>
+          <Button type="text" danger icon={<DeleteOutlined />} />
+        </Popconfirm>
       ),
     },
   ];
@@ -264,22 +260,14 @@ function TmEngineersTab() {
     setSaving(false);
   };
 
-  const handleDelete = (record: MtrTmEngineer) => {
-    modal.confirm({
-      title: 'Удалить привязку?',
-      okText: 'Удалить',
-      okType: 'danger',
-      cancelText: 'Отмена',
-      onOk: async () => {
-        try {
-          await api.mtr.deleteTmEngineer(record.id);
-          message.success('Привязка удалена');
-          await load();
-        } catch (err: any) {
-          message.error(err.message);
-        }
-      },
-    });
+  const handleDelete = async (record: MtrTmEngineer) => {
+    try {
+      await api.mtr.deleteTmEngineer(record.id);
+      message.success('Привязка удалена');
+      await load();
+    } catch (err: any) {
+      message.error(err.message);
+    }
   };
 
   const columns = [
@@ -294,11 +282,13 @@ function TmEngineersTab() {
       render: (_: any, record: MtrTmEngineer) => record.engineer?.fullName || '—',
     },
     {
-      title: 'Действия',
+      title: '',
       key: 'actions',
       width: 80,
       render: (_: any, record: MtrTmEngineer) => (
-        <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+        <Popconfirm title="Удалить привязку?" onConfirm={() => handleDelete(record)}>
+          <Button type="text" danger icon={<DeleteOutlined />} />
+        </Popconfirm>
       ),
     },
   ];

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Button, Table, Tag, Space, Input, App, Modal, Form, Switch } from 'antd';
+import { Button, Table, Space, Input, App, Modal, Form, Switch } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 import { MtrWorkType } from '../../../../shared/types/index';
@@ -15,7 +15,7 @@ export default function MtrAdminWorkTypes() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingWorkType, setEditingWorkType] = useState<MtrWorkType | null>(null);
   const [form] = Form.useForm();
-  const pageSize = 50;
+  const pageSize = 10;
   const { message, modal } = App.useApp();
   const isMobile = useIsMobile();
 
@@ -115,9 +115,7 @@ export default function MtrAdminWorkTypes() {
       dataIndex: 'isActive',
       key: 'isActive',
       width: 100,
-      render: (active: boolean) => (
-        <Tag color={active ? 'green' : 'default'}>{active ? 'Да' : 'Нет'}</Tag>
-      ),
+      render: (active: boolean) => active ? '✅' : '❌',
     },
     {
       title: 'Действия',
@@ -134,21 +132,20 @@ export default function MtrAdminWorkTypes() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ margin: 0 }}>Виды работ МТР</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          Добавить
-        </Button>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <h2>Виды работ МТР</h2>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>Добавить</Button>
       </div>
 
-      <Input
-        placeholder="Поиск по названию..."
-        prefix={<SearchOutlined />}
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        allowClear
-        style={{ marginBottom: 16, maxWidth: 400 }}
-      />
+      <div style={{ marginBottom: 16, maxWidth: 400 }}>
+        <Input
+          placeholder="Поиск по названию..."
+          prefix={<SearchOutlined />}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          allowClear
+        />
+      </div>
 
       <Table
         dataSource={workTypes}
@@ -160,7 +157,8 @@ export default function MtrAdminWorkTypes() {
           pageSize,
           total,
           onChange: (page) => setCurrentPage(page),
-          showSizeChanger: false,
+          showSizeChanger: true,
+          pageSizeOptions: [10, 25, 50],
           showTotal: (total) => `Всего: ${total}`,
         }}
       />
