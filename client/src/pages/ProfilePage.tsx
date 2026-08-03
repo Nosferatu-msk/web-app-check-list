@@ -511,6 +511,134 @@ function AdminProfile() {
   );
 }
 
+// ─── Engineer MTR Profile ─────────────────────────────────────
+function EngineerMtrProfile() {
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const isOnline = useNetworkStatus();
+
+  return (
+    <div>
+      {/* Network status */}
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Badge status={isOnline ? 'success' : 'error'} />
+        <Text type={isOnline ? 'success' : 'danger'}>{isOnline ? 'В сети' : 'Офлайн'}</Text>
+      </div>
+
+      {/* Security */}
+      <Card title="Безопасность" size="small">
+        <Button icon={<LockOutlined />} onClick={() => navigate('/forgot-password')}>
+          Сменить пароль
+        </Button>
+      </Card>
+    </div>
+  );
+}
+
+// ─── TM MTR Profile ───────────────────────────────────────────
+function TmMtrProfile() {
+  const { user } = useAuthStore();
+  const { message } = App.useApp();
+  const navigate = useNavigate();
+
+  // Team
+  const [engineers, setEngineers] = useState<any[]>([]);
+  const [teamLoading, setTeamLoading] = useState(true);
+
+  // Assigned objects (TM MTR)
+  const [tmObjects, setTmObjects] = useState<any[]>([]);
+  const [objLoading, setObjLoading] = useState(false);
+
+  const loadTeam = useCallback(async () => {
+    setTeamLoading(true);
+    try {
+      const data = await api.mtr.getTmEngineers();
+      setEngineers((data || []).map((a: any) => a.engineer).filter(Boolean));
+    } catch { /* ignore */ }
+    setTeamLoading(false);
+  }, []);
+
+  const loadObjects = useCallback(async () => {
+    setObjLoading(true);
+    try {
+      const data = await api.mtr.getMyTmObjects();
+      setTmObjects(Array.isArray(data) ? data.map((o: any) => o.address).filter(Boolean) : []);
+    } catch { /* ignore */ }
+    setObjLoading(false);
+  }, []);
+
+  useEffect(() => { loadTeam(); loadObjects(); }, [loadTeam, loadObjects]);
+
+  return (
+    <div>
+      {/* Team list */}
+      <Card
+        title={<span><TeamOutlined /> Команда</span>}
+        size="small"
+        style={{ marginBottom: 16 }}
+      >
+        {teamLoading ? <Spin /> : engineers.length === 0 ? (
+          <Empty description="Нет инженеров в команде" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        ) : (
+          <List
+            size="small"
+            dataSource={engineers}
+            renderItem={(eng: any) => (
+              <List.Item>
+                <List.Item.Meta
+                  avatar={<UserOutlined style={{ fontSize: 20, color: '#1677ff' }} />}
+                  title={eng.fullName}
+                  description={<Text type="secondary">{eng.email}</Text>}
+                />
+              </List.Item>
+            )}
+          />
+        )}
+      </Card>
+
+      {/* Assigned objects */}
+      <Card
+        title={<span><StarFilled style={{ color: '#faad14' }} /> Закреплённые объекты</span>}
+        size="small"
+        style={{ marginBottom: 16 }}
+        extra={<Text type="secondary">{tmObjects.length} объектов</Text>}
+      >
+        {objLoading ? <Spin /> : tmObjects.length === 0 ? (
+          <Empty description="Нет закреплённых объектов" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        ) : (
+          <List
+            size="small"
+            dataSource={tmObjects}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50'],
+              showTotal: (total, range) => `${range[0]}–${range[1]} из ${total}`,
+              size: 'small',
+            }}
+            renderItem={(obj: any) => (
+              <List.Item>
+                <List.Item.Meta
+                  avatar={<StarFilled style={{ color: '#faad14' }} />}
+                  title={obj.fullAddress || obj.objectCode}
+                  description={<Text type="secondary" style={{ fontSize: 12 }}>{obj.objectCode}</Text>}
+                />
+              </List.Item>
+            )}
+          />
+        )}
+      </Card>
+
+      {/* Security */}
+      <Card title="Безопасность" size="small">
+        <Button icon={<LockOutlined />} onClick={() => navigate('/forgot-password')}>
+          Сменить пароль
+        </Button>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main ProfilePage ─────────────────────────────────────────
 export default function ProfilePage() {
   const { user } = useAuthStore();
@@ -550,7 +678,9 @@ export default function ProfilePage() {
 
       {/* Role-specific content */}
       {user.role === 'engineer' && <EngineerProfile />}
+      {user.role === 'engineer_mtr' && <EngineerMtrProfile />}
       {user.role === 'tm' && <TmProfile />}
+      {user.role === 'tm_mtr' && <TmMtrProfile />}
       {user.role === 'admin' && <AdminProfile />}
     </div>
   );

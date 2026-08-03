@@ -16,6 +16,7 @@ const IMPORT_TYPES = [
   { key: 'object-equipment', label: 'Оборудование объектов', icon: '⚙️', description: 'CSV/XLSX: object_code, equipment_type, room_type (опц.), brand, model, serial_number, location_description' },
   { key: 'manufacturers', label: 'Производители', icon: '🏭', description: 'CSV: name, country' },
   { key: 'models', label: 'Модели оборудования', icon: '📦', description: 'CSV: eq_type, manufacture, model' },
+  { key: 'mtr-work-types', label: 'Виды работ МТР', icon: '🔨', description: 'CSV/XLSX: name (обязательно), category (опционально)' },
 ];
 
 interface ImportResult {

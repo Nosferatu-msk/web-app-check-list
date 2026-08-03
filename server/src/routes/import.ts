@@ -756,4 +756,66 @@ router.post('/models', upload.single('file'), async (req: AuthRequest, res: Resp
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── MTR WORK TYPES ─────────────────────────────────────────
+router.post('/mtr-work-types', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { rows, fileName } = await parseUploadedFile(req);
+    const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
+    const dupRows: number[] = [];
+
+    // Загруем существующие названия для проверки дубликатов
+    const existingNames = await prisma.mtrWorkType.findMany({ select: { name: true } });
+    const existingSet = new Set(existingNames.map(e => e.name.trim().toLowerCase()));
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r.name || r['название'] || r['наименование'] || '').trim();
+      if (!name) { result.errors.push({ row: i + 2, message: 'Не заполнено name' }); continue; }
+
+      const category = (r.category || r['категория'] || '').trim() || null;
+
+      // Проверка дубликата (case-insensitive, trimmed)
+      if (existingSet.has(name.toLowerCase())) {
+        result.duplicates++;
+        dupRows.push(i + 2);
+        continue;
+      }
+
+      if (isValidateMode(req)) continue;
+
+      try {
+        await prisma.mtrWorkType.create({
+          data: { name, category, isActive: true },
+        });
+        existingSet.add(name.toLowerCase());
+        result.success++;
+      } catch (createErr: any) {
+        if (createErr?.code === 'P2002') {
+          result.duplicates++;
+          dupRows.push(i + 2);
+        } else {
+          result.errors.push({ row: i + 2, message: createErr.message || 'Ошибка создания записи' });
+        }
+      }
+    }
+
+    if (isValidateMode(req)) {
+      const vr: ValidateResult = {
+        totalRows: rows.length,
+        validRows: rows.length - result.errors.length - result.duplicates,
+        duplicateRows: result.duplicates,
+        errorRows: result.errors.length,
+        duplicates: dupRows.map(row => ({ row, value: rows[row - 2]?.name || rows[row - 2]?.['название'] || rows[row - 2]?.['наименование'] || '' })),
+        errors: result.errors,
+      };
+      return res.json(vr);
+    }
+
+    await prisma.importLog.create({
+      data: { userId: req.userId!, entityType: 'mtr_work_types', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
+    });
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 export default router;

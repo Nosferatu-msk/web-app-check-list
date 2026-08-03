@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Table, Space, Input, App, Modal, Form, Switch } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ImportOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 import { MtrWorkType } from '../../../../shared/types/index';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function MtrAdminWorkTypes() {
+  const navigate = useNavigate();
   const [workTypes, setWorkTypes] = useState<MtrWorkType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
@@ -134,7 +136,10 @@ export default function MtrAdminWorkTypes() {
     <div>
       <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h2>Виды работ МТР</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>Добавить</Button>
+        <Space>
+          <Button icon={<ImportOutlined />} onClick={() => navigate('/admin/import')}>Импорт</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>Добавить</Button>
+        </Space>
       </div>
 
       <div style={{ marginBottom: 16, maxWidth: 400 }}>

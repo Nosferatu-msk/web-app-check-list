@@ -692,6 +692,12 @@ export const api = {
     deleteMtrPhoto: (visitId: string, photoId: string) =>
       request<any>(`/photos/mtr-visits/${visitId}/photos/${photoId}`, { method: 'DELETE' }),
 
+    // TM: свои закреплённые объекты
+    getMyTmObjects: () => request<any[]>('/mtr/tm/objects'),
+
+    // Address search (filtered by TM assignments)
+    searchAddresses: (q: string) => request<any[]>(`/mtr/addresses/search?q=${encodeURIComponent(q)}`),
+
     // Work types search
     searchWorkTypes: (q: string) => request<any[]>(`/mtr/work-types/search?q=${encodeURIComponent(q)}`),
     getAllWorkTypes: () => request<any[]>('/mtr/work-types/all'),

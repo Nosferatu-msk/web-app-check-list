@@ -1,7 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Table, Tag, Space, Input, App, Badge } from 'antd';
-import { PlusOutlined, LogoutOutlined, SearchOutlined, DeleteOutlined, CloudOutlined } from '@ant-design/icons';
+import { Button, List, Tag, Empty, Spin, Space, Select, Input, App, Badge, Dropdown, Pagination } from 'antd';
+import {
+  PlusOutlined, LogoutOutlined, DeleteOutlined, UserOutlined,
+  MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined,
+  SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined,
+  CloseCircleOutlined, CloudOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api, isOffline } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -9,7 +14,7 @@ import { MtrVisit, MTR_VISIT_STATUS_LABELS } from '../../../../shared/types/inde
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import MobileHeader from '../../components/MobileHeader';
-import { db, type LocalMtrVisit } from '../../db/index';
+import { db } from '../../db/index';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'default',
@@ -20,10 +25,19 @@ const STATUS_COLORS: Record<string, string> = {
   accepted: 'green',
 };
 
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  draft: <ClockCircleOutlined />,
+  in_progress: <SyncOutlined spin />,
+  completed: <CheckCircleOutlined />,
+  sent: <SendOutlined />,
+  rejected: <CloseCircleOutlined />,
+  accepted: <CheckCircleOutlined />,
+};
+
 export default function MtrVisitListPage() {
   const [visits, setVisits] = useState<MtrVisit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -37,7 +51,6 @@ export default function MtrVisitListPage() {
 
   const loadFromDexie = useCallback(async () => {
     const localVisits = await db.mtrVisits.toArray();
-    // Sort by dateStart descending
     localVisits.sort((a, b) => (b.dateStart || '').localeCompare(a.dateStart || ''));
     return localVisits;
   }, []);
@@ -45,11 +58,10 @@ export default function MtrVisitListPage() {
   const load = useCallback(async () => {
     try {
       if (isOffline()) {
-        // Offline: load from Dexie only
         const localVisits = await loadFromDexie();
         let filtered = localVisits as any[];
-        if (selectedStatus) {
-          filtered = filtered.filter((v) => v.status === selectedStatus);
+        if (selectedStatuses.length > 0) {
+          filtered = filtered.filter((v) => selectedStatuses.includes(v.status));
         }
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
@@ -71,7 +83,7 @@ export default function MtrVisitListPage() {
         setTotal(filtered.length);
       } else {
         const params: any = { page: currentPage, pageSize };
-        if (selectedStatus) params.status = selectedStatus;
+        if (selectedStatuses.length > 0) params.status = selectedStatuses.join(',');
         if (searchQuery) params.search = searchQuery;
         const res = await api.mtr.getVisits(params);
         setVisits(res.data || []);
@@ -81,16 +93,25 @@ export default function MtrVisitListPage() {
       message.error('Ошибка загрузки визитов');
     }
     setLoading(false);
-  }, [selectedStatus, currentPage, searchQuery, message, loadFromDexie]);
+  }, [selectedStatuses, currentPage, searchQuery, message, loadFromDexie]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setCurrentPage(1); }, [selectedStatus, searchQuery]);
+  useEffect(() => { setCurrentPage(1); }, [selectedStatuses, searchQuery]);
 
   // Debounce для поиска
   useEffect(() => {
-    const timer = setTimeout(() => setSearchQuery(searchInput), 300);
+    const timer = setTimeout(() => setSearchQuery(searchInput), 400);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Автообновление при возврате на вкладку
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [load]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -114,69 +135,11 @@ export default function MtrVisitListPage() {
     });
   };
 
-  const statusFilters = [
-    { key: '', label: 'Все' },
-    { key: 'draft', label: 'Черновики' },
-    { key: 'in_progress', label: 'В работе' },
-    { key: 'completed', label: 'Завершённые' },
-    { key: 'sent', label: 'Отправленные' },
-    { key: 'rejected', label: 'Отклонённые' },
-    { key: 'accepted', label: 'Принятые' },
-  ];
-
-  const columns = [
-    {
-      title: '№ заявки',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 150,
-    },
-    {
-      title: 'Адрес',
-      key: 'address',
-      ellipsis: true,
-      render: (_: any, record: MtrVisit) => record.address?.fullAddress || '—',
-    },
-    {
-      title: 'Дата',
-      dataIndex: 'dateStart',
-      key: 'dateStart',
-      width: 120,
-      render: (date: string) => dayjs(date).format('DD.MM.YYYY'),
-    },
-    {
-      title: 'Статус',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (status: string) => (
-        <Tag color={STATUS_COLORS[status] || 'default'}>
-          {MTR_VISIT_STATUS_LABELS[status as keyof typeof MTR_VISIT_STATUS_LABELS] || status}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Действия',
-      key: 'actions',
-      width: 100,
-      render: (_: any, record: MtrVisit) => (
-        <Space>
-          {(record.status === 'draft' || record.status === 'in_progress') && (
-            <Button
-              type="text"
-              danger
-              size="small"
-              icon={<DeleteOutlined />}
-              onClick={(e) => handleDelete(e, record.id)}
-            />
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const statusOptions = Object.entries(MTR_VISIT_STATUS_LABELS).map(([key, label]) => ({ value: key, label }));
 
   return (
-    <div className="page-container" style={!isMobile ? { maxWidth: 1400, margin: '0 auto', padding: 16 } : undefined}>
+    <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`} style={!isMobile ? { maxWidth: 1400 } : undefined}>
+      {/* Мобильный заголовок */}
       {isMobile && (
         <MobileHeader
           title="Визиты МТР"
@@ -188,6 +151,7 @@ export default function MtrVisitListPage() {
         />
       )}
 
+      {/* Офлайн-индикатор */}
       {!isOnline && (
         <div style={{ padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 6, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <CloudOutlined style={{ color: '#fa8c16' }} />
@@ -196,114 +160,143 @@ export default function MtrVisitListPage() {
         </div>
       )}
 
+      {/* Десктопный заголовок */}
       {!isMobile && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>Визиты МТР</div>
-            <div style={{ color: '#666', fontSize: 14 }}>{user?.fullName}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/profile')}>
+            <UserOutlined style={{ fontSize: 24, color: '#1677ff' }} />
+            <div>
+              <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Визиты МТР</div>
+              <div style={{ color: '#666', fontSize: 14 }}>{user?.fullName}</div>
+            </div>
           </div>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/mtr/visits/new')}>
-              Новый визит
-            </Button>
             <Button icon={<LogoutOutlined />} onClick={handleLogout}>Выход</Button>
           </Space>
         </div>
       )}
 
-      {/* Фильтры статусов */}
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {statusFilters.map((f) => (
-          <Button
-            key={f.key}
-            type={selectedStatus === f.key ? 'primary' : 'default'}
-            size="small"
-            onClick={() => setSelectedStatus(f.key)}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </div>
-
-      {/* Поиск */}
-      <Input
-        placeholder="Поиск по адресу или номеру заявки..."
-        prefix={<SearchOutlined />}
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        allowClear
-        style={{ marginBottom: 16, maxWidth: isMobile ? '100%' : 400 }}
-      />
-
-      {/* Таблица или список */}
-      {isMobile ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}>Загрузка...</div>
-          ) : visits.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>Нет визитов</div>
-          ) : (
-            visits.map((visit) => (
-              <div
-                key={visit.id}
-                onClick={() => navigate(`/mtr/visits/${visit.id}`)}
-                style={{
-                  padding: 12,
-                  border: '1px solid #f0f0f0',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  background: '#fff',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ fontWeight: 600 }}>{visit.requestNumber}</div>
-                  <Tag color={STATUS_COLORS[visit.status] || 'default'}>
-                    {MTR_VISIT_STATUS_LABELS[visit.status as keyof typeof MTR_VISIT_STATUS_LABELS] || visit.status}
-                  </Tag>
-                </div>
-                <div style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>
-                  {visit.address?.fullAddress || '—'}
-                </div>
-                <div style={{ fontSize: 12, color: '#999' }}>
-                  {dayjs(visit.dateStart).format('DD.MM.YYYY')}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      ) : (
-        <Table
-          dataSource={visits}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize,
-            total,
-            onChange: (page) => setCurrentPage(page),
-            showSizeChanger: false,
-            showTotal: (total) => `Всего: ${total}`,
-          }}
-          onRow={(record) => ({
-            onClick: () => navigate(`/mtr/visits/${record.id}`),
-            style: { cursor: 'pointer' },
-          })}
-        />
-      )}
-
-      {/* Кнопка "Новый визит" на мобильном */}
-      {isMobile && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 100 }}>
-          <Button
-            type="primary"
-            shape="circle"
-            size="large"
-            icon={<PlusOutlined />}
-            onClick={() => navigate('/mtr/visits/new')}
-            style={{ width: 56, height: 56, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+      {/* Фильтры и кнопки */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/mtr/visits/new')} block size="middle">
+          Новый визит
+        </Button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Input
+            prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+            placeholder="Поиск по адресу или номеру заявки"
+            allowClear
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{ flex: 1, minWidth: 180 }}
+          />
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="Статусы"
+            maxTagCount="responsive"
+            value={selectedStatuses}
+            onChange={(v) => setSelectedStatuses(v || [])}
+            style={{ minWidth: 160, flex: 1 }}
+            options={statusOptions}
           />
         </div>
+      </div>
+
+      {/* Список визитов */}
+      {loading ? <Spin /> : visits.length === 0 ? (
+        <Empty description="Нет визитов" />
+      ) : (
+        <>
+          <List
+            dataSource={visits}
+            renderItem={(v: any) => {
+              const statusLabel = MTR_VISIT_STATUS_LABELS[v.status as keyof typeof MTR_VISIT_STATUS_LABELS] || v.status;
+              const statusColor = STATUS_COLORS[v.status] || 'default';
+              const statusIcon = STATUS_ICONS[v.status] || null;
+
+              // Действия для overflow-меню (мобильные)
+              const actionItems: any[] = [];
+              if (v.status === 'draft' || v.status === 'in_progress') {
+                actionItems.push({
+                  key: 'delete',
+                  icon: <DeleteOutlined />,
+                  label: 'Удалить',
+                  danger: true,
+                  onClick: (info: any) => {
+                    info?.domEvent?.stopPropagation();
+                    handleDelete(info.domEvent, v.id);
+                  },
+                });
+              }
+
+              return (
+                <div
+                  className="visit-card"
+                  onClick={() => navigate(`/mtr/visits/${v.id}`)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                        {statusIcon && (
+                          <span aria-label={`Статус: ${statusLabel}`} style={{ marginRight: 2, display: 'inline-flex', color: STATUS_COLORS[v.status] === 'processing' ? '#1677ff' : STATUS_COLORS[v.status] === 'success' || STATUS_COLORS[v.status] === 'green' ? '#52c41a' : STATUS_COLORS[v.status] === 'blue' ? '#1677ff' : STATUS_COLORS[v.status] === 'error' ? '#ff4d4f' : '#888' }}>
+                            {statusIcon}
+                          </span>
+                        )}
+                        <Tag color="blue" style={{ marginRight: 4 }}>{v.requestNumber}</Tag>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.address?.fullAddress || 'Адрес'}</span>
+                      </div>
+                      <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
+                        {v.dateStart ? dayjs(v.dateStart).format('DD.MM.YYYY') : ''}
+                        {v.timeStart && ` в ${v.timeStart}`}
+                        {(v as any)?.dirty && <Tag color="orange" style={{ marginLeft: 8, fontSize: 11 }}>Не синхронизировано</Tag>}
+                      </div>
+                    </div>
+                    {/* Десктоп: обычные кнопки */}
+                    {!isMobile && (
+                      <Space>
+                        <Tag color={statusColor}>{statusLabel}</Tag>
+                        {(v.status === 'draft' || v.status === 'in_progress') && (
+                          <Button size="small" danger icon={<DeleteOutlined />} onClick={(e) => handleDelete(e, v.id)} />
+                        )}
+                      </Space>
+                    )}
+                    {/* Мобильные: статус-бейдж + overflow-меню */}
+                    {isMobile && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        <Tag color={statusColor} style={{ margin: 0 }}>{statusLabel}</Tag>
+                        {actionItems.length > 0 && (
+                          <Dropdown menu={{ items: actionItems }} trigger={['click']}>
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<MoreOutlined style={{ fontSize: 18 }} />}
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label="Действия"
+                              style={{ minWidth: 32, minHeight: 32 }}
+                            />
+                          </Dropdown>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }}
+          />
+          {total > pageSize && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+              <Pagination
+                current={currentPage}
+                total={total}
+                pageSize={pageSize}
+                onChange={(p) => setCurrentPage(p)}
+                showSizeChanger={false}
+                showTotal={(t, range) => `${range[0]}–${range[1]} из ${t}`}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -85,7 +85,13 @@ router.get('/visits', engineerMtrOnly, async (req: AuthRequest, res: Response) =
     isDeleted: false,
   };
 
-  if (status) where.status = status;
+  if (status) {
+    if (status.includes(',')) {
+      where.status = { in: status.split(',').map(s => s.trim()) };
+    } else {
+      where.status = status;
+    }
+  }
   if (search) {
     where.OR = [
       { address: { fullAddress: { contains: search, mode: 'insensitive' } } },
@@ -537,7 +543,13 @@ router.get('/tm/visits', tmMtrOrAdmin, async (req: AuthRequest, res: Response) =
     }
   }
 
-  if (status) where.status = status;
+  if (status) {
+    if (status.includes(',')) {
+      where.status = { in: status.split(',').map(s => s.trim()) };
+    } else {
+      where.status = status;
+    }
+  }
   if (search) {
     where.OR = [
       { address: { fullAddress: { contains: search, mode: 'insensitive' } } },
@@ -667,6 +679,18 @@ router.put('/tm/visits/:id/reject', tmMtrOrAdmin, validate(rejectVisitSchema), a
   });
 
   res.json(updated);
+});
+
+// ─── ТМ МТР: свои закреплённые объекты ──────────────────────
+
+router.get('/tm/objects', tmMtrOrAdmin, async (req: AuthRequest, res: Response) => {
+  const objects = await prisma.mtrTmObject.findMany({
+    where: { tmId: req.userId },
+    include: { address: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json(objects);
 });
 
 // ─── ТМ МТР: список подчинённых инженеров ───────────────────
@@ -982,6 +1006,54 @@ router.delete('/admin/tm-engineers/:id', adminOnly, async (req: AuthRequest, res
   });
 
   res.json({ message: 'Привязка удалена' });
+});
+
+// ─── Инженер МТР: поиск адресов (только объекты своего ТМ) ──
+
+router.get('/addresses/search', engineerMtrOnly, async (req: AuthRequest, res: Response) => {
+  const q = req.query.q as string;
+  if (!q || q.length < 2) {
+    res.json([]);
+    return;
+  }
+
+  // 1. Найти ТМ инженера (через mtr_tm_engineers)
+  const assignment = await prisma.mtrTmEngineer.findUnique({
+    where: { engineerId: req.userId! },
+  });
+  if (!assignment) {
+    // Инженер не привязан к ТМ — вернуть пустой список
+    res.json([]);
+    return;
+  }
+
+  // 2. Найти адреса, закреплённые за этим ТМ (через mtr_tm_objects)
+  const tmObjectAddresses = await prisma.mtrTmObject.findMany({
+    where: { tmId: assignment.tmId },
+    select: { addressId: true },
+  });
+  const allowedAddressIds = tmObjectAddresses.map((o) => o.addressId);
+
+  if (allowedAddressIds.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  // 3. Фильтрация по запросу
+  const addresses = await prisma.address.findMany({
+    where: {
+      id: { in: allowedAddressIds },
+      OR: [
+        { fullAddress: { contains: q, mode: 'insensitive' } },
+        { objectCode: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    select: { id: true, fullAddress: true, objectCode: true },
+    take: 30,
+    orderBy: { objectCode: 'asc' },
+  });
+
+  res.json(addresses);
 });
 
 // ─── Общий: все активные типы работ (для офлайн-кэширования) ─

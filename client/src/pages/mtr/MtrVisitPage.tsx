@@ -183,7 +183,7 @@ export default function MtrVisitPage() {
     }
     const timer = setTimeout(async () => {
       try {
-        const results = await api.searchAddresses(addressSearch);
+        const results = await api.mtr.searchAddresses(addressSearch);
         setAddressResults(results || []);
       } catch { /* ignore */ }
     }, 300);
