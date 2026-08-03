@@ -8,6 +8,7 @@ import NotificationBell from '../../components/NotificationBell';
 const { Content } = Layout;
 
 const menuItems = [
+  { key: '/', icon: <ArrowLeftOutlined />, label: '← Визиты' },
   { key: '/admin/addresses', icon: <EnvironmentOutlined />, label: 'Адреса' },
   { key: '/admin/equipment', icon: <ToolOutlined />, label: 'Оборудование' },
   { key: '/admin/manufacturers', icon: <ShopOutlined />, label: 'Производители' },
