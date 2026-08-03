@@ -56,7 +56,7 @@ model User {
   isActive           Boolean  @default(true) @map("is_active")
   mustChangePassword Boolean  @default(false) @map("must_change_password")
   specializationVik  Boolean  @default(false) @map("specialization_vik")
-  specializationIszh Boolean  @default(true) @map("specialization_iszh")
+  specializationIszh Boolean  @default(false) @map("specialization_iszh")
   specializationGpm  Boolean  @default(false) @map("specialization_gpm")
   specializationDgu  Boolean  @default(false) @map("specialization_dgu")
   specializationIbp  Boolean  @default(false) @map("specialization_ibp")
