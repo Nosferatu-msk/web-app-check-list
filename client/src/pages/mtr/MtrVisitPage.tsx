@@ -1,16 +1,19 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Tag, Space, Input, App, Modal, List, Typography, Spin, Image } from 'antd';
+import { Button, Tag, Space, Input, App, Modal, List, Typography, Spin, Image, Badge } from 'antd';
 import {
   ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PlusOutlined,
-  SaveOutlined, CheckCircleOutlined, SearchOutlined,
+  SaveOutlined, CheckCircleOutlined, SearchOutlined, CloudOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { api } from '../../api/client';
+import { api, isOffline } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { MtrVisit, MtrVisitWork, Photo, MTR_VISIT_STATUS_LABELS } from '../../../../shared/types/index';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import MobileHeader from '../../components/MobileHeader';
+import { db, localId } from '../../db/index';
+import { getCachedRefData } from '../../db/sync';
 
 const { Text } = Typography;
 
@@ -30,6 +33,7 @@ export default function MtrVisitPage() {
   const { user } = useAuthStore();
   const { message, modal } = App.useApp();
   const isMobile = useIsMobile();
+  const { isOnline, pendingCount } = useOnlineStatus();
 
   const [visit, setVisit] = useState<MtrVisit | null>(null);
   const [loading, setLoading] = useState(!isNew);
@@ -58,6 +62,9 @@ export default function MtrVisitPage() {
   const fileInputBeforeRef = useRef<HTMLInputElement>(null);
   const fileInputAfterRef = useRef<HTMLInputElement>(null);
 
+  // Local photo blob URLs
+  const [localPhotoUrls, setLocalPhotoUrls] = useState<Record<string, string>>({});
+
   const isEditable = visit && (visit.status === 'draft' || visit.status === 'in_progress');
 
   // Determine state machine state
@@ -81,8 +88,56 @@ export default function MtrVisitPage() {
   const loadVisit = useCallback(async () => {
     if (!id) return;
     try {
-      const data = await api.mtr.getVisit(id);
-      setVisit(data);
+      if (isOffline()) {
+        // Load from Dexie
+        const localVisit = await db.mtrVisits.get(id);
+        if (!localVisit) {
+          message.error('Визит не найден');
+          navigate('/mtr/visits');
+          return;
+        }
+        const works = await db.mtrVisitWorks.where('mtrVisitLocalId').equals(id).toArray();
+        const photos = await db.mtrPhotos.where('mtrVisitLocalId').equals(id).toArray();
+
+        // Resolve work type names from cache
+        const cached = await getCachedRefData('mtr-work-types');
+        const workTypesMap = new Map<string, any>();
+        if (cached?.items) {
+          for (const wt of cached.items) workTypesMap.set(wt.id, wt);
+        }
+
+        const visitData: any = {
+          id: localVisit.serverId || localVisit.id,
+          _localId: localVisit.id,
+          requestNumber: localVisit.requestNumber,
+          dateStart: localVisit.dateStart,
+          timeStart: localVisit.timeStart,
+          status: localVisit.status,
+          isDraft: localVisit.isDraft,
+          dirty: localVisit.dirty,
+          address: { fullAddress: localVisit.addressId },
+          works: works.map((w) => ({
+            id: w.serverId || w.id,
+            _localId: w.id,
+            mtrVisitId: w.mtrVisitLocalId,
+            mtrWorkTypeId: w.mtrWorkTypeId,
+            quantity: w.quantity,
+            comment: w.comment,
+            mtrWorkType: workTypesMap.get(w.mtrWorkTypeId) || { name: 'Неизвестный вид работы' },
+          })),
+          photos: photos.map((p) => ({
+            id: p.serverId || p.id,
+            _localId: p.id,
+            moment: p.moment,
+            fileName: p.fileName,
+            _isLocal: true,
+          })),
+        };
+        setVisit(visitData);
+      } else {
+        const data = await api.mtr.getVisit(id);
+        setVisit(data);
+      }
     } catch (err: any) {
       message.error(err.message || 'Ошибка загрузки визита');
       navigate('/mtr/visits');
@@ -91,6 +146,34 @@ export default function MtrVisitPage() {
   }, [id, message, navigate]);
 
   useEffect(() => { if (id) loadVisit(); }, [id, loadVisit]);
+
+  // Generate blob URLs for local photos
+  useEffect(() => {
+    if (!visit?.photos) return;
+    const localPhotos = visit.photos.filter((p: any) => p._isLocal);
+    if (localPhotos.length === 0) return;
+
+    const generateUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const photo of localPhotos) {
+        try {
+          const localPhoto = await db.mtrPhotos.get(photo.id);
+          if (localPhoto) {
+            urls[photo.id] = URL.createObjectURL(localPhoto.blob);
+          }
+        } catch { /* ignore */ }
+      }
+      setLocalPhotoUrls((prev) => ({ ...prev, ...urls }));
+    };
+    generateUrls();
+
+    return () => {
+      // Cleanup blob URLs
+      Object.values(localPhotoUrls).forEach((url) => {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+    };
+  }, [visit?.photos]);
 
   // Address search debounce
   useEffect(() => {
@@ -116,8 +199,22 @@ export default function MtrVisitPage() {
     const timer = setTimeout(async () => {
       setWorkSearching(true);
       try {
-        const results = await api.mtr.searchWorkTypes(workSearchQuery);
-        setWorkSearchResults(results || []);
+        if (isOffline()) {
+          // Search from cached data
+          const cached = await getCachedRefData('mtr-work-types');
+          if (cached?.items) {
+            const q = workSearchQuery.toLowerCase();
+            const filtered = cached.items.filter((wt: any) =>
+              wt.name.toLowerCase().includes(q) || (wt.category && wt.category.toLowerCase().includes(q))
+            );
+            setWorkSearchResults(filtered.slice(0, 50));
+          } else {
+            setWorkSearchResults([]);
+          }
+        } else {
+          const results = await api.mtr.searchWorkTypes(workSearchQuery);
+          setWorkSearchResults(results || []);
+        }
       } catch { /* ignore */ }
       setWorkSearching(false);
     }, 300);
@@ -129,13 +226,17 @@ export default function MtrVisitPage() {
     if (!requestNumber.trim()) { message.warning('Укажите номер заявки'); return; }
     setSaving(true);
     try {
-      const result = await api.mtr.createVisit({
+      const result = await api.mtrCreateVisitOffline({
         addressId: selectedAddress.id,
-        requestNumber: requestNumber.trim(),
+        requestNumber: requestNumber.trim().toUpperCase(),
         dateStart,
         timeStart,
       });
-      message.success('Визит создан');
+      if ((result as any)._offline) {
+        message.success('Визит сохранён локально (будет отправлен при подключении)');
+      } else {
+        message.success('Визит создан');
+      }
       navigate(`/mtr/visits/${result.id}`, { replace: true });
     } catch (err: any) {
       message.error(err.message);
@@ -148,11 +249,13 @@ export default function MtrVisitPage() {
     const setUploading = moment === 'before' ? setUploadingBefore : setUploadingAfter;
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('moment', moment);
-      await api.mtr.uploadMtrPhoto(visit.id, formData);
-      message.success(moment === 'before' ? 'Фото «до» загружено' : 'Фото «после» загружено');
+      const visitId = (visit as any)._localId || visit.id;
+      const result = await api.mtrUploadPhotoOffline(visitId, file, moment);
+      if ((result as any)._offline) {
+        message.success((moment === 'before' ? 'Фото «до»' : 'Фото «после»') + ' сохранено локально');
+      } else {
+        message.success(moment === 'before' ? 'Фото «до» загружено' : 'Фото «после» загружено');
+      }
       await loadVisit();
     } catch (err: any) {
       message.error(err.message || 'Ошибка загрузки фото');
@@ -182,12 +285,17 @@ export default function MtrVisitPage() {
   const handleAddWork = async () => {
     if (!visit || !selectedWorkType) return;
     try {
-      await api.mtr.addWork(visit.id, {
+      const visitId = (visit as any)._localId || visit.id;
+      const result = await api.mtrAddWorkOffline(visitId, {
         mtrWorkTypeId: selectedWorkType.id,
         quantity: workQuantity,
         comment: workComment || undefined,
       });
-      message.success('Работа добавлена');
+      if ((result as any)._offline) {
+        message.success('Работа добавлена локально');
+      } else {
+        message.success('Работа добавлена');
+      }
       setWorkSearchOpen(false);
       setWorkSearchQuery('');
       setWorkSearchResults([]);
@@ -209,7 +317,8 @@ export default function MtrVisitPage() {
       cancelText: 'Отмена',
       onOk: async () => {
         try {
-          await api.mtr.removeWork(visit.id, workId);
+          const visitId = (visit as any)._localId || visit.id;
+          await api.mtrRemoveWorkOffline(visitId, workId);
           message.success('Работа удалена');
           await loadVisit();
         } catch (err: any) {
@@ -223,8 +332,14 @@ export default function MtrVisitPage() {
     if (!visit) return;
     setSaving(true);
     try {
-      await api.mtr.saveDraft(visit.id);
-      message.success('Сохранено как черновик');
+      if (isOffline()) {
+        const visitId = (visit as any)._localId || visit.id;
+        await db.mtrVisits.update(visitId, { isDraft: true, dirty: true, updatedAt: new Date().toISOString() });
+        message.success('Сохранено локально');
+      } else {
+        await api.mtr.saveDraft(visit.id);
+        message.success('Сохранено как черновик');
+      }
     } catch (err: any) {
       message.error(err.message);
     }
@@ -240,8 +355,13 @@ export default function MtrVisitPage() {
       cancelText: 'Отмена',
       onOk: async () => {
         try {
-          await api.mtr.completeVisit(visit.id);
-          message.success('Визит завершён и отправлен');
+          const visitId = (visit as any)._localId || visit.id;
+          const result = await api.mtrCompleteVisitOffline(visitId);
+          if ((result as any)._offline) {
+            message.success('Визит помечен как завершённый (будет отправлен при подключении)');
+          } else {
+            message.success('Визит завершён и отправлен');
+          }
           await loadVisit();
         } catch (err: any) {
           message.error(err.message);
@@ -260,7 +380,8 @@ export default function MtrVisitPage() {
       cancelText: 'Отмена',
       onOk: async () => {
         try {
-          await api.mtr.deleteVisit(visit.id);
+          const visitId = (visit as any)._localId || visit.id;
+          await api.mtrDeleteVisitOffline(visitId);
           message.success('Визит удалён');
           navigate('/mtr/visits');
         } catch (err: any) {
@@ -374,6 +495,16 @@ export default function MtrVisitPage() {
         </div>
       )}
 
+      {/* Offline indicator */}
+      {!isOnline && (
+        <div style={{ padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 6, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CloudOutlined style={{ color: '#fa8c16' }} />
+          <span>Офлайн-режим</span>
+          {pendingCount > 0 && <Badge count={pendingCount} style={{ backgroundColor: '#fa8c16' }} />}
+          {(visit as any)?.dirty && <Tag color="orange" style={{ marginLeft: 'auto' }}>Не синхронизировано</Tag>}
+        </div>
+      )}
+
       {/* Header info */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -425,7 +556,7 @@ export default function MtrVisitPage() {
             {photosBefore.map((photo) => (
               <div key={photo.id} style={{ position: 'relative' }}>
                 <Image
-                  src={`/api/photos/${photo.id}/file`}
+                  src={(photo as any)._isLocal ? (localPhotoUrls[photo.id] || '') : `/api/photos/${photo.id}/file`}
                   width={isMobile ? 80 : 120}
                   height={isMobile ? 80 : 120}
                   style={{ objectFit: 'cover', borderRadius: 8 }}
@@ -525,7 +656,7 @@ export default function MtrVisitPage() {
             {photosAfter.map((photo) => (
               <div key={photo.id} style={{ position: 'relative' }}>
                 <Image
-                  src={`/api/photos/${photo.id}/file`}
+                  src={(photo as any)._isLocal ? (localPhotoUrls[photo.id] || '') : `/api/photos/${photo.id}/file`}
                   width={isMobile ? 80 : 120}
                   height={isMobile ? 80 : 120}
                   style={{ objectFit: 'cover', borderRadius: 8 }}

@@ -1,13 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Table, Tag, Space, Input, App } from 'antd';
-import { PlusOutlined, LogoutOutlined, SearchOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Table, Tag, Space, Input, App, Badge } from 'antd';
+import { PlusOutlined, LogoutOutlined, SearchOutlined, DeleteOutlined, CloudOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { api } from '../../api/client';
+import { api, isOffline } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { MtrVisit, MTR_VISIT_STATUS_LABELS } from '../../../../shared/types/index';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import MobileHeader from '../../components/MobileHeader';
+import { db, type LocalMtrVisit } from '../../db/index';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'default',
@@ -31,20 +33,55 @@ export default function MtrVisitListPage() {
   const { user, logout } = useAuthStore();
   const { message, modal } = App.useApp();
   const isMobile = useIsMobile();
+  const { isOnline, pendingCount } = useOnlineStatus();
+
+  const loadFromDexie = useCallback(async () => {
+    const localVisits = await db.mtrVisits.toArray();
+    // Sort by dateStart descending
+    localVisits.sort((a, b) => (b.dateStart || '').localeCompare(a.dateStart || ''));
+    return localVisits;
+  }, []);
 
   const load = useCallback(async () => {
     try {
-      const params: any = { page: currentPage, pageSize };
-      if (selectedStatus) params.status = selectedStatus;
-      if (searchQuery) params.search = searchQuery;
-      const res = await api.mtr.getVisits(params);
-      setVisits(res.data || []);
-      setTotal(res.total || 0);
+      if (isOffline()) {
+        // Offline: load from Dexie only
+        const localVisits = await loadFromDexie();
+        let filtered = localVisits as any[];
+        if (selectedStatus) {
+          filtered = filtered.filter((v) => v.status === selectedStatus);
+        }
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          filtered = filtered.filter((v) =>
+            v.requestNumber?.toLowerCase().includes(q)
+          );
+        }
+        setVisits(filtered.map((v) => ({
+          id: v.serverId || v.id,
+          _localId: v.id,
+          requestNumber: v.requestNumber,
+          dateStart: v.dateStart,
+          timeStart: v.timeStart,
+          status: v.status,
+          isDraft: v.isDraft,
+          dirty: v.dirty,
+          address: { fullAddress: v.addressId },
+        })) as any);
+        setTotal(filtered.length);
+      } else {
+        const params: any = { page: currentPage, pageSize };
+        if (selectedStatus) params.status = selectedStatus;
+        if (searchQuery) params.search = searchQuery;
+        const res = await api.mtr.getVisits(params);
+        setVisits(res.data || []);
+        setTotal(res.total || 0);
+      }
     } catch {
       message.error('Ошибка загрузки визитов');
     }
     setLoading(false);
-  }, [selectedStatus, currentPage, searchQuery, message]);
+  }, [selectedStatus, currentPage, searchQuery, message, loadFromDexie]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setCurrentPage(1); }, [selectedStatus, searchQuery]);
@@ -67,7 +104,7 @@ export default function MtrVisitListPage() {
       cancelText: 'Отмена',
       onOk: async () => {
         try {
-          await api.mtr.deleteVisit(visitId);
+          await api.mtrDeleteVisitOffline(visitId);
           message.success('Визит удалён');
           load();
         } catch (err: any) {
@@ -149,6 +186,14 @@ export default function MtrVisitListPage() {
             </Space>
           }
         />
+      )}
+
+      {!isOnline && (
+        <div style={{ padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 6, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CloudOutlined style={{ color: '#fa8c16' }} />
+          <span>Офлайн-режим</span>
+          {pendingCount > 0 && <Badge count={pendingCount} style={{ backgroundColor: '#fa8c16' }} />}
+        </div>
       )}
 
       {!isMobile && (

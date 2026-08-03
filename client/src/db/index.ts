@@ -81,7 +81,7 @@ export interface LocalFavorite {
 export interface SyncQueueItem {
   id?: number;
   operation: 'create' | 'update' | 'delete' | 'upload_photo' | 'complete' | 'send_report' | 'reassign';
-  entityType: 'visit' | 'task' | 'task_equipment_item' | 'photo' | 'report' | 'favorite';
+  entityType: 'visit' | 'task' | 'task_equipment_item' | 'photo' | 'report' | 'favorite' | 'mtr_visit' | 'mtr_work' | 'mtr_photo';
   entityId: string;
   payload?: any;
   createdAt: string;
@@ -122,6 +122,48 @@ export interface LocalProposal {
   dirty: boolean;
 }
 
+export interface LocalMtrVisit {
+  id: string;
+  serverId?: string;
+  engineerId: string;
+  addressId: string;
+  requestNumber: string;
+  dateStart: string;
+  timeStart: string;
+  status: string;
+  isDraft: boolean;
+  createdAt: string;
+  updatedAt: string;
+  dirty: boolean;
+}
+
+export interface LocalMtrVisitWork {
+  id: string;
+  serverId?: string;
+  mtrVisitLocalId: string;
+  mtrVisitServerId?: string;
+  mtrWorkTypeId: string;
+  quantity: number;
+  comment?: string;
+  sortOrder: number;
+  createdAt: string;
+  dirty: boolean;
+}
+
+export interface LocalMtrPhoto {
+  id: string;
+  serverId?: string;
+  mtrVisitLocalId: string;
+  mtrVisitServerId?: string;
+  blob: Blob;
+  fileName: string;
+  moment: 'before' | 'after';
+  fileSize?: number;
+  mimeType?: string;
+  createdAt: string;
+  dirty: boolean;
+}
+
 class ChecklistDB extends Dexie {
   visits!: Table<LocalVisit, string>;
   tasks!: Table<LocalTask, string>;
@@ -132,6 +174,9 @@ class ChecklistDB extends Dexie {
   favorites!: Table<LocalFavorite, string>;
   notifications!: Table<LocalNotification, string>;
   proposals!: Table<LocalProposal, string>;
+  mtrVisits!: Table<LocalMtrVisit, string>;
+  mtrVisitWorks!: Table<LocalMtrVisitWork, string>;
+  mtrPhotos!: Table<LocalMtrPhoto, string>;
 
   constructor() {
     super('ChecklistDB');
@@ -169,6 +214,20 @@ class ChecklistDB extends Dexie {
       favorites: 'id, userId, objectCode, addedAt',
       notifications: 'id, userId, isRead, createdAt',
       proposals: 'id, addressId, status, requestType, dirty',
+    });
+    this.version(5).stores({
+      visits: 'id, serverId, userId, status, dirty, isDeleted',
+      tasks: 'id, serverId, visitLocalId, visitServerId, dirty',
+      taskEquipmentItems: 'id, serverId, taskLocalId, taskServerId, dirty',
+      photos: 'id, serverId, taskLocalId, taskServerId, taskEquipmentItemLocalId, taskEquipmentItemServerId, dirty',
+      syncQueue: '++id, entityType, entityId, createdAt',
+      cachedRefs: 'key',
+      favorites: 'id, userId, objectCode, addedAt',
+      notifications: 'id, userId, isRead, createdAt',
+      proposals: 'id, addressId, status, requestType, dirty',
+      mtrVisits: 'id, serverId, engineerId, status, dirty',
+      mtrVisitWorks: 'id, serverId, mtrVisitLocalId, mtrVisitServerId, dirty',
+      mtrPhotos: 'id, serverId, mtrVisitLocalId, mtrVisitServerId, dirty',
     });
   }
 }

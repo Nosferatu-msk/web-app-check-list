@@ -984,6 +984,18 @@ router.delete('/admin/tm-engineers/:id', adminOnly, async (req: AuthRequest, res
   res.json({ message: 'Привязка удалена' });
 });
 
+// ─── Общий: все активные типы работ (для офлайн-кэширования) ─
+
+router.get('/work-types/all', async (req: AuthRequest, res: Response) => {
+  const workTypes = await prisma.mtrWorkType.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, category: true },
+    orderBy: { name: 'asc' },
+  });
+
+  res.json(workTypes);
+});
+
 // ─── Общий: поиск типов работ ────────────────────────────────
 
 router.get('/work-types/search', async (req: AuthRequest, res: Response) => {

@@ -235,6 +235,127 @@ async function processQueueItem(item: SyncQueueItem, token: string) {
       break;
     }
 
+    // ─── MTR operations ────────────────────────────────────────
+    case 'create:mtr_visit': {
+      const mv = await db.mtrVisits.get(item.entityId);
+      if (!mv) throw new Error('MTR visit not found locally');
+      const res = await fetch('/api/mtr/visits', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          addressId: mv.addressId,
+          requestNumber: mv.requestNumber,
+          dateStart: mv.dateStart,
+          timeStart: mv.timeStart,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Server error: ${res.status}`);
+      }
+      const data = await res.json();
+      await db.mtrVisits.update(item.entityId, { serverId: data.id, dirty: false });
+      // Update works and photos with new visit server ID
+      await db.mtrVisitWorks.where('mtrVisitLocalId').equals(item.entityId).modify({ mtrVisitServerId: data.id });
+      await db.mtrPhotos.where('mtrVisitLocalId').equals(item.entityId).modify({ mtrVisitServerId: data.id });
+      break;
+    }
+
+    case 'update:mtr_visit': {
+      const mv = await db.mtrVisits.get(item.entityId);
+      if (!mv?.serverId) throw new Error('No server ID for MTR visit');
+      const res = await fetch(`/api/mtr/visits/${mv.serverId}`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          addressId: mv.addressId,
+          requestNumber: mv.requestNumber,
+          dateStart: mv.dateStart,
+          timeStart: mv.timeStart,
+        }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      await db.mtrVisits.update(item.entityId, { dirty: false });
+      break;
+    }
+
+    case 'delete:mtr_visit': {
+      const mv = await db.mtrVisits.get(item.entityId);
+      if (!mv?.serverId) {
+        await db.mtrVisits.delete(item.entityId);
+        break;
+      }
+      const res = await fetch(`/api/mtr/visits/${mv.serverId}`, { method: 'DELETE', headers });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      await db.mtrVisits.delete(item.entityId);
+      break;
+    }
+
+    case 'create:mtr_work': {
+      const work = await db.mtrVisitWorks.get(item.entityId);
+      if (!work) throw new Error('MTR work not found locally');
+      const visitServerId = work.mtrVisitServerId || (await db.mtrVisits.get(work.mtrVisitLocalId))?.serverId;
+      if (!visitServerId) throw new Error('MTR visit not synced yet');
+      const res = await fetch(`/api/mtr/visits/${visitServerId}/works`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mtrWorkTypeId: work.mtrWorkTypeId,
+          quantity: work.quantity,
+          comment: work.comment || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      await db.mtrVisitWorks.update(item.entityId, { serverId: data.id, dirty: false });
+      break;
+    }
+
+    case 'delete:mtr_work': {
+      const work = await db.mtrVisitWorks.get(item.entityId);
+      if (!work?.serverId) {
+        await db.mtrVisitWorks.delete(item.entityId);
+        break;
+      }
+      const visitServerId = work.mtrVisitServerId || (await db.mtrVisits.get(work.mtrVisitLocalId))?.serverId;
+      if (!visitServerId) throw new Error('MTR visit not synced yet');
+      const res = await fetch(`/api/mtr/visits/${visitServerId}/works/${work.serverId}`, { method: 'DELETE', headers });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      await db.mtrVisitWorks.delete(item.entityId);
+      break;
+    }
+
+    case 'upload_photo:mtr_photo': {
+      const photo = await db.mtrPhotos.get(item.entityId);
+      if (!photo) throw new Error('MTR photo not found locally');
+      const visitServerId = photo.mtrVisitServerId || (await db.mtrVisits.get(photo.mtrVisitLocalId))?.serverId;
+      if (!visitServerId) throw new Error('MTR visit not synced yet');
+      const fd = new FormData();
+      fd.append('photo', photo.blob, photo.fileName);
+      fd.append('moment', photo.moment);
+      const res = await fetch(`/api/photos/mtr-visits/${visitServerId}/photos`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      await db.mtrPhotos.update(item.entityId, { serverId: data.id, dirty: false });
+      break;
+    }
+
+    case 'complete:mtr_visit': {
+      const mv = await db.mtrVisits.get(item.entityId);
+      if (!mv?.serverId) throw new Error('No server ID for MTR visit');
+      const res = await fetch(`/api/mtr/visits/${mv.serverId}/complete`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      await db.mtrVisits.update(item.entityId, { dirty: false, status: 'sent' });
+      break;
+    }
+
     default:
       throw new Error(`Unknown operation: ${item.operation}:${item.entityType}`);
   }
@@ -350,5 +471,88 @@ export async function fullSync(): Promise<{ pushed: { success: number; failed: n
   const pushed = await processSyncQueue();
   const pulled = await pullVisitsFromServer();
   await pullFavoritesFromServer();
+  await pullMtrVisitsFromServer();
+  await cacheMtrWorkTypes();
   return { pushed, pulled };
+}
+
+// ─── PULL MTR VISITS FROM SERVER ─────────────────────────────
+export async function pullMtrVisitsFromServer(): Promise<number> {
+  const token = localStorage.getItem('accessToken');
+  if (!token) return 0;
+
+  const pageSize = 100;
+  let page = 1;
+  let allData: any[] = [];
+  let totalCount = 0;
+
+  while (true) {
+    const res = await fetch(`/api/mtr/visits?page=${page}&pageSize=${pageSize}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return 0;
+
+    const json = await res.json();
+    const { data, total } = json;
+    allData = allData.concat(data || []);
+    totalCount = total || 0;
+
+    if (allData.length >= totalCount || !data?.length) break;
+    page++;
+  }
+
+  let count = 0;
+
+  for (const sv of allData) {
+    const existing = await db.mtrVisits.where('serverId').equals(sv.id).first();
+    if (existing && !existing.dirty) {
+      await db.mtrVisits.update(existing.id, {
+        status: sv.status,
+        isDraft: sv.isDraft,
+        updatedAt: sv.updatedAt || new Date().toISOString(),
+      });
+    } else if (!existing) {
+      await db.mtrVisits.add({
+        id: `server_mtr_${sv.id}`,
+        serverId: sv.id,
+        engineerId: sv.engineerId,
+        addressId: sv.addressId,
+        requestNumber: sv.requestNumber,
+        dateStart: sv.dateStart ? new Date(sv.dateStart).toISOString().slice(0, 10) : '',
+        timeStart: sv.timeStart || '',
+        status: sv.status,
+        isDraft: sv.isDraft ?? false,
+        createdAt: sv.createdAt || new Date().toISOString(),
+        updatedAt: sv.updatedAt || new Date().toISOString(),
+        dirty: false,
+      });
+      count++;
+    }
+  }
+
+  return count;
+}
+
+// ─── CACHE MTR WORK TYPES ────────────────────────────────────
+export async function cacheMtrWorkTypes() {
+  const token = localStorage.getItem('accessToken');
+  if (!token) return;
+
+  const cached = await getCachedRefData('mtr-work-types');
+  if (cached && cached._cachedAt) {
+    const age = Date.now() - new Date(cached._cachedAt).getTime();
+    if (age < 3600000) return; // 1 hour
+  }
+
+  try {
+    const res = await fetch('/api/mtr/work-types/all', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    await cacheRefData('mtr-work-types', { items: data, _cachedAt: new Date().toISOString() });
+  } catch {
+    // Ignore errors — will retry next sync
+  }
 }

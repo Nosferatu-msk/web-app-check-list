@@ -435,6 +435,124 @@ export const api = {
     return db.favorites.toArray();
   },
 
+  // ─── MTR OFFLINE-AWARE METHODS ───────────────────────────────
+  mtrCreateVisitOffline: async (data: { addressId: string; requestNumber: string; dateStart: string; timeStart: string }) => {
+    if (!isOffline()) return api.mtr.createVisit(data);
+    const { db, localId, enqueueSync } = await import('../db/index');
+    const id = localId();
+    const now = new Date().toISOString();
+    const token = localStorage.getItem('accessToken');
+    const engineerId = token ? JSON.parse(atob(token.split('.')[1])).userId : 'unknown';
+    await db.mtrVisits.add({
+      id,
+      engineerId,
+      addressId: data.addressId,
+      requestNumber: data.requestNumber,
+      dateStart: data.dateStart,
+      timeStart: data.timeStart,
+      status: 'draft',
+      isDraft: true,
+      createdAt: now,
+      updatedAt: now,
+      dirty: true,
+    });
+    await enqueueSync({ operation: 'create', entityType: 'mtr_visit', entityId: id });
+    return { id, ...data, status: 'draft', _offline: true };
+  },
+
+  mtrAddWorkOffline: async (visitId: string, data: { mtrWorkTypeId: string; quantity?: number; comment?: string }) => {
+    if (!isOffline()) return api.mtr.addWork(visitId, data);
+    const { db, localId, enqueueSync } = await import('../db/index');
+    const id = localId();
+    const visit = await db.mtrVisits.get(visitId);
+    const works = await db.mtrVisitWorks.where('mtrVisitLocalId').equals(visitId).toArray();
+    const maxOrder = works.reduce((max, w) => Math.max(max, w.sortOrder), 0);
+    await db.mtrVisitWorks.add({
+      id,
+      mtrVisitLocalId: visitId,
+      mtrVisitServerId: visit?.serverId,
+      mtrWorkTypeId: data.mtrWorkTypeId,
+      quantity: data.quantity ?? 1,
+      comment: data.comment,
+      sortOrder: maxOrder + 1,
+      createdAt: new Date().toISOString(),
+      dirty: true,
+    });
+    await enqueueSync({ operation: 'create', entityType: 'mtr_work', entityId: id });
+    // If visit was draft, move to in_progress
+    if (visit && visit.status === 'draft') {
+      await db.mtrVisits.update(visitId, { status: 'in_progress', dirty: true });
+    }
+    return { id, ...data, _offline: true };
+  },
+
+  mtrRemoveWorkOffline: async (visitId: string, workId: string) => {
+    if (!isOffline()) return api.mtr.removeWork(visitId, workId);
+    const { db, enqueueSync } = await import('../db/index');
+    await db.mtrVisitWorks.delete(workId);
+    await enqueueSync({ operation: 'delete', entityType: 'mtr_work', entityId: workId, payload: { visitId } });
+    return { message: 'Работа удалена', _offline: true };
+  },
+
+  mtrUploadPhotoOffline: async (visitId: string, file: File, moment: 'before' | 'after') => {
+    if (!isOffline()) return api.mtr.uploadMtrPhoto(visitId, (() => { const fd = new FormData(); fd.append('photo', file); fd.append('moment', moment); return fd; })());
+    const { db, localId, enqueueSync } = await import('../db/index');
+    const id = localId();
+    const visit = await db.mtrVisits.get(visitId);
+    await db.mtrPhotos.add({
+      id,
+      mtrVisitLocalId: visitId,
+      mtrVisitServerId: visit?.serverId,
+      blob: file,
+      fileName: file.name,
+      moment,
+      fileSize: file.size,
+      mimeType: file.type,
+      createdAt: new Date().toISOString(),
+      dirty: true,
+    });
+    await enqueueSync({ operation: 'upload_photo', entityType: 'mtr_photo', entityId: id });
+    return { id, visitId, moment, fileName: file.name, _offline: true };
+  },
+
+  mtrCompleteVisitOffline: async (visitId: string) => {
+    if (!isOffline()) return api.mtr.completeVisit(visitId);
+    const { db, enqueueSync } = await import('../db/index');
+    await db.mtrVisits.update(visitId, { status: 'sent', dirty: true, updatedAt: new Date().toISOString() });
+    await enqueueSync({ operation: 'complete', entityType: 'mtr_visit', entityId: visitId });
+    return { id: visitId, status: 'sent', _offline: true };
+  },
+
+  mtrDeleteVisitOffline: async (visitId: string) => {
+    if (!isOffline()) return api.mtr.deleteVisit(visitId);
+    const { db, enqueueSync } = await import('../db/index');
+    await db.mtrVisits.delete(visitId);
+    await enqueueSync({ operation: 'delete', entityType: 'mtr_visit', entityId: visitId });
+    return { message: 'Визит удалён', _offline: true };
+  },
+
+  getLocalMtrVisits: async () => {
+    const { db } = await import('../db/index');
+    return db.mtrVisits.reverse().sortBy('dateStart');
+  },
+
+  getLocalMtrVisitWorks: async (visitLocalId: string) => {
+    const { db } = await import('../db/index');
+    return db.mtrVisitWorks.where('mtrVisitLocalId').equals(visitLocalId).sortBy('sortOrder');
+  },
+
+  getLocalMtrPhotos: async (visitLocalId: string) => {
+    const { db } = await import('../db/index');
+    return db.mtrPhotos.where('mtrVisitLocalId').equals(visitLocalId).toArray();
+  },
+
+  getLocalMtrPhotoUrl: async (photoId: string): Promise<string> => {
+    const { db } = await import('../db/index');
+    const photo = await db.mtrPhotos.get(photoId);
+    if (!photo) throw new Error('MTR photo not found');
+    return URL.createObjectURL(photo.blob);
+  },
+
   // ─── MANUFACTURERS ──────────────────────────────────────────
   getManufacturers: async (params?: { page?: number; pageSize?: number; q?: string }) => {
     const qs = new URLSearchParams();
@@ -576,6 +694,7 @@ export const api = {
 
     // Work types search
     searchWorkTypes: (q: string) => request<any[]>(`/mtr/work-types/search?q=${encodeURIComponent(q)}`),
+    getAllWorkTypes: () => request<any[]>('/mtr/work-types/all'),
 
     // TM
     getTmVisits: (params?: { status?: string; engineer_id?: string; page?: number; pageSize?: number; search?: string }) => {
