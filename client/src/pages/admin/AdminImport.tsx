@@ -7,7 +7,7 @@ const API_BASE = '/api/admin/import';
 
 const IMPORT_TYPES = [
   { key: 'addresses', label: 'Адреса объектов', icon: '📋', description: 'CSV: city, street, house, building, full_address, customer_email, object_code' },
-  { key: 'equipment-types', label: 'Виды оборудования', icon: '🔧', description: 'CSV: name, code, photos_required, is_active' },
+  { key: 'equipment-types', label: 'Виды оборудования', icon: '🔧', description: 'CSV: name, code, photos_required, is_active, specialization_req (vik/iszh/gpm/dgu/ibp)' },
   { key: 'room-types', label: 'Типы помещений', icon: '🏠', description: 'CSV: name, code' },
   { key: 'recommendations', label: 'Типовые рекомендации', icon: '📝', description: 'CSV: equipment_code, text, sort_order, is_active' },
   { key: 'users', label: 'Пользователи', icon: '👥', description: 'CSV: full_name, email, role, password, tm_email' },

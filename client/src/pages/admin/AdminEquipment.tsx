@@ -1,7 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Switch, Space, App, Popconfirm } from 'antd';
+import { Table, Button, Modal, Form, Input, InputNumber, Switch, Select, Space, App, Popconfirm, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
+
+const SPEC_OPTIONS = [
+  { value: '', label: '— Все специализации —' },
+  { value: 'vik', label: 'ВиК (Вентиляция и Кондиционирование)' },
+  { value: 'iszh', label: 'ИСЖ (Инженерные Сети и Электрика)' },
+  { value: 'gpm', label: 'ГПМ (Грузоподъёмные механизмы)' },
+  { value: 'dgu', label: 'ДГУ (Дизель-генераторные установки)' },
+  { value: 'ibp', label: 'ИБП (Источники бесперебойного питания)' },
+];
+
+const SPEC_TAG_COLORS: Record<string, string> = {
+  vik: 'blue',
+  iszh: 'green',
+  gpm: 'orange',
+  dgu: 'purple',
+  ibp: 'red',
+};
+
+const SPEC_SHORT: Record<string, string> = {
+  vik: 'ВиК',
+  iszh: 'ИСЖ',
+  gpm: 'ГПМ',
+  dgu: 'ДГУ',
+  ibp: 'ИБП',
+};
 
 export default function AdminEquipment() {
   const { message } = App.useApp();
@@ -16,8 +41,9 @@ export default function AdminEquipment() {
 
   const handleSave = async () => {
     const values = await form.validateFields();
-    if (editing) await api.adminUpdate('equipment-types', editing.id, values);
-    else await api.adminCreate('equipment-types', values);
+    const payload = { ...values, specializationReq: values.specializationReq || null };
+    if (editing) await api.adminUpdate('equipment-types', editing.id, payload);
+    else await api.adminCreate('equipment-types', payload);
     setModalOpen(false); form.resetFields(); setEditing(null); load();
     message.success(editing ? 'Обновлено' : 'Создано');
   };
@@ -34,10 +60,11 @@ export default function AdminEquipment() {
         { title: 'Название', dataIndex: 'name' },
         { title: 'Код', dataIndex: 'code' },
         { title: 'Фото', dataIndex: 'photosRequired' },
+        { title: 'Специализация', dataIndex: 'specializationReq', width: 140, render: (v: string | null) => v ? <Tag color={SPEC_TAG_COLORS[v]}>{SPEC_SHORT[v] || v}</Tag> : <span style={{ color: '#999' }}>Все</span> },
         { title: 'Активен', dataIndex: 'isActive', render: (v: boolean) => v ? '✅' : '❌' },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (
           <Space>
-            <Button type="text" icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue(r); setModalOpen(true); }} />
+            <Button type="text" icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue({ ...r, specializationReq: r.specializationReq || '' }); setModalOpen(true); }} />
             <Popconfirm title="Удалить?" onConfirm={() => handleDelete(r.id)}><Button type="text" danger icon={<DeleteOutlined />} /></Popconfirm>
           </Space>
         )},
@@ -47,6 +74,9 @@ export default function AdminEquipment() {
           <Form.Item name="name" label="Название" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="code" label="Код (транслит)" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="photosRequired" label="Количество фото" rules={[{ required: true }]}><InputNumber min={1} max={2} /></Form.Item>
+          <Form.Item name="specializationReq" label="Специализация" initialValue="">
+            <Select options={SPEC_OPTIONS} />
+          </Form.Item>
           <Form.Item name="isActive" label="Активен" valuePropName="checked"><Switch /></Form.Item>
         </Form>
       </Modal>

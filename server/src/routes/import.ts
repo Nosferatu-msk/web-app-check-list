@@ -228,13 +228,18 @@ router.post('/equipment-types', upload.single('file'), async (req: AuthRequest, 
       const photosRequired = parseInt(r.photos_required || r.photosRequired || '1');
       if (photosRequired < 1 || photosRequired > 2) { result.errors.push({ row: i + 2, message: 'photos_required должен быть 1 или 2' }); continue; }
 
+      const specReqRaw = (r.specialization_req || r.specializationReq || '').trim().toLowerCase();
+      const validSpecs = ['vik', 'iszh', 'gpm', 'dgu', 'ibp'];
+      if (specReqRaw && !validSpecs.includes(specReqRaw)) { result.errors.push({ row: i + 2, message: `specialization_req должен быть одним из: ${validSpecs.join(', ')}` }); continue; }
+      const specializationReq = specReqRaw || null;
+
       const existing = await prisma.equipmentType.findUnique({ where: { code } });
       if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
 
       if (isValidateMode(req)) continue;
 
       await prisma.equipmentType.create({
-        data: { name, code, photosRequired, isActive: (r.is_active || r.isActive || 'true').toLowerCase() === 'true' },
+        data: { name, code, photosRequired, isActive: (r.is_active || r.isActive || 'true').toLowerCase() === 'true', specializationReq },
       });
       result.success++;
     }
