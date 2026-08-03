@@ -404,7 +404,7 @@ export default function RequestsPage() {
           dataSource={requests}
           rowKey="id"
           loading={loading}
-          onChange={(_pagination, _filters, sorter: any) => {
+          onChange={(pagination, _filters, sorter: any) => {
             if (sorter && sorter.field) {
               setSortField(sorter.field as string);
               setSortOrder(sorter.order || '');
@@ -412,7 +412,16 @@ export default function RequestsPage() {
               setSortField('');
               setSortOrder('');
             }
-            setPage(1);
+            if (pagination.current && pagination.current !== page) {
+              setPage(pagination.current);
+            }
+            if (pagination.pageSize && pagination.pageSize !== pageSize) {
+              setPageSize(pagination.pageSize);
+              setPage(1);
+            }
+            if (pagination.current === page && pagination.pageSize === pageSize) {
+              setPage(1);
+            }
           }}
           pagination={{
             current: page,
