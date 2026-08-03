@@ -280,6 +280,13 @@ export default function MtrVisitPage() {
     const setUploading = moment === 'before' ? setUploadingBefore : setUploadingAfter;
     setUploading(true);
     try {
+      // Удаляем существующее фото этого момента, если есть (лимит 1 шт.)
+      const existingPhotos = (visit.photos || []).filter((p) => p.moment === moment);
+      for (const old of existingPhotos) {
+        try {
+          await api.mtr.deleteMtrPhoto(visit.id, old.id);
+        } catch { /* ignore — could be local-only */ }
+      }
       const visitId = (visit as any)._localId || visit.id;
       const result = await api.mtrUploadPhotoOffline(visitId, file, moment);
       if ((result as any)._offline) {
@@ -536,10 +543,17 @@ export default function MtrVisitPage() {
 
       {/* Visit info card — white card like VisitPage */}
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>{visit.requestNumber}</div>
-        <div style={{ color: '#666', marginBottom: 4 }}>{visit.address?.fullAddress}</div>
+        <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>№ заявки: {visit.requestNumber}</div>
+        {visit.engineer?.fullName && (
+          <div style={{ color: '#333', marginBottom: 4 }}>
+            <span style={{ color: '#999' }}>Инженер: </span>{visit.engineer.fullName}
+          </div>
+        )}
+        <div style={{ color: '#666', marginBottom: 4 }}>
+          <span style={{ color: '#999' }}>Адрес: </span>{visit.address?.fullAddress}
+        </div>
         <div style={{ color: '#999', fontSize: 14 }}>
-          {dayjs(visit.dateStart).format('DD.MM.YYYY')} в {visit.timeStart}
+          <span>Дата: </span>{dayjs(visit.dateStart).format('DD.MM.YYYY')}<span style={{ margin: '0 6px' }}>·</span><span>Время: </span>{visit.timeStart}
         </div>
         {visit.rejectionReason && (
           <div style={{ marginTop: 8, padding: 8, background: '#fff2f0', borderRadius: 6, border: '1px solid #ffccc7' }}>
@@ -548,18 +562,19 @@ export default function MtrVisitPage() {
         )}
       </div>
 
-      {/* Фото ДО — white card section */}
+      {/* Фото ДО — white card section (лимит: 1 фото) */}
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ДО</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ДО {photosBefore.length > 0 && <span style={{ fontSize: 13, color: '#52c41a', fontWeight: 400 }}>✓ загружено</span>}</h3>
           {canAddPhotoBefore && (
             <Button
               icon={<CameraOutlined />}
               onClick={() => fileInputBeforeRef.current?.click()}
               loading={uploadingBefore}
               size="small"
+              type={photosBefore.length > 0 ? 'default' : 'primary'}
             >
-              {isMobile ? 'Фото' : 'Добавить фото'}
+              {photosBefore.length > 0 ? (isMobile ? 'Заменить' : 'Заменить фото') : (isMobile ? 'Фото' : 'Добавить фото')}
             </Button>
           )}
         </div>
@@ -670,18 +685,19 @@ export default function MtrVisitPage() {
         )}
       </div>
 
-      {/* Фото ПОСЛЕ — white card section */}
+      {/* Фото ПОСЛЕ — white card section (лимит: 1 фото) */}
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ПОСЛЕ</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ПОСЛЕ {photosAfter.length > 0 && <span style={{ fontSize: 13, color: '#52c41a', fontWeight: 400 }}>✓ загружено</span>}</h3>
           {canAddPhotoAfter && (
             <Button
               icon={<CameraOutlined />}
               onClick={() => fileInputAfterRef.current?.click()}
               loading={uploadingAfter}
               size="small"
+              type={photosAfter.length > 0 ? 'default' : 'primary'}
             >
-              {isMobile ? 'Фото' : 'Добавить фото'}
+              {photosAfter.length > 0 ? (isMobile ? 'Заменить' : 'Заменить фото') : (isMobile ? 'Фото' : 'Добавить фото')}
             </Button>
           )}
         </div>
