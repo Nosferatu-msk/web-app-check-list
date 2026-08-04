@@ -541,8 +541,18 @@ export default function VisitPage() {
   const tasksByRoom = (() => {
     const groups = new Map<string, { roomName: string; tasks: any[] }>();
     for (const task of tasks) {
-      const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
-      const roomName = task.roomType?.name || task.comment || 'Без помещения';
+      let roomKey: string;
+      let roomName: string;
+      
+      // Для group_climate без помещения — отдельная группа
+      if (task.taskType === 'group_climate' && !task.roomTypeCode && !task.room_type_id && !task.roomType?.name) {
+        roomKey = '__climate_object__';
+        roomName = 'Климатическое оборудование · Уровень объекта';
+      } else {
+        roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
+        roomName = task.roomType?.name || task.comment || 'Без помещения';
+      }
+      
       if (!groups.has(roomKey)) {
         groups.set(roomKey, { roomName, tasks: [] });
       }
