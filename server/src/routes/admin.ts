@@ -197,12 +197,16 @@ const userSchema = z.object({
 
 router.get('/users', async (req: AuthRequest, res: Response) => {
   const search = req.query.search as string;
+  const role = req.query.role as string;
   const where: any = {};
   if (search) {
     where.OR = [
       { fullName: { contains: search, mode: 'insensitive' as const } },
       { email: { contains: search, mode: 'insensitive' as const } },
     ];
+  }
+  if (role) {
+    where.role = role;
   }
   const data = await prisma.user.findMany({
     where,
