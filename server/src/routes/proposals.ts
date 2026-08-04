@@ -54,7 +54,7 @@ async function notifyAdminsAndTMs(
 const createProposalSchema = z.object({
   addressId: z.string().uuid(),
   equipmentTypeCode: z.string().min(1),
-  roomTypeCode: z.string().min(1),
+  roomTypeCode: z.string().default(''),
   brand: z.string().optional(),
   model: z.string().optional(),
   serialNumber: z.string().optional(),

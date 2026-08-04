@@ -55,7 +55,7 @@ export default function VisitPage() {
   const [objectEquipLoading, setObjectEquipLoading] = useState(false);
   const [selectedObjectEquipIds, setSelectedObjectEquipIds] = useState<string[]>([]);
   const [addingEquipment, setAddingEquipment] = useState(false);
-  const [proposeEquipment, setProposeEquipment] = useState(false);
+  const [proposeEquipment, setProposeEquipment] = useState(true);
   const [newTaskForm] = Form.useForm();
   const [mfrOptions, setMfrOptions] = useState<{ value: string; label: string }[]>([]);
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
@@ -1102,7 +1102,7 @@ export default function VisitPage() {
                     checked={proposeEquipment}
                     onChange={(e) => setProposeEquipment(e.target.checked)}
                   >
-                    Предложить добавить в привязку объекта
+                    Добавить в справочник оборудования объекта (на модерацию)
                   </Checkbox>
                 </Form.Item>
                 <Form.Item><Button type="primary" htmlType="submit" block>Добавить</Button></Form.Item>
