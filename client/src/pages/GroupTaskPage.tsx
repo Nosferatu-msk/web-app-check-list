@@ -193,13 +193,18 @@ export default function GroupTaskPage() {
       for (const id of taskIdsToUpdate) {
         console.log('[GroupTaskPage] Updating task:', id, { parameters, taskStatus });
         try {
-          const result = await api.updateTask(visitId, id, {
+          // Для виртуальных задач не перезаписываем conclusion — он уже установлен через handleItemStatusChange
+          const updateData: Record<string, any> = {
             parameters,
             selectedRecommendationIds: selectedRecs,
             additionalRecommendations: additionalRecommendations || '',
-            conclusion: finalConclusion,
             status: taskStatus,
-          });
+          };
+          // Для реальных задач (не виртуальных) обновляем conclusion из формы
+          if (!sourceTaskIds || sourceTaskIds.length === 0) {
+            updateData.conclusion = finalConclusion;
+          }
+          const result = await api.updateTask(visitId, id, updateData);
           console.log('[GroupTaskPage] Task updated:', id, result);
         } catch (err) {
           console.error('[GroupTaskPage] Error updating task:', id, err);
