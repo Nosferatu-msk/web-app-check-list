@@ -541,22 +541,12 @@ export default function VisitPage() {
   const tasksByRoom = (() => {
     const groups = new Map<string, { roomName: string; tasks: any[] }>();
     for (const task of tasks) {
-      // Климатическое оборудование (group_climate) — в отдельную группу
-      if (task.taskType === 'group_climate') {
-        const climateKey = '__climate__';
-        if (!groups.has(climateKey)) {
-          groups.set(climateKey, { roomName: 'Климатическое оборудование', tasks: [] });
-        }
-        groups.get(climateKey)!.tasks.push(task);
-      } else {
-        // Остальное оборудование — по помещениям
-        const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
-        const roomName = task.roomType?.name || task.comment || 'Без помещения';
-        if (!groups.has(roomKey)) {
-          groups.set(roomKey, { roomName, tasks: [] });
-        }
-        groups.get(roomKey)!.tasks.push(task);
+      const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
+      const roomName = task.roomType?.name || task.comment || 'Без помещения';
+      if (!groups.has(roomKey)) {
+        groups.set(roomKey, { roomName, tasks: [] });
       }
+      groups.get(roomKey)!.tasks.push(task);
     }
     return Array.from(groups.entries()).map(([key, val]) => ({ key, ...val }));
   })();
