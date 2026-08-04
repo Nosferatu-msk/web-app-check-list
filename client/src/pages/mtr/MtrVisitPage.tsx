@@ -435,7 +435,10 @@ export default function MtrVisitPage() {
         </div>
 
         <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-          <Form form={form} layout="vertical" initialValues={{ dateStart: dayjs(), timeStart: dayjs() }}>
+          <Form form={form} layout="vertical" initialValues={{ dateStart: dayjs(), timeStart: dayjs(), engineerName: user?.fullName || '' }}>
+            <Form.Item label="Инженер" name="engineerName" rules={[{ required: true }]}>
+              <Input disabled />
+            </Form.Item>
             <Form.Item label="Адрес" name="addressSearch" rules={[{ required: true, message: 'Выберите адрес' }]}>
               <Select
                 showSearch
@@ -470,7 +473,7 @@ export default function MtrVisitPage() {
             </Space>
           </Form>
           <Button type="primary" onClick={handleCreate} loading={saving} icon={<SaveOutlined />}>
-            Создать визит
+            Сохранить
           </Button>
         </div>
       </div>
