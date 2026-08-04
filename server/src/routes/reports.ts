@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { authMiddleware, AuthRequest, tmOrAdmin } from '../middleware/auth.js';
 import prisma from '../models/prisma.js';
 import { generateReportHtml, generatePdf, buildReportFileName } from '../services/report.js';
+import { generateMtrReportHtml, buildMtrReportFileName } from '../services/mtrReport.js';
 import { generateUnifiedReportHtml, UnifiedReportVisit } from '../services/unifiedReport.js';
 import { resizeForActScan } from '../services/imageProcessor.js';
 import { sendMail } from '../utils/email.js';
@@ -442,6 +443,59 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
   } catch (err: any) {
     console.error('Unified report generation error:', err);
     res.status(500).json({ error: 'Ошибка формирования сводного отчёта', details: err.message });
+  }
+});
+
+// ─── MTR REPORT ROUTES ────────────────────────────────────────
+
+// POST /api/reports/mtr/:id/report/generate
+router.post('/mtr/:id/report/generate', async (req: AuthRequest, res: Response) => {
+  try {
+    const visit = await prisma.mtrVisit.findUnique({
+      where: { id: req.params.id as string },
+      include: { address: true },
+    });
+    if (!visit) { res.status(404).json({ error: 'Визит МТР не найден' }); return; }
+
+    const baseName = buildMtrReportFileName(visit);
+    const pdfPath = path.join(reportsDir, `${baseName}.pdf`);
+
+    const html = await generateMtrReportHtml(req.params.id as string);
+    await generatePdf(html, pdfPath);
+
+    await logAudit({ userId: req.userId, action: 'generate_report', entityType: 'mtr_visit', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+    res.json({ fileName: `${baseName}.pdf`, pdfPath });
+  } catch (err: any) {
+    console.error('MTR Report generation error:', err);
+    res.status(500).json({ error: 'Ошибка генерации отчёта МТР', details: err.message });
+  }
+});
+
+// GET /api/reports/mtr/:id/report/download
+router.get('/mtr/:id/report/download', async (req: AuthRequest, res: Response) => {
+  try {
+    const visit = await prisma.mtrVisit.findUnique({
+      where: { id: req.params.id as string },
+      include: { address: true },
+    });
+    if (!visit) { res.status(404).json({ error: 'Визит МТР не найден' }); return; }
+
+    const baseName = buildMtrReportFileName(visit);
+    const pdfPath = path.join(reportsDir, `${baseName}.pdf`);
+
+    if (!fs.existsSync(pdfPath)) {
+      const html = await generateMtrReportHtml(req.params.id as string);
+      await generatePdf(html, pdfPath);
+    }
+
+    if (!fs.existsSync(pdfPath)) {
+      res.status(404).json({ error: 'Отчёт МТР не найден' });
+      return;
+    }
+    res.download(pdfPath, `${baseName}.pdf`);
+  } catch (err: any) {
+    console.error('MTR Report download error:', err);
+    res.status(500).json({ error: 'Ошибка скачивания отчёта МТР', details: err.message });
   }
 });
 

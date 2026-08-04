@@ -160,6 +160,11 @@ export const api = {
   sendReport: (visitId: string, data: { email: string; cc?: string; comment?: string }) =>
     request<any>(`/reports/${visitId}/report/send`, { method: 'POST', body: JSON.stringify(data) }),
 
+  // MTR Reports
+  generateMtrReport: (visitId: string) =>
+    request<any>(`/reports/mtr/${visitId}/report/generate`, { method: 'POST' }),
+  downloadMtrReport: (visitId: string) => `${API_BASE}/reports/mtr/${visitId}/report/download`,
+
   // Unified summary report
   generateUnifiedReport: async (data: {
     type: 'period' | 'objects' | 'requests';
