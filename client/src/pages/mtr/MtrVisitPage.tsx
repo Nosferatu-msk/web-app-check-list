@@ -519,18 +519,25 @@ export default function MtrVisitPage() {
 
       {/* Visit info card — white card like VisitPage */}
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>№ заявки: {visit.requestNumber}</div>
-        {visit.engineer?.fullName && (
-          <div style={{ color: '#333', marginBottom: 4 }}>
-            <span style={{ color: '#999' }}>Инженер: </span>{visit.engineer.fullName}
-          </div>
-        )}
-        <div style={{ color: '#666', marginBottom: 4 }}>
-          <span style={{ color: '#999' }}>Адрес: </span>{visit.address?.fullAddress}
-        </div>
-        <div style={{ color: '#999', fontSize: 14 }}>
-          <span>Дата: </span>{dayjs(visit.dateStart).format('DD.MM.YYYY')}<span style={{ margin: '0 6px' }}>·</span><span>Время: </span>{visit.timeStart}
-        </div>
+        <Form layout="vertical">
+          <Form.Item label="Инженер">
+            <Input value={visit.engineer?.fullName || ''} disabled />
+          </Form.Item>
+          <Form.Item label="Адрес">
+            <Input value={visit.address?.fullAddress || ''} disabled />
+          </Form.Item>
+          <Form.Item label="Номер заявки">
+            <Input value={visit.requestNumber} disabled />
+          </Form.Item>
+          <Space style={{ width: '100%' }} size="middle">
+            <Form.Item label="Дата">
+              <DatePicker value={dayjs(visit.dateStart)} format="DD.MM.YYYY" disabled />
+            </Form.Item>
+            <Form.Item label="Время">
+              <TimePicker value={dayjs(visit.timeStart, 'HH:mm')} format="HH:mm" disabled />
+            </Form.Item>
+          </Space>
+        </Form>
         {visit.rejectionReason && (
           <div style={{ marginTop: 8, padding: 8, background: '#fff2f0', borderRadius: 6, border: '1px solid #ffccc7' }}>
             <Text type="danger">Причина отклонения: {visit.rejectionReason}</Text>
