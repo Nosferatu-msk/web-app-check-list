@@ -616,21 +616,29 @@ export default function VisitPage() {
     }
     
     // Создаём виртуальные group_climate задачи для каждой группы
-    const virtualClimateTasks = Array.from(climateByRoom.entries()).map(([roomKey, { room, tasks: roomTasks }]) => ({
-      id: `virtual_climate_${roomKey}`,
-      taskType: 'group_climate' as const,
-      equipmentType: { name: 'Климатическое оборудование', code: 'climate' },
-      roomType: room,
-      equipmentItems: roomTasks.map(t => ({
-        id: t.id,
-        objectEquipmentId: t.objectEquipmentId,
-        status: t.conclusion === 'ok' ? 'ok' : t.conclusion === 'faulty' ? 'not_ok' : null,
-        photos: t.photos || [],
-        _sourceTaskId: t.id, // Для навигации
-      })),
-      _virtualRoomKey: roomKey,
-      _sourceTaskIds: roomTasks.map(t => t.id), // Для навигации
-    }));
+    const virtualClimateTasks = Array.from(climateByRoom.entries()).map(([roomKey, { room, tasks: roomTasks }]) => {
+      // Вычисляем статус виртуальной задачи на основе статусов реальных задач
+      const allCompleted = roomTasks.every(t => t.status === 'completed');
+      const anyInProgress = roomTasks.some(t => t.status === 'in_progress');
+      const virtualStatus = allCompleted ? 'completed' : anyInProgress ? 'in_progress' : 'not_started';
+
+      return {
+        id: `virtual_climate_${roomKey}`,
+        taskType: 'group_climate' as const,
+        equipmentType: { name: 'Климатическое оборудование', code: 'climate' },
+        roomType: room,
+        status: virtualStatus,
+        equipmentItems: roomTasks.map(t => ({
+          id: t.id,
+          objectEquipmentId: t.objectEquipmentId,
+          status: t.conclusion === 'ok' ? 'ok' : t.conclusion === 'faulty' ? 'not_ok' : null,
+          photos: t.photos || [],
+          _sourceTaskId: t.id, // Для навигации
+        })),
+        _virtualRoomKey: roomKey,
+        _sourceTaskIds: roomTasks.map(t => t.id), // Для навигации
+      };
+    });
     
     return [...virtualClimateTasks, ...otherTasks];
   })();

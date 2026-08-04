@@ -154,12 +154,16 @@ export default function GroupTaskPage() {
     const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
     const finalConclusion = formConclusion || conclusion;
     const parameters = { ...formParamValues, conclusion: finalConclusion };
-    await api.updateTask(visitId, taskId, {
+    const updateData: Record<string, any> = {
       parameters,
       selectedRecommendationIds: selectedRecs,
       additionalRecommendations: additionalRecommendations || '',
       conclusion: finalConclusion,
-    });
+    };
+    if (task.status !== 'completed') {
+      updateData.status = 'in_progress';
+    }
+    await api.updateTask(visitId, taskId, updateData);
   }, [visitId, taskId, task, form, conclusion, selectedRecs]);
 
   const { isSaving: autoSaving, lastSavedAt, markDirty: markAutoSaveDirty, resetDirty: resetAutoSave } = useAutoSave(handleAutoSave, {

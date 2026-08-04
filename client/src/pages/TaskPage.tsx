@@ -431,12 +431,16 @@ export default function TaskPage() {
     const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
     const finalConclusion = formConclusion || conclusion;
     const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
-    await api.updateTask(visitId, taskId, {
+    const updateData: Record<string, any> = {
       parameters,
       selectedRecommendationIds: selectedRecs,
       additionalRecommendations: additionalRecommendations || '',
       conclusion: finalConclusion,
-    });
+    };
+    if (task.status !== 'completed') {
+      updateData.status = 'in_progress';
+    }
+    await api.updateTask(visitId, taskId, updateData);
   }, [visitId, taskId, task, form, conclusion, selectedRecs]);
 
   const {
@@ -563,12 +567,16 @@ export default function TaskPage() {
       const finalConclusion = formConclusion || conclusion;
       const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
 
-      await api.updateTask(visitId, taskId, {
+      const updateData: Record<string, any> = {
         parameters,
         selectedRecommendationIds: selectedRecs,
         additionalRecommendations: additionalRecommendations || '',
         conclusion: finalConclusion,
-      });
+      };
+      if (task.status !== 'completed') {
+        updateData.status = 'in_progress';
+      }
+      await api.updateTask(visitId, taskId, updateData);
     } catch {
       // Silent save - don't block navigation
     }
