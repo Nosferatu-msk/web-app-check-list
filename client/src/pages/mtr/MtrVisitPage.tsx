@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Tag, Input, App, Modal, List, Typography, Spin, Badge, Form, Select, DatePicker, TimePicker, Space } from 'antd';
 import {
   ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PlusOutlined,
-  SaveOutlined, CheckCircleOutlined, SearchOutlined, CloudOutlined,
+  SaveOutlined, CheckCircleOutlined, SearchOutlined, CloudOutlined, FilePdfOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api, isOffline } from '../../api/client';
@@ -65,7 +65,7 @@ export default function MtrVisitPage() {
   // Server photo blob URLs
   const [serverPhotoUrls, setServerPhotoUrls] = useState<Record<string, string>>({});
 
-  const isEditable = visit && (visit.status === 'draft' || visit.status === 'in_progress');
+  const isEditable = visit && (visit.status === 'draft' || visit.status === 'in_progress' || visit.status === 'completed');
 
   // Determine state machine state
   const photosBefore = visit?.photos?.filter((p) => p.moment === 'before') || [];
@@ -741,17 +741,29 @@ export default function MtrVisitPage() {
       {/* Действия — matches VisitPage pattern */}
       {isEditable && (
         <div style={{ marginTop: 16 }}>
-          <Button
-            type="primary"
-            size="large"
-            icon={<CheckCircleOutlined />}
-            onClick={handleComplete}
-            disabled={!canComplete}
-            loading={saving}
-            block
-          >
-            ✅ Завершить визит
-          </Button>
+          {visit.status === 'completed' ? (
+            <Button
+              type="primary"
+              size="large"
+              icon={<FilePdfOutlined />}
+              onClick={() => navigate(`/mtr/visits/${visit.id}/report`)}
+              block
+            >
+              Сформировать отчёт
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              size="large"
+              icon={<CheckCircleOutlined />}
+              onClick={handleComplete}
+              disabled={!canComplete}
+              loading={saving}
+              block
+            >
+              ✅ Завершить визит
+            </Button>
+          )}
           <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
             <Button icon={<SaveOutlined />} onClick={handleSaveDraft} loading={saving} style={{ flex: 1 }}>
               Сохранить черновик

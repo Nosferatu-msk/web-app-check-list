@@ -495,7 +495,10 @@ router.put('/visits/:id/complete', engineerMtrOnly, async (req: AuthRequest, res
 // ─── Инженер МТР: сохранить как черновик ────────────────────
 
 router.put('/visits/:id/save-draft', engineerMtrOnly, async (req: AuthRequest, res: Response) => {
-  const visit = await prisma.mtrVisit.findUnique({ where: { id: req.params.id as string } });
+  const visit = await prisma.mtrVisit.findUnique({
+    where: { id: req.params.id as string },
+    include: { works: true, photos: true },
+  });
   if (!visit) {
     res.status(404).json({ error: 'Визит не найден' });
     return;
@@ -505,9 +508,20 @@ router.put('/visits/:id/save-draft', engineerMtrOnly, async (req: AuthRequest, r
     return;
   }
 
+  // Если визит завершён — проверяем условия завершения после редактирования
+  let newStatus = visit.status;
+  if (visit.status === 'completed') {
+    const photosBefore = visit.photos.filter(p => p.moment === 'before');
+    const photosAfter = visit.photos.filter(p => p.moment === 'after');
+    const hasWorks = visit.works.length > 0;
+    if (photosBefore.length === 0 || !hasWorks || photosAfter.length === 0) {
+      newStatus = 'in_progress';
+    }
+  }
+
   const updated = await prisma.mtrVisit.update({
     where: { id: visit.id },
-    data: { isDraft: true },
+    data: { isDraft: true, status: newStatus },
     include: {
       engineer: true,
       address: true,
