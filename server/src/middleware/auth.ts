@@ -57,6 +57,14 @@ export function engineerMtrOnly(req: AuthRequest, res: Response, next: NextFunct
   next();
 }
 
+export function engineerMtrOrAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (req.userRole !== 'engineer_mtr' && req.userRole !== 'admin') {
+    res.status(403).json({ error: 'Доступ запрещён' });
+    return;
+  }
+  next();
+}
+
 export function generateAccessToken(userId: string, role: string) {
   return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: process.env.JWT_ACCESS_EXPIRES || '15m' } as jwt.SignOptions);
 }

@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../models/prisma.js';
-import { authMiddleware, AuthRequest, engineerMtrOnly, tmMtrOrAdmin, adminOnly } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest, engineerMtrOnly, engineerMtrOrAdmin, tmMtrOrAdmin, adminOnly } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { logAudit } from '../middleware/audit.js';
 
@@ -74,16 +74,20 @@ async function getTmMtrEngineerIds(tmId: string): Promise<string[]> {
 
 // ─── Инженер МТР: список своих визитов ──────────────────────
 
-router.get('/visits', engineerMtrOnly, async (req: AuthRequest, res: Response) => {
+router.get('/visits', engineerMtrOrAdmin, async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 20;
   const status = req.query.status as string;
   const search = req.query.search as string;
 
   const where: any = {
-    engineerId: req.userId,
     isDeleted: false,
   };
+
+  // Инженер видит только свои визиты, админ — все
+  if (req.userRole !== 'admin') {
+    where.engineerId = req.userId;
+  }
 
   if (status) {
     if (status.includes(',')) {
