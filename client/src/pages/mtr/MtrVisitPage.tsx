@@ -393,7 +393,7 @@ export default function MtrVisitPage() {
           } else {
             message.success('Визит завершён и отправлен');
           }
-          await loadVisit();
+          navigate(`/mtr/visits/${visit.id}/report`);
         } catch (err: any) {
           message.error(err.message);
         }

@@ -37,6 +37,7 @@ import AdminSystemNotifications from './pages/admin/AdminSystemNotifications';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
 import MtrVisitListPage from './pages/mtr/MtrVisitListPage';
 import MtrVisitPage from './pages/mtr/MtrVisitPage';
+import MtrReportPage from './pages/mtr/MtrReportPage';
 import MtrTmVisitListPage from './pages/mtr/MtrTmVisitListPage';
 import MtrAdminWorkTypes from './pages/mtr/MtrAdminWorkTypes';
 import MtrAdminAssignments from './pages/mtr/MtrAdminAssignments';
@@ -154,6 +155,7 @@ export default function App() {
       <Route path="/mtr/visits" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitListPage /></EngineerMtrRoute></ProtectedRoute>} />
       <Route path="/mtr/visits/new" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitPage /></EngineerMtrRoute></ProtectedRoute>} />
       <Route path="/mtr/visits/:id" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitPage /></EngineerMtrRoute></ProtectedRoute>} />
+      <Route path="/mtr/visits/:id/report" element={<ProtectedRoute><EngineerMtrRoute><MtrReportPage /></EngineerMtrRoute></ProtectedRoute>} />
       <Route path="/mtr/tm/visits" element={<ProtectedRoute><TmMtrRoute><MtrTmVisitListPage /></TmMtrRoute></ProtectedRoute>} />
       <Route path="*" element={<ProtectedRoute><SmartRedirect /></ProtectedRoute>} />
     </Routes>
