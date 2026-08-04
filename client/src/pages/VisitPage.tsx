@@ -128,12 +128,17 @@ export default function VisitPage() {
 
   // Перезагрузка задач при возвращении на страницу (например, после редактирования задачи)
   useEffect(() => {
-    if (!isNew && id && visit) {
-      api.getVisit(id).then(v => {
-        setTasks(v.tasks || []);
-      });
-    }
-  }, [location.key]);
+    const handleFocus = () => {
+      if (!isNew && id && visit) {
+        api.getVisit(id).then(v => {
+          setTasks(v.tasks || []);
+        });
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [id, isNew, visit]);
 
   const searchAddresses = async (q: string) => {
     if (q.length >= 2) {
