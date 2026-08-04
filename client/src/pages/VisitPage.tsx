@@ -586,9 +586,11 @@ export default function VisitPage() {
       const eqCode = task.equipmentType?.code || '';
       if (CLIMATE_CODES.includes(eqCode) && task.taskType !== 'group_climate') {
         // Индивидуальная задача климатического оборудования — группируем по помещению
-        const roomKey = task.roomTypeCode || task.room_type_id || '__no_room__';
+        const roomCode = task.roomType?.code || task.roomTypeCode || '';
+        const roomKey = roomCode || task.roomTypeId || task.room_type_id || '__no_room__';
+        const room = task.roomType || { code: roomCode, name: task.roomType?.name || 'Без помещения' };
         if (!climateByRoom.has(roomKey)) {
-          climateByRoom.set(roomKey, { room: task.roomType, tasks: [] });
+          climateByRoom.set(roomKey, { room, tasks: [] });
         }
         climateByRoom.get(roomKey)!.tasks.push(task);
       } else {
