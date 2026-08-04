@@ -97,10 +97,9 @@ function TmMtrRoute({ children }: { children: React.ReactNode }) {
 function SmartRedirect() {
   const { user, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
-  if (user?.role === 'engineer' || user?.role === 'admin') return <VisitListPage />;
+  if (user?.role === 'engineer' || user?.role === 'admin' || user?.role === 'tm') return <VisitListPage />;
   if (user?.role === 'engineer_mtr') return <Navigate to="/mtr/visits" />;
   if (user?.role === 'tm_mtr') return <Navigate to="/mtr/tm/visits" />;
-  if (user?.role === 'tm') return <Navigate to="/requests" />;
   return <Navigate to="/login" />;
 }
 
