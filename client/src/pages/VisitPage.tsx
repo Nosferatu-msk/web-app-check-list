@@ -564,13 +564,57 @@ export default function VisitPage() {
 
   const navigateToTask = (record: any) => {
     if (visit?.id) {
-      if (record.taskType === 'group_climate') {
+      // Для виртуальных задач — переходим к первой реальной задаче в группе
+      if (record._sourceTaskIds && record._sourceTaskIds.length > 0) {
+        const firstTaskId = record._sourceTaskIds[0];
+        navigate(`/visit/${visit.id}/task/${firstTaskId}/group`);
+      } else if (record.taskType === 'group_climate') {
         navigate(`/visit/${visit.id}/task/${record.id}/group`);
       } else {
         navigate(`/visit/${visit.id}/task/${record.id}`);
       }
     }
   };
+
+  // Виртуальная группировка: splitvn/mssvn/vrv_vn группируем по помещениям в group_climate
+  const CLIMATE_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
+  const displayTasks = (() => {
+    const climateByRoom = new Map<string, { room: any; tasks: any[] }>();
+    const otherTasks: any[] = [];
+    
+    for (const task of tasks) {
+      const eqCode = task.equipmentType?.code || '';
+      if (CLIMATE_CODES.includes(eqCode) && task.taskType !== 'group_climate') {
+        // Индивидуальная задача климатического оборудования — группируем по помещению
+        const roomKey = task.roomTypeCode || task.room_type_id || '__no_room__';
+        if (!climateByRoom.has(roomKey)) {
+          climateByRoom.set(roomKey, { room: task.roomType, tasks: [] });
+        }
+        climateByRoom.get(roomKey)!.tasks.push(task);
+      } else {
+        otherTasks.push(task);
+      }
+    }
+    
+    // Создаём виртуальные group_climate задачи для каждой группы
+    const virtualClimateTasks = Array.from(climateByRoom.entries()).map(([roomKey, { room, tasks: roomTasks }]) => ({
+      id: `virtual_climate_${roomKey}`,
+      taskType: 'group_climate' as const,
+      equipmentType: { name: 'Климатическое оборудование', code: 'climate' },
+      roomType: room,
+      equipmentItems: roomTasks.map(t => ({
+        id: t.id,
+        objectEquipmentId: t.objectEquipmentId,
+        status: t.conclusion === 'ok' ? 'ok' : t.conclusion === 'faulty' ? 'not_ok' : null,
+        photos: t.photos || [],
+        _sourceTaskId: t.id, // Для навигации
+      })),
+      _virtualRoomKey: roomKey,
+      _sourceTaskIds: roomTasks.map(t => t.id), // Для навигации
+    }));
+    
+    return [...virtualClimateTasks, ...otherTasks];
+  })();
 
   return (
     <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`}>
@@ -639,7 +683,7 @@ export default function VisitPage() {
 
       {!isMobile ? (
         <Table
-          dataSource={tasks}
+          dataSource={displayTasks}
           columns={columns}
           rowKey="id"
           pagination={false}
