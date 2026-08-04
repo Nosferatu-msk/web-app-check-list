@@ -217,18 +217,16 @@ export default function MtrVisitListPage() {
 
               // Действия для overflow-меню (мобильные)
               const actionItems: any[] = [];
-              if (v.status === 'draft' || v.status === 'in_progress') {
-                actionItems.push({
-                  key: 'delete',
-                  icon: <DeleteOutlined />,
-                  label: 'Удалить',
-                  danger: true,
-                  onClick: (info: any) => {
-                    info?.domEvent?.stopPropagation();
-                    handleDelete(info.domEvent, v.id);
-                  },
-                });
-              }
+              actionItems.push({
+                key: 'delete',
+                icon: <DeleteOutlined />,
+                label: 'Удалить',
+                danger: true,
+                onClick: (info: any) => {
+                  info?.domEvent?.stopPropagation();
+                  handleDelete(info.domEvent, v.id);
+                },
+              });
 
               return (
                 <div
@@ -256,9 +254,7 @@ export default function MtrVisitListPage() {
                     {!isMobile && (
                       <Space>
                         <Tag color={statusColor}>{statusLabel}</Tag>
-                        {(v.status === 'draft' || v.status === 'in_progress') && (
-                          <Button size="small" danger icon={<DeleteOutlined />} onClick={(e) => handleDelete(e, v.id)} />
-                        )}
+                        <Button size="small" danger icon={<DeleteOutlined />} onClick={(e) => handleDelete(e, v.id)} />
                       </Space>
                     )}
                     {/* Мобильные: статус-бейдж + overflow-меню */}
