@@ -126,19 +126,16 @@ export default function VisitPage() {
     }
   }, [id]);
 
-  // Перезагрузка задач при возвращении на страницу (например, после редактирования задачи)
+  // Перезагрузка задач при возвращении из задачи (после сохранения)
   useEffect(() => {
-    const handleFocus = () => {
-      if (!isNew && id && visit) {
-        api.getVisit(id).then(v => {
-          setTasks(v.tasks || []);
-        });
-      }
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [id, isNew, visit]);
+    if (!isNew && id && visit && (location.state as any)?.refreshTasks) {
+      api.getVisit(id).then(v => {
+        setTasks(v.tasks || []);
+      });
+      // Очищаем флаг, чтобы не перезагружать при каждом рендере
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [id, isNew, visit, location.state, location.pathname, navigate]);
 
   const searchAddresses = async (q: string) => {
     if (q.length >= 2) {

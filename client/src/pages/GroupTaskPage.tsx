@@ -195,7 +195,7 @@ export default function GroupTaskPage() {
         const incomplete = items.filter(i => !i.status || i.photos.length < 2).length;
         message.info(`Сохранено. Не завершено единиц: ${incomplete}`);
       }
-      navigate(`/visit/${visitId}`);
+      navigate(`/visit/${visitId}`, { state: { refreshTasks: true } });
     } catch (err: any) {
       if (err.errorFields) return;
       message.error(err.message);
