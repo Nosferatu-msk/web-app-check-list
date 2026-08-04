@@ -537,73 +537,19 @@ export default function VisitPage() {
 
   if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>;
 
-  // Группировка задач по комнатам
-  const tasksByRoom = (() => {
-    const CLIMATE_CODES = ['splitvn', 'mssvn', 'vrv_vn'];
-    const groups = new Map<string, { roomName: string; tasks: any[]; climateItems?: any[] }>();
-    
+  // Группировка задач по комнатам для мобильного вида
+  const tasksByRoom = isMobile ? (() => {
+    const groups = new Map<string, { roomName: string; tasks: any[] }>();
     for (const task of tasks) {
-      const eqCode = task.equipmentType?.code || '';
-      const isClimate = CLIMATE_CODES.includes(eqCode) || task.taskType === 'group_climate';
-      
-      if (isClimate) {
-        // Климатическое оборудование — группируем по помещениям
-        const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || '__climate_object__';
-        const roomName = task.roomType?.name || 'Уровень объекта';
-        const groupName = `Климатическое оборудование · ${roomName}`;
-        
-        if (!groups.has(roomKey)) {
-          groups.set(roomKey, { roomName: groupName, tasks: [], climateItems: [] });
-        }
-        const group = groups.get(roomKey)!;
-        
-        // Если это уже group_climate — добавляем equipmentItems
-        if (task.taskType === 'group_climate') {
-          group.tasks.push(task);
-          if (task.equipmentItems) {
-            group.climateItems!.push(...task.equipmentItems);
-          }
-        } else {
-          // Индивидуальная задача климатического оборудования — добавляем как единицу
-          group.tasks.push(task);
-          group.climateItems!.push({
-            id: task.id,
-            objectEquipmentId: task.objectEquipmentId,
-            status: task.conclusion === 'ok' ? 'ok' : task.conclusion === 'faulty' ? 'not_ok' : null,
-            photos: task.photos || [],
-            // Сохраняем ссылку на исходную задачу для навигации
-            _sourceTask: task,
-          });
-        }
-      } else {
-        // Остальное оборудование — по помещениям
-        const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
-        const roomName = task.roomType?.name || task.comment || 'Без помещения';
-        if (!groups.has(roomKey)) {
-          groups.set(roomKey, { roomName, tasks: [] });
-        }
-        groups.get(roomKey)!.tasks.push(task);
+      const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
+      const roomName = task.roomType?.name || task.comment || 'Без помещения';
+      if (!groups.has(roomKey)) {
+        groups.set(roomKey, { roomName, tasks: [] });
       }
+      groups.get(roomKey)!.tasks.push(task);
     }
-    
-    // Для групп с климатическим оборудованием — создаём виртуальную групповую задачу
-    return Array.from(groups.entries()).map(([key, val]) => {
-      if (val.climateItems && val.climateItems.length > 0) {
-        // Создаём виртуальную задачу group_climate
-        const virtualTask = {
-          id: `virtual_climate_${key}`,
-          taskType: 'group_climate',
-          equipmentType: { name: 'Климатическое оборудование' },
-          roomType: { name: val.roomName.replace('Климатическое оборудование · ', '') },
-          equipmentItems: val.climateItems,
-          // Для навигации — используем первую реальную задачу
-          _navigateToTask: val.tasks[0],
-        };
-        return { key, roomName: val.roomName, tasks: [virtualTask] };
-      }
-      return { key, ...val };
-    });
-  })();
+    return Array.from(groups.entries()).map(([key, val]) => ({ key, ...val }));
+  })() : [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -618,12 +564,10 @@ export default function VisitPage() {
 
   const navigateToTask = (record: any) => {
     if (visit?.id) {
-      // Для виртуальных задач — переходим к реальной задаче
-      const target = record._navigateToTask || record;
-      if (target.taskType === 'group_climate') {
-        navigate(`/visit/${visit.id}/task/${target.id}/group`);
+      if (record.taskType === 'group_climate') {
+        navigate(`/visit/${visit.id}/task/${record.id}/group`);
       } else {
-        navigate(`/visit/${visit.id}/task/${target.id}`);
+        navigate(`/visit/${visit.id}/task/${record.id}`);
       }
     }
   };
@@ -694,28 +638,17 @@ export default function VisitPage() {
       </div>
 
       {!isMobile ? (
-        tasksByRoom.length === 0 ? (
-          <Empty description="Нет задач" />
-        ) : (
-          tasksByRoom.map((group) => (
-            <div key={group.key} style={{ marginBottom: 24 }}>
-              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8, padding: '8px 12px', background: '#f5f5f5', borderRadius: 6, borderLeft: '3px solid #1890ff' }}>
-                📍 {group.roomName} <span style={{ fontWeight: 400, color: '#888', fontSize: 13 }}>({group.tasks.length})</span>
-              </div>
-              <Table
-                dataSource={group.tasks}
-                columns={columns}
-                rowKey="id"
-                pagination={false}
-                size="small"
-                onRow={(record) => ({
-                  onClick: () => navigateToTask(record),
-                  style: { cursor: 'pointer' },
-                })}
-              />
-            </div>
-          ))
-        )
+        <Table
+          dataSource={tasks}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          size="small"
+          onRow={(record) => ({
+            onClick: () => navigateToTask(record),
+            style: { cursor: 'pointer' },
+          })}
+        />
       ) : (
         <div className="mobile-task-list">
           {tasksByRoom.length === 0 ? (
