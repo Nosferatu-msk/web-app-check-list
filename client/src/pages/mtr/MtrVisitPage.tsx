@@ -379,26 +379,16 @@ export default function MtrVisitPage() {
 
   const handleComplete = async () => {
     if (!visit) return;
-    modal.confirm({
-      title: 'Завершить визит?',
-      content: 'После завершения визит будет отправлен на проверку ТМ.',
-      okText: 'Завершить',
-      cancelText: 'Отмена',
-      onOk: async () => {
-        try {
-          const visitId = (visit as any)._localId || visit.id;
-          const result = await api.mtrCompleteVisitOffline(visitId);
-          if ((result as any)._offline) {
-            message.success('Визит помечен как завершённый (будет отправлен при подключении)');
-          } else {
-            message.success('Визит завершён и отправлен');
-          }
-          navigate(`/mtr/visits/${visit.id}/report`);
-        } catch (err: any) {
-          message.error(err.message);
-        }
-      },
-    });
+    try {
+      const visitId = (visit as any)._localId || visit.id;
+      const result = await api.mtrCompleteVisitOffline(visitId);
+      if ((result as any)._offline) {
+        message.success('Визит завершён (будет отправлен при подключении)');
+      }
+      navigate(`/mtr/visits/${visit.id}/report`);
+    } catch (err: any) {
+      message.error(err.message);
+    }
   };
 
   const handleDeleteVisit = () => {

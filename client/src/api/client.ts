@@ -518,9 +518,9 @@ export const api = {
   mtrCompleteVisitOffline: async (visitId: string) => {
     if (!isOffline()) return api.mtr.completeVisit(visitId);
     const { db, enqueueSync } = await import('../db/index');
-    await db.mtrVisits.update(visitId, { status: 'sent', dirty: true, updatedAt: new Date().toISOString() });
+    await db.mtrVisits.update(visitId, { status: 'completed', dirty: true, updatedAt: new Date().toISOString() });
     await enqueueSync({ operation: 'complete', entityType: 'mtr_visit', entityId: visitId });
-    return { id: visitId, status: 'sent', _offline: true };
+    return { id: visitId, status: 'completed', _offline: true };
   },
 
   mtrDeleteVisitOffline: async (visitId: string) => {

@@ -463,14 +463,11 @@ router.put('/visits/:id/complete', engineerMtrOnly, async (req: AuthRequest, res
     return;
   }
 
-  const now = new Date();
-
   const updated = await prisma.mtrVisit.update({
     where: { id: visit.id },
     data: {
-      status: 'sent',
+      status: 'completed',
       isDraft: false,
-      sentAt: now,
     },
     include: {
       engineer: true,

@@ -353,7 +353,7 @@ async function processQueueItem(item: SyncQueueItem, token: string) {
         headers: { ...headers, 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      await db.mtrVisits.update(item.entityId, { dirty: false, status: 'sent' });
+      await db.mtrVisits.update(item.entityId, { dirty: false, status: 'completed' });
       break;
     }
 
