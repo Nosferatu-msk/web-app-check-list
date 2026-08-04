@@ -564,10 +564,12 @@ export default function VisitPage() {
 
   const navigateToTask = (record: any) => {
     if (visit?.id) {
-      // Для виртуальных задач — переходим к первой реальной задаче в группе
+      // Для виртуальных задач — переходим к первой реальной задаче, передавая все ID группы
       if (record._sourceTaskIds && record._sourceTaskIds.length > 0) {
         const firstTaskId = record._sourceTaskIds[0];
-        navigate(`/visit/${visit.id}/task/${firstTaskId}/group`);
+        navigate(`/visit/${visit.id}/task/${firstTaskId}/group`, {
+          state: { sourceTaskIds: record._sourceTaskIds }
+        });
       } else if (record.taskType === 'group_climate') {
         navigate(`/visit/${visit.id}/task/${record.id}/group`);
       } else {

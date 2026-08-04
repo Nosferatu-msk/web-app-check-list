@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Collapse, Tag, Modal, List, Empty, Tabs } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined, DeleteOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
@@ -56,6 +56,8 @@ export default function GroupTaskPage() {
   const { message } = App.useApp();
   const { visitId, taskId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const sourceTaskIds = (location.state as any)?.sourceTaskIds as string[] | undefined;
   const isMobile = useIsMobile();
   const [form] = Form.useForm();
   const [task, setTask] = useState<any>(null);
@@ -80,7 +82,32 @@ export default function GroupTaskPage() {
     if (!visitId || !taskId) return;
     const t = await api.getTask(visitId, taskId);
     setTask(t);
-    setItems(t.equipmentItems || []);
+    
+    // Если есть sourceTaskIds (виртуальная группировка splitvn) — загружаем все задачи и объединяем equipmentItems
+    if (sourceTaskIds && sourceTaskIds.length > 0) {
+      const allItems: EquipmentItem[] = [];
+      for (const id of sourceTaskIds) {
+        const taskData = await api.getTask(visitId, id);
+        if (taskData.equipmentItems) {
+          allItems.push(...taskData.equipmentItems);
+        } else if (taskData.objectEquipmentId) {
+          // Если equipmentItems нет, но есть objectEquipmentId — создаём item из задачи
+          allItems.push({
+            id: taskData.id,
+            taskId: taskData.id,
+            objectEquipmentId: taskData.objectEquipmentId,
+            status: taskData.conclusion === 'ok' ? 'ok' : taskData.conclusion === 'faulty' ? 'not_ok' : undefined,
+            sortOrder: 0,
+            objectEquipment: taskData.objectEquipment,
+            photos: taskData.photos || [],
+          });
+        }
+      }
+      setItems(allItems);
+    } else {
+      setItems(t.equipmentItems || []);
+    }
+    
     const params = (t.parameters || {}) as Record<string, any>;
     const { conclusion: c, ...rest } = params;
     const conclusionValue = c || 'ok';
