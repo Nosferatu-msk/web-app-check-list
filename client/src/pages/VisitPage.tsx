@@ -537,8 +537,8 @@ export default function VisitPage() {
 
   if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>;
 
-  // Группировка задач по комнатам для мобильного вида
-  const tasksByRoom = isMobile ? (() => {
+  // Группировка задач по комнатам
+  const tasksByRoom = (() => {
     const groups = new Map<string, { roomName: string; tasks: any[] }>();
     for (const task of tasks) {
       const roomKey = task.roomTypeCode || task.room_type_id || task.roomType?.name || 'Без помещения';
@@ -549,7 +549,7 @@ export default function VisitPage() {
       groups.get(roomKey)!.tasks.push(task);
     }
     return Array.from(groups.entries()).map(([key, val]) => ({ key, ...val }));
-  })() : [];
+  })();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -638,17 +638,28 @@ export default function VisitPage() {
       </div>
 
       {!isMobile ? (
-        <Table
-          dataSource={tasks}
-          columns={columns}
-          rowKey="id"
-          pagination={false}
-          size="small"
-          onRow={(record) => ({
-            onClick: () => navigateToTask(record),
-            style: { cursor: 'pointer' },
-          })}
-        />
+        tasksByRoom.length === 0 ? (
+          <Empty description="Нет задач" />
+        ) : (
+          tasksByRoom.map((group) => (
+            <div key={group.key} style={{ marginBottom: 24 }}>
+              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8, padding: '8px 12px', background: '#f5f5f5', borderRadius: 6, borderLeft: '3px solid #1890ff' }}>
+                📍 {group.roomName} <span style={{ fontWeight: 400, color: '#888', fontSize: 13 }}>({group.tasks.length})</span>
+              </div>
+              <Table
+                dataSource={group.tasks}
+                columns={columns}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                onRow={(record) => ({
+                  onClick: () => navigateToTask(record),
+                  style: { cursor: 'pointer' },
+                })}
+              />
+            </div>
+          ))
+        )
       ) : (
         <div className="mobile-task-list">
           {tasksByRoom.length === 0 ? (
@@ -908,7 +919,7 @@ export default function VisitPage() {
                                   <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 500 }}>
                                       {eqType?.name || eq.equipmentTypeCode}
-                                      {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
+                                      {(eq.brand || eq.model) && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand}{eq.brand && eq.model ? ' ' : ''}{eq.model}</span>}
                                     </div>
                                     <div style={{ fontSize: 12, color: '#888' }}>
                                       {eq.serialNumber && <span>SN: {eq.serialNumber}</span>}
@@ -952,7 +963,7 @@ export default function VisitPage() {
                                 <div style={{ flex: 1 }}>
                                   <div style={{ fontWeight: 500, fontSize: 13 }}>
                                     {eqType?.name || eq.equipmentTypeCode}
-                                    {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
+                                    {(eq.brand || eq.model) && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand}{eq.brand && eq.model ? ' ' : ''}{eq.model}</span>}
                                   </div>
                                   <div style={{ fontSize: 12, color: '#888' }}>
                                     📍 {roomName}

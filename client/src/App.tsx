@@ -75,7 +75,7 @@ function TmAdminRoute({ children }: { children: React.ReactNode }) {
 function EngineerRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
   if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
-  if (user?.role !== 'engineer') return <Navigate to="/" />;
+  if (user?.role !== 'engineer' && user?.role !== 'admin') return <Navigate to="/" />;
   return <SpecializationGate><EngineerMobileLayout>{children}</EngineerMobileLayout></SpecializationGate>;
 }
 

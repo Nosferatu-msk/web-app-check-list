@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Space, App, Popconfirm, Tag, Divider, List } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, Space, App, Popconfirm, Tag, Divider, List, AutoComplete } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 
@@ -16,6 +16,8 @@ export default function AdminObjectEquipment() {
   const [roomTypes, setRoomTypes] = useState<any[]>([]);
   const [objectEquipment, setObjectEquipment] = useState<any[]>([]);
   const [modalAddressId, setModalAddressId] = useState<string>('');
+  const [mfrOptions, setMfrOptions] = useState<{ value: string; label: string }[]>([]);
+  const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -193,8 +195,48 @@ export default function AdminObjectEquipment() {
           <Form.Item name="roomTypeCode" label="Тип помещения">
             <Select allowClear options={roomTypes.map((r: any) => ({ value: r.code, label: r.name }))} placeholder="Не указано = уровень объекта" />
           </Form.Item>
-          <Form.Item name="brand" label="Марка"><Input /></Form.Item>
-          <Form.Item name="model" label="Модель"><Input /></Form.Item>
+          <Form.Item name="brand" label="Марка">
+            <AutoComplete
+              placeholder="Начните вводить..."
+              options={mfrOptions}
+              onSearch={async (q) => {
+                try {
+                  const list = await api.getManufacturersList();
+                  const filtered = list.filter((m: any) => m.name.toLowerCase().includes(q.toLowerCase()));
+                  setMfrOptions(filtered.map((m: any) => ({ value: m.name, label: m.name })));
+                } catch { setMfrOptions([]); }
+              }}
+              onFocus={async () => {
+                if (mfrOptions.length === 0) {
+                  try {
+                    const list = await api.getManufacturersList();
+                    setMfrOptions(list.map((m: any) => ({ value: m.name, label: m.name })));
+                  } catch { /* ignore */ }
+                }
+              }}
+              filterOption={false}
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item name="model" label="Модель">
+            <AutoComplete
+              placeholder="Начните вводить..."
+              options={modelOptions}
+              onSearch={async (q) => {
+                const eqTypeCode = form.getFieldValue('equipmentTypeCode');
+                const eqType = equipmentTypes.find((e: any) => e.code === eqTypeCode);
+                try {
+                  const results = await api.searchModels({ equipment_type_id: eqType?.id || '', query: q });
+                  setModelOptions(results.map((m: any) => ({
+                    value: m.fullModelName || m.modelName,
+                    label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+                  })));
+                } catch { setModelOptions([]); }
+              }}
+              filterOption={false}
+              allowClear
+            />
+          </Form.Item>
           <Form.Item name="serialNumber" label="Серийный номер"><Input /></Form.Item>
           <Form.Item name="locationDescription" label="Местоположение"><Input.TextArea rows={2} /></Form.Item>
         </Form>
