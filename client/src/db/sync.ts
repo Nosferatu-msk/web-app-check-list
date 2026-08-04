@@ -1,4 +1,5 @@
 import { db, type SyncQueueItem, type LocalVisit, type LocalTask, type LocalPhoto, type LocalFavorite } from './index';
+import { useAuthStore } from '../store/authStore';
 
 type SyncStatus = 'idle' | 'syncing' | 'error';
 type SyncCallback = (status: SyncStatus, pending: number, error?: string) => void;
@@ -471,8 +472,13 @@ export async function fullSync(): Promise<{ pushed: { success: number; failed: n
   const pushed = await processSyncQueue();
   const pulled = await pullVisitsFromServer();
   await pullFavoritesFromServer();
-  await pullMtrVisitsFromServer();
-  await cacheMtrWorkTypes();
+
+  const role = useAuthStore.getState().user?.role;
+  if (role === 'engineer_mtr' || role === 'tm_mtr' || role === 'admin') {
+    await pullMtrVisitsFromServer();
+    await cacheMtrWorkTypes();
+  }
+
   return { pushed, pulled };
 }
 
