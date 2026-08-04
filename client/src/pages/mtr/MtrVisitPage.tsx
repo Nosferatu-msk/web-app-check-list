@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Tag, Input, App, Modal, List, Typography, Spin, Badge } from 'antd';
+import { Button, Tag, Input, App, Modal, List, Typography, Spin, Badge, Form, Select, DatePicker, TimePicker, Space } from 'antd';
 import {
   ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PlusOutlined,
   SaveOutlined, CheckCircleOutlined, SearchOutlined, CloudOutlined,
@@ -39,14 +39,11 @@ export default function MtrVisitPage() {
   const [visit, setVisit] = useState<MtrVisit | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [form] = Form.useForm();
 
   // Create form
-  const [addressSearch, setAddressSearch] = useState('');
-  const [addressResults, setAddressResults] = useState<any[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [requestNumber, setRequestNumber] = useState('');
-  const [dateStart, setDateStart] = useState(dayjs().format('YYYY-MM-DD'));
-  const [timeStart, setTimeStart] = useState(dayjs().format('HH:mm'));
 
   // Work types search modal
   const [workSearchOpen, setWorkSearchOpen] = useState(false);
@@ -206,20 +203,14 @@ export default function MtrVisitPage() {
     };
   }, [visit?.photos]);
 
-  // Address search debounce
-  useEffect(() => {
-    if (!addressSearch || addressSearch.length < 2) {
-      setAddressResults([]);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      try {
-        const results = await api.mtr.searchAddresses(addressSearch);
-        setAddressResults(results || []);
-      } catch { /* ignore */ }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [addressSearch]);
+  // Address search (like VisitPage)
+  const searchAddresses = async (q: string) => {
+    if (q.length < 2) { setAddressOptions([]); return; }
+    try {
+      const results = await api.mtr.searchAddresses(q);
+      setAddressOptions(results || []);
+    } catch { /* ignore */ }
+  };
 
   // Work type search debounce
   useEffect(() => {
@@ -253,15 +244,16 @@ export default function MtrVisitPage() {
   }, [workSearchQuery]);
 
   const handleCreate = async () => {
-    if (!selectedAddress) { message.warning('Выберите адрес'); return; }
-    if (!requestNumber.trim()) { message.warning('Укажите номер заявки'); return; }
-    setSaving(true);
     try {
+      const values = await form.validateFields();
+      if (!values.addressId) { message.warning('Выберите адрес'); return; }
+      if (!requestNumber.trim()) { message.warning('Укажите номер заявки'); return; }
+      setSaving(true);
       const result = await api.mtrCreateVisitOffline({
-        addressId: selectedAddress.id,
+        addressId: values.addressId,
         requestNumber: requestNumber.trim().toUpperCase(),
-        dateStart,
-        timeStart,
+        dateStart: values.dateStart ? values.dateStart.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+        timeStart: values.timeStart ? values.timeStart.format('HH:mm') : dayjs().format('HH:mm'),
       });
       if ((result as any)._offline) {
         message.success('Визит сохранён локально (будет отправлен при подключении)');
@@ -270,6 +262,7 @@ export default function MtrVisitPage() {
       }
       navigate(`/mtr/visits/${result.id}`, { replace: true });
     } catch (err: any) {
+      if (err.errorFields) return; // form validation error
       message.error(err.message);
     }
     setSaving(false);
@@ -441,62 +434,42 @@ export default function MtrVisitPage() {
           <TorchButton />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Адрес */}
-          <div>
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>Адрес *</div>
-            <Input
-              placeholder="Начните вводить адрес..."
-              value={addressSearch}
-              onChange={(e) => setAddressSearch(e.target.value)}
-            />
-            {selectedAddress && (
-              <div style={{ marginTop: 8, padding: 8, background: '#f6ffed', borderRadius: 6, border: '1px solid #b7eb8f' }}>
-                <Text strong>{selectedAddress.fullAddress}</Text>
-                <Button type="link" size="small" onClick={() => { setSelectedAddress(null); setAddressSearch(''); }}>
-                  Изменить
-                </Button>
-              </div>
-            )}
-            {addressResults.length > 0 && !selectedAddress && (
-              <div style={{ marginTop: 8, maxHeight: 200, overflowY: 'auto', border: '1px solid #d9d9d9', borderRadius: 6 }}>
-                {addressResults.map((addr) => (
-                  <div
-                    key={addr.id}
-                    onClick={() => { setSelectedAddress(addr); setAddressSearch(addr.fullAddress); setAddressResults([]); }}
-                    style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}
-                  >
-                    {addr.fullAddress}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+          <Form form={form} layout="vertical" initialValues={{ dateStart: dayjs(), timeStart: dayjs() }}>
+            <Form.Item label="Адрес" name="addressSearch" rules={[{ required: true, message: 'Выберите адрес' }]}>
+              <Select
+                showSearch
+                filterOption={false}
+                onSearch={searchAddresses}
+                placeholder="Начните вводить адрес..."
+                onChange={(v: string) => {
+                  form.setFieldValue('addressId', v);
+                }}
+                options={addressOptions.map((a: any) => ({ label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress, value: a.id, dataId: a.id }))}
+                notFoundContent="Адрес не найден"
+              />
+            </Form.Item>
+            <Form.Item name="addressId" hidden><Input /></Form.Item>
 
-          {/* Номер заявки */}
-          <div>
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>Номер заявки * (формат SD + 10 цифр)</div>
-            <Input
-              placeholder="SD1234567890"
-              value={requestNumber}
-              onChange={(e) => setRequestNumber(e.target.value)}
-              style={{ textTransform: 'uppercase' }}
-            />
-          </div>
+            <Form.Item label="Номер заявки" required>
+              <Input
+                placeholder="SD1234567890"
+                value={requestNumber}
+                onChange={(e) => setRequestNumber(e.target.value)}
+                style={{ textTransform: 'uppercase' }}
+              />
+            </Form.Item>
 
-          {/* Дата */}
-          <div>
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>Дата *</div>
-            <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
-          </div>
-
-          {/* Время */}
-          <div>
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>Время *</div>
-            <Input type="time" value={timeStart} onChange={(e) => setTimeStart(e.target.value)} />
-          </div>
-
-          <Button type="primary" size="large" onClick={handleCreate} loading={saving} block>
+            <Space style={{ width: '100%' }} size="middle">
+              <Form.Item label="Дата" name="dateStart" rules={[{ required: true }]}>
+                <DatePicker format="DD.MM.YYYY" />
+              </Form.Item>
+              <Form.Item label="Время" name="timeStart" rules={[{ required: true }]}>
+                <TimePicker format="HH:mm" />
+              </Form.Item>
+            </Space>
+          </Form>
+          <Button type="primary" onClick={handleCreate} loading={saving} icon={<SaveOutlined />}>
             Создать визит
           </Button>
         </div>
