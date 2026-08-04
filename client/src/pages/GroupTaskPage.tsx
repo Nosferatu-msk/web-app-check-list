@@ -90,15 +90,23 @@ export default function GroupTaskPage() {
         const taskData = await api.getTask(visitId, id);
         if (taskData.equipmentItems && taskData.equipmentItems.length > 0) {
           allItems.push(...taskData.equipmentItems);
-        } else if (taskData.objectEquipmentId) {
-          // Если equipmentItems нет, но есть objectEquipmentId — создаём item из задачи
+        } else {
+          // Создаём equipmentItem из данных задачи (даже если objectEquipmentId null)
           allItems.push({
             id: taskData.id,
             taskId: taskData.id,
-            objectEquipmentId: taskData.objectEquipmentId,
+            objectEquipmentId: taskData.objectEquipmentId || '',
             status: taskData.conclusion === 'ok' ? 'ok' : taskData.conclusion === 'faulty' ? 'not_ok' : undefined,
             sortOrder: 0,
-            objectEquipment: taskData.objectEquipment,
+            objectEquipment: taskData.objectEquipment || {
+              id: taskData.id,
+              equipmentTypeCode: taskData.equipmentType?.code || '',
+              brand: taskData.brand || undefined,
+              model: taskData.model || undefined,
+              serialNumber: taskData.serialNumber || undefined,
+              roomTypeCode: taskData.roomType?.code || undefined,
+              isOutdoorUnit: false,
+            },
             photos: taskData.photos || [],
           });
         }
