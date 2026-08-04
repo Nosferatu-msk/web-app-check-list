@@ -223,8 +223,18 @@ export default function GroupTaskPage() {
     // Для виртуальных задач используем item.taskId (ID реальной задачи)
     const item = items.find(i => i.id === itemId);
     const targetTaskId = item?.taskId || taskId;
-    await api.updateTaskItem(visitId, targetTaskId, itemId, { status });
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+    
+    // Если это виртуальная задача (item.id === item.taskId), обновляем статус задачи
+    if (item && item.id === item.taskId) {
+      // Обновляем conclusion задачи на основе статуса единицы
+      const conclusion = status === 'ok' ? 'ok' : 'faulty';
+      await api.updateTask(visitId, targetTaskId, { conclusion });
+      setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+    } else {
+      // Для реальных equipmentItems обновляем через API
+      await api.updateTaskItem(visitId, targetTaskId, itemId, { status });
+      setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+    }
   };
 
   const handleOpenAddModal = async () => {
