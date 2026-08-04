@@ -80,23 +80,27 @@ export default function GroupTaskPage() {
 
   const loadTask = useCallback(async () => {
     if (!visitId || !taskId) return;
+    console.log('[GroupTaskPage] loadTask:', { visitId, taskId, sourceTaskIds });
     const t = await api.getTask(visitId, taskId);
+    console.log('[GroupTaskPage] Task loaded:', t);
     setTask(t);
     
     // Если есть sourceTaskIds (виртуальная группировка splitvn) — загружаем все задачи и объединяем equipmentItems
     if (sourceTaskIds && sourceTaskIds.length > 0) {
+      console.log('[GroupTaskPage] Loading virtual group tasks:', sourceTaskIds);
       const allItems: EquipmentItem[] = [];
       for (const id of sourceTaskIds) {
         const taskData = await api.getTask(visitId, id);
+        console.log('[GroupTaskPage] Virtual task loaded:', id, taskData);
         if (taskData.equipmentItems && taskData.equipmentItems.length > 0) {
           allItems.push(...taskData.equipmentItems);
         } else {
           // Создаём equipmentItem из данных задачи (даже если objectEquipmentId null)
-          allItems.push({
+          const newItem = {
             id: taskData.id,
             taskId: taskData.id,
             objectEquipmentId: taskData.objectEquipmentId || '',
-            status: taskData.conclusion === 'ok' ? 'ok' : taskData.conclusion === 'faulty' ? 'not_ok' : undefined,
+            status: taskData.conclusion === 'ok' ? 'ok' as const : taskData.conclusion === 'faulty' ? 'not_ok' as const : undefined,
             sortOrder: 0,
             objectEquipment: taskData.objectEquipment || {
               id: taskData.id,
@@ -108,9 +112,12 @@ export default function GroupTaskPage() {
               isOutdoorUnit: false,
             },
             photos: taskData.photos || [],
-          });
+          };
+          console.log('[GroupTaskPage] Created virtual item:', newItem);
+          allItems.push(newItem);
         }
       }
+      console.log('[GroupTaskPage] All virtual items:', allItems);
       setItems(allItems);
     } else {
       setItems(t.equipmentItems || []);
@@ -162,6 +169,7 @@ export default function GroupTaskPage() {
 
   const handleSave = async () => {
     if (!visitId || !taskId || !task) return;
+    console.log('[GroupTaskPage] handleSave:', { visitId, taskId, sourceTaskIds, items });
     try {
       await form.validateFields();
 
@@ -170,23 +178,32 @@ export default function GroupTaskPage() {
       const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
       const finalConclusion = formConclusion || conclusion;
       const parameters = { ...formParamValues, conclusion: finalConclusion };
+      console.log('[GroupTaskPage] Saving with parameters:', parameters);
 
       // Автоматическое определение статуса:
       // "completed" — если все единицы имеют статус и оба фото (ДО + ПОСЛЕ)
       // "in_progress" — если хотя бы одна единица не заполнена полностью
       const allComplete = items.length > 0 && items.every(i => i.status && i.photos.length >= 2);
       const taskStatus = allComplete ? 'completed' : 'in_progress';
+      console.log('[GroupTaskPage] Task status:', taskStatus, 'allComplete:', allComplete);
 
       // Для виртуальных задач обновляем все задачи из группы
       const taskIdsToUpdate = sourceTaskIds && sourceTaskIds.length > 0 ? sourceTaskIds : [taskId];
+      console.log('[GroupTaskPage] Updating tasks:', taskIdsToUpdate);
       for (const id of taskIdsToUpdate) {
-        await api.updateTask(visitId, id, {
-          parameters,
-          selectedRecommendationIds: selectedRecs,
-          additionalRecommendations: additionalRecommendations || '',
-          conclusion: finalConclusion,
-          status: taskStatus,
-        });
+        console.log('[GroupTaskPage] Updating task:', id, { parameters, taskStatus });
+        try {
+          const result = await api.updateTask(visitId, id, {
+            parameters,
+            selectedRecommendationIds: selectedRecs,
+            additionalRecommendations: additionalRecommendations || '',
+            conclusion: finalConclusion,
+            status: taskStatus,
+          });
+          console.log('[GroupTaskPage] Task updated:', id, result);
+        } catch (err) {
+          console.error('[GroupTaskPage] Error updating task:', id, err);
+        }
       }
 
       if (allComplete) {
@@ -197,6 +214,7 @@ export default function GroupTaskPage() {
       }
       navigate(`/visit/${visitId}`, { state: { refreshTasks: true } });
     } catch (err: any) {
+      console.error('[GroupTaskPage] handleSave error:', err);
       if (err.errorFields) return;
       message.error(err.message);
     } finally {
@@ -220,20 +238,35 @@ export default function GroupTaskPage() {
 
   const handleItemStatusChange = async (itemId: string, status: 'ok' | 'not_ok') => {
     if (!visitId || !taskId) return;
+    console.log('[GroupTaskPage] handleItemStatusChange:', { itemId, status, taskId, sourceTaskIds });
+    
     // Для виртуальных задач используем item.taskId (ID реальной задачи)
     const item = items.find(i => i.id === itemId);
     const targetTaskId = item?.taskId || taskId;
+    console.log('[GroupTaskPage] item:', item, 'targetTaskId:', targetTaskId);
     
     // Если это виртуальная задача (item.id === item.taskId), обновляем статус задачи
     if (item && item.id === item.taskId) {
       // Обновляем conclusion задачи на основе статуса единицы
       const conclusion = status === 'ok' ? 'ok' : 'faulty';
-      await api.updateTask(visitId, targetTaskId, { conclusion });
-      setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+      console.log('[GroupTaskPage] Updating task conclusion:', { visitId, targetTaskId, conclusion });
+      try {
+        const result = await api.updateTask(visitId, targetTaskId, { conclusion });
+        console.log('[GroupTaskPage] Task updated:', result);
+        setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+      } catch (err) {
+        console.error('[GroupTaskPage] Error updating task:', err);
+      }
     } else {
       // Для реальных equipmentItems обновляем через API
-      await api.updateTaskItem(visitId, targetTaskId, itemId, { status });
-      setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+      console.log('[GroupTaskPage] Updating task item:', { visitId, targetTaskId, itemId, status });
+      try {
+        const result = await api.updateTaskItem(visitId, targetTaskId, itemId, { status });
+        console.log('[GroupTaskPage] Task item updated:', result);
+        setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
+      } catch (err) {
+        console.error('[GroupTaskPage] Error updating task item:', err);
+      }
     }
   };
 
