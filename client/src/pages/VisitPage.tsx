@@ -128,8 +128,11 @@ export default function VisitPage() {
 
   // Перезагрузка задач при возвращении из задачи (после сохранения)
   useEffect(() => {
+    console.log('[VisitPage] useEffect refreshTasks:', { isNew, id, visit: !!visit, locationState: location.state });
     if (!isNew && id && visit && (location.state as any)?.refreshTasks) {
+      console.log('[VisitPage] Refreshing tasks...');
       api.getVisit(id).then(v => {
+        console.log('[VisitPage] Tasks refreshed:', v.tasks?.length, 'tasks');
         setTasks(v.tasks || []);
       });
       // Очищаем флаг, чтобы не перезагружать при каждом рендере
