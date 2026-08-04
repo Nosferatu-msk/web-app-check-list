@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete, Dropdown } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
@@ -30,6 +30,7 @@ export default function VisitPage() {
   const { message } = App.useApp();
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const isMobile = useIsMobile();
   const isNew = !id || id === 'new';
@@ -124,6 +125,15 @@ export default function VisitPage() {
       setLoading(false);
     }
   }, [id]);
+
+  // Перезагрузка задач при возвращении на страницу (например, после редактирования задачи)
+  useEffect(() => {
+    if (!isNew && id && visit) {
+      api.getVisit(id).then(v => {
+        setTasks(v.tasks || []);
+      });
+    }
+  }, [location.key]);
 
   const searchAddresses = async (q: string) => {
     if (q.length >= 2) {
