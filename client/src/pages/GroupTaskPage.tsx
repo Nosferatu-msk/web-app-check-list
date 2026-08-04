@@ -256,7 +256,7 @@ export default function GroupTaskPage() {
       const conclusion = status === 'ok' ? 'ok' : 'faulty';
       console.log('[GroupTaskPage] Updating task conclusion:', { visitId, targetTaskId, conclusion });
       try {
-        const result = await api.updateTask(visitId, targetTaskId, { conclusion });
+        const result = await api.updateTask(visitId, targetTaskId, { conclusion, status: 'in_progress' });
         console.log('[GroupTaskPage] Task updated:', result);
         setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
       } catch (err) {
