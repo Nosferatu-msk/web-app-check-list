@@ -160,6 +160,7 @@ const taskInclude = {
   equipmentType: true,
   roomType: true,
   photos: true,
+  objectEquipment: true,
   equipmentItems: {
     orderBy: { sortOrder: 'asc' as const },
     include: {

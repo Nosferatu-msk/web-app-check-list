@@ -88,7 +88,7 @@ export default function GroupTaskPage() {
       const allItems: EquipmentItem[] = [];
       for (const id of sourceTaskIds) {
         const taskData = await api.getTask(visitId, id);
-        if (taskData.equipmentItems) {
+        if (taskData.equipmentItems && taskData.equipmentItems.length > 0) {
           allItems.push(...taskData.equipmentItems);
         } else if (taskData.objectEquipmentId) {
           // Если equipmentItems нет, но есть objectEquipmentId — создаём item из задачи
