@@ -154,6 +154,7 @@ router.post('/visits', engineerMtrOnly, validate(createVisitSchema), async (req:
       isDraft: true,
     },
     include: {
+      engineer: true,
       address: true,
       works: {
         orderBy: { sortOrder: 'asc' },
@@ -182,6 +183,7 @@ router.get('/visits/:id', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.mtrVisit.findUnique({
     where: { id: req.params.id as string },
     include: {
+      engineer: true,
       address: true,
       works: {
         orderBy: { sortOrder: 'asc' },
@@ -248,6 +250,7 @@ router.put('/visits/:id', engineerMtrOnly, validate(updateVisitSchema), async (r
     where: { id: visit.id },
     data,
     include: {
+      engineer: true,
       address: true,
       works: {
         orderBy: { sortOrder: 'asc' },
@@ -470,6 +473,7 @@ router.put('/visits/:id/complete', engineerMtrOnly, async (req: AuthRequest, res
       sentAt: now,
     },
     include: {
+      engineer: true,
       address: true,
       works: {
         orderBy: { sortOrder: 'asc' },
@@ -508,6 +512,7 @@ router.put('/visits/:id/save-draft', engineerMtrOnly, async (req: AuthRequest, r
     where: { id: visit.id },
     data: { isDraft: true },
     include: {
+      engineer: true,
       address: true,
       works: {
         orderBy: { sortOrder: 'asc' },
