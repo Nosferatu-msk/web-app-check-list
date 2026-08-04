@@ -177,13 +177,17 @@ export default function GroupTaskPage() {
       const allComplete = items.length > 0 && items.every(i => i.status && i.photos.length >= 2);
       const taskStatus = allComplete ? 'completed' : 'in_progress';
 
-      await api.updateTask(visitId, taskId, {
-        parameters,
-        selectedRecommendationIds: selectedRecs,
-        additionalRecommendations: additionalRecommendations || '',
-        conclusion: finalConclusion,
-        status: taskStatus,
-      });
+      // Для виртуальных задач обновляем все задачи из группы
+      const taskIdsToUpdate = sourceTaskIds && sourceTaskIds.length > 0 ? sourceTaskIds : [taskId];
+      for (const id of taskIdsToUpdate) {
+        await api.updateTask(visitId, id, {
+          parameters,
+          selectedRecommendationIds: selectedRecs,
+          additionalRecommendations: additionalRecommendations || '',
+          conclusion: finalConclusion,
+          status: taskStatus,
+        });
+      }
 
       if (allComplete) {
         message.success('Задача завершена');
@@ -216,7 +220,10 @@ export default function GroupTaskPage() {
 
   const handleItemStatusChange = async (itemId: string, status: 'ok' | 'not_ok') => {
     if (!visitId || !taskId) return;
-    await api.updateTaskItem(visitId, taskId, itemId, { status });
+    // Для виртуальных задач используем item.taskId (ID реальной задачи)
+    const item = items.find(i => i.id === itemId);
+    const targetTaskId = item?.taskId || taskId;
+    await api.updateTaskItem(visitId, targetTaskId, itemId, { status });
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
   };
 
