@@ -96,7 +96,7 @@ export default function AdminUsers() {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
-    setRoleValue(undefined);
+    setRoleValue('engineer');
     setModalOpen(true);
   };
 
