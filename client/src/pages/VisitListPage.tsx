@@ -355,15 +355,13 @@ export default function VisitListPage() {
                         if (v.user && !engineerIds.has(v.user.id)) {
                           allEngineers.push({ id: v.user.id, fullName: v.user.fullName, specs: v.user });
                         }
-                        // Показываем всех, кроме текущего пользователя
-                        const otherEngineers = allEngineers.filter(e => e.id !== user?.id);
-                        if (otherEngineers.length === 0) return null;
+                        if (allEngineers.length === 0) return null;
                         return (
-                          <span> · {otherEngineers.map(e => (
+                          <span> · {allEngineers.map((e, idx) => (
                             <span key={e.id}>
-                              {e.fullName}{getSpecBadges(e.specs)}
+                              {idx > 0 && ', '}{e.fullName}{getSpecBadges(e.specs)}
                             </span>
-                          )).reduce((prev, curr, idx) => idx === 0 ? [curr] : [...prev, ', ', curr], [] as any[])}
+                          ))}
                           </span>
                         );
                       })()}

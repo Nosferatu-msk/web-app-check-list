@@ -133,6 +133,7 @@ export default function MyRequestsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Мои заявки</div>
           <Space>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
             <NotificationBell />
             <Button icon={<LogoutOutlined />} onClick={() => { logout(); navigate('/login'); }}>Выход</Button>
           </Space>
