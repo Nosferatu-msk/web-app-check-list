@@ -88,6 +88,8 @@ export const api = {
   // Visits
   createVisit: (data: any) =>
     request<any>('/visits', { method: 'POST', body: JSON.stringify(data) }),
+  checkRequestsByAddress: (addressId: string) =>
+    request<any>(`/visits/check-requests?addressId=${encodeURIComponent(addressId)}`),
   getVisits: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any>(`/visits${qs}`);

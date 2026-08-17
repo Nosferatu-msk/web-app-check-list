@@ -43,6 +43,83 @@ async function canAccessVisit(visitUserId: string | null, req: AuthRequest, visi
   return false;
 }
 
+// ─── CHECK REQUESTS BY ADDRESS ───────────────────────────────
+// Проверка наличия заявок по адресу для автоназначения
+router.get('/check-requests', async (req: AuthRequest, res: Response) => {
+  if (req.userRole !== 'engineer') {
+    res.status(403).json({ error: 'Доступно только инженеру' });
+    return;
+  }
+
+  const addressId = req.query.addressId as string;
+  if (!addressId) {
+    res.status(400).json({ error: 'Не указан addressId' });
+    return;
+  }
+
+  // Проверка специализации инженера — только ВИК и ИСЖ
+  const engineer = await prisma.user.findUnique({
+    where: { id: req.userId as string },
+    select: { specializationVik: true, specializationIszh: true },
+  });
+
+  const canAutoAssign = !!(engineer?.specializationVik || engineer?.specializationIszh);
+
+  if (!canAutoAssign) {
+    res.json({ requests: [], canAutoAssign: false });
+    return;
+  }
+
+  // Поиск заявок по адресу со статусами awaiting_assignment и planned
+  const requests = await prisma.importedRequest.findMany({
+    where: {
+      matchedAddressId: addressId,
+      visit: {
+        status: { in: ['awaiting_assignment', 'planned'] },
+      },
+      equipmentType: {
+        specializationReq: { in: ['vik', 'iszh'] },
+      },
+    },
+    include: {
+      equipmentType: { select: { id: true, name: true, code: true, specializationReq: true } },
+      visit: {
+        include: {
+          visitEngineers: {
+            include: { engineer: { select: { id: true, fullName: true } } },
+          },
+        },
+      },
+    },
+    take: 10,
+  });
+
+  // Фильтрация: только заявки, где инженер ещё не назначен
+  const availableRequests = requests.filter(r => {
+    const visit = r.visit;
+    if (!visit) return false;
+    // Пропустить, если инженер уже назначен на этот визит
+    if (visit.visitEngineers.some(ve => ve.engineerId === req.userId)) return false;
+    return true;
+  });
+
+  res.json({
+    requests: availableRequests.map(r => ({
+      id: r.id,
+      externalRequestId: r.externalRequestId,
+      equipmentType: r.equipmentType,
+      visitStatus: r.visit?.status,
+      visitId: r.visitId,
+      assignedEngineers: r.visit?.visitEngineers.map(ve => ({
+        id: ve.engineer.id,
+        fullName: ve.engineer.fullName,
+        isPrimary: ve.isPrimary,
+      })) || [],
+    })),
+    canAutoAssign: true,
+  });
+});
+
 // ─── VISITS ──────────────────────────────────────────────────
 const createVisitSchema = z.object({
   addressId: z.string().uuid(),
@@ -51,10 +128,11 @@ const createVisitSchema = z.object({
   timeStart: z.string(),
   season: z.enum(['summer', 'winter']),
   userId: z.string().uuid().optional(),
+  autoAssignRequests: z.boolean().optional(),
 });
 
 router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Response) => {
-  const { userId: targetUserId, ...rest } = req.body;
+  const { userId: targetUserId, autoAssignRequests, ...rest } = req.body;
   let visitUserId: string;
 
   if (req.userRole === 'engineer') {
@@ -89,7 +167,93 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     include: { address: true, tasks: { include: taskInclude } },
   });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'visit', entityId: visit.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
-  res.status(201).json(visit);
+
+  // Автоназначение на заявки по адресу
+  const autoAssignedRequests: any[] = [];
+  if (autoAssignRequests && req.userRole === 'engineer') {
+    // Проверка специализации — только ВИК и ИСЖ
+    const engineer = await prisma.user.findUnique({
+      where: { id: req.userId as string },
+      select: { specializationVik: true, specializationIszh: true, fullName: true },
+    });
+
+    if (engineer?.specializationVik || engineer?.specializationIszh) {
+      // Поиск заявок по адресу со статусами awaiting_assignment и planned
+      const requests = await prisma.importedRequest.findMany({
+        where: {
+          matchedAddressId: rest.addressId,
+          visit: {
+            status: { in: ['awaiting_assignment', 'planned'] },
+          },
+          equipmentType: {
+            specializationReq: { in: ['vik', 'iszh'] },
+          },
+        },
+        include: {
+          visit: {
+            include: {
+              visitEngineers: true,
+            },
+          },
+        },
+        take: 20,
+      });
+
+      // Назначение инженера на каждую заявку
+      for (const request of requests) {
+        if (!request.visitId || !request.visit) continue;
+        
+        const visitForRequest = request.visit;
+        
+        // Пропустить, если инженер уже назначен на этот визит
+        if (visitForRequest.visitEngineers.some(ve => ve.engineerId === req.userId)) continue;
+        
+        // Определить isPrimary
+        const isPrimary = visitForRequest.visitEngineers.length === 0;
+        
+        // Создать VisitEngineer
+        await prisma.visitEngineer.create({
+          data: {
+            visitId: visitForRequest.id,
+            engineerId: req.userId!,
+            isPrimary,
+            assignedBy: req.userId!, // инженер сам назначил
+          },
+        });
+        
+        // Обновить визит, если это первый инженер
+        if (isPrimary) {
+          await prisma.visit.update({
+            where: { id: visitForRequest.id },
+            data: {
+              userId: req.userId,
+              engineerName: engineer.fullName,
+              status: 'planned',
+            },
+          });
+        }
+        
+        // Записать в лог назначений
+        await prisma.requestAssignmentLog.create({
+          data: {
+            importedRequestId: request.id,
+            action: 'assigned',
+            engineerId: req.userId,
+            performedBy: req.userId,
+            reason: 'Автоматически при создании визита',
+          },
+        });
+        
+        autoAssignedRequests.push({
+          requestId: request.id,
+          externalRequestId: request.externalRequestId,
+          visitId: visitForRequest.id,
+        });
+      }
+    }
+  }
+
+  res.status(201).json({ ...visit, autoAssignedRequests });
 });
 
 router.get('/', async (req: AuthRequest, res: Response) => {
