@@ -106,7 +106,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   if (!includeDeleted) where.isDeleted = false;
 
   if (req.userRole === 'engineer') {
-    where.userId = req.userId;
+    // Инженер видит визиты, где он основной (userId) или назначен через visitEngineers
+    where.AND = [
+      ...(where.AND || []),
+      { OR: [
+        { userId: req.userId },
+        { visitEngineers: { some: { engineerId: req.userId } } }
+      ]}
+    ];
   } else if (req.userRole === 'tm') {
     const engineerIds = await getTmEngineerIds(req.userId!);
     if (req.query.user_id && engineerIds.includes(req.query.user_id as string)) {
@@ -125,9 +132,12 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     where.status = status;
   }
   if (search) {
-    where.OR = [
-      { address: { fullAddress: { contains: search, mode: 'insensitive' } } },
-      { address: { objectCode: { contains: search, mode: 'insensitive' } } },
+    where.AND = [
+      ...(where.AND || []),
+      { OR: [
+        { address: { fullAddress: { contains: search, mode: 'insensitive' } } },
+        { address: { objectCode: { contains: search, mode: 'insensitive' } } },
+      ]}
     ];
   }
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
