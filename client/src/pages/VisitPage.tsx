@@ -113,6 +113,10 @@ export default function VisitPage() {
         });
         resetAutoSave();
         setLoading(false);
+      }).catch(err => {
+        setLoading(false);
+        message.error(err.message || 'Не удалось загрузить визит');
+        navigate('/requests');
       });
     } else {
       const now = dayjs();

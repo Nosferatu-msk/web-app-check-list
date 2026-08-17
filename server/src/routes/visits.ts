@@ -14,16 +14,31 @@ async function getTmEngineerIds(tmId: string): Promise<string[]> {
   return assignments.map(a => a.engineerId);
 }
 
-async function canAccessVisit(visitUserId: string | null, req: AuthRequest): Promise<boolean> {
+async function canAccessVisit(visitUserId: string | null, req: AuthRequest, visitId?: string): Promise<boolean> {
   if (req.userRole === 'admin') return true;
   if (!visitUserId) {
     // Визит без инженера (awaiting_assignment) — доступен ТМ и админу
     return req.userRole === 'tm' || req.userRole === 'admin';
   }
   if (visitUserId === req.userId) return true;
+  // Проверка через visitEngineers — вторичный инженер тоже имеет доступ
+  if (req.userRole === 'engineer' && visitId) {
+    const ve = await prisma.visitEngineer.findFirst({
+      where: { visitId, engineerId: req.userId as string },
+    });
+    if (ve) return true;
+  }
   if (req.userRole === 'tm') {
     const engineerIds = await getTmEngineerIds(req.userId!);
-    return engineerIds.includes(visitUserId);
+    if (engineerIds.includes(visitUserId)) return true;
+    // ТМ также имеет доступ, если его инженеры назначены через visitEngineers
+    if (visitId) {
+      const tmEngineerIds = await getTmEngineerIds(req.userId!);
+      const ve = await prisma.visitEngineer.findFirst({
+        where: { visitId, engineerId: { in: tmEngineerIds } },
+      });
+      if (ve) return true;
+    }
   }
   return false;
 }
@@ -185,7 +200,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     },
   });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   // Filter tasks by engineer's specialization
   if (req.userRole === 'engineer') {
@@ -222,7 +237,7 @@ const updateVisitSchema = z.object({
 router.put('/:id', validate(updateVisitSchema), async (req: AuthRequest, res: Response) => {
   const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(existing.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const isTmCorrection = (req.userRole === 'tm' || req.userRole === 'admin') && existing.userId !== req.userId;
 
@@ -246,7 +261,7 @@ router.put('/:id', validate(updateVisitSchema), async (req: AuthRequest, res: Re
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(existing.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   await prisma.visit.update({
     where: { id: req.params.id as string },
@@ -263,7 +278,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
   const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(existing.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const now = new Date();
   const msk = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
@@ -290,7 +305,7 @@ router.post('/:id/reassign', validate(reassignSchema), async (req: AuthRequest, 
 
   const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(existing.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const { newUserId } = req.body;
   const newEngineer = await prisma.user.findUnique({ where: { id: newUserId } });
@@ -340,7 +355,7 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
   const visitId = req.params.visitId as string;
   const visit = await prisma.visit.findUnique({ where: { id: visitId } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const data = req.body;
   if (data.roomTypeId === '') data.roomTypeId = undefined;
@@ -378,7 +393,7 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
 router.get('/:visitId/tasks', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const tasks = await prisma.task.findMany({
     where: { visitId: req.params.visitId as string },
@@ -391,7 +406,7 @@ router.get('/:visitId/tasks', async (req: AuthRequest, res: Response) => {
 router.get('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const task = await prisma.task.findFirst({
     where: { id: req.params.id as string, visitId: req.params.visitId as string },
@@ -404,7 +419,7 @@ router.get('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
 router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const data: Record<string, any> = {};
   if (req.body.equipmentTypeId !== undefined) data.equipmentTypeId = req.body.equipmentTypeId;
@@ -432,7 +447,7 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
 router.delete('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   await prisma.task.delete({ where: { id: req.params.id as string } });
   const remaining = await prisma.task.findMany({ where: { visitId: req.params.visitId as string }, orderBy: { sortOrder: 'asc' } });
@@ -448,7 +463,7 @@ router.delete('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => 
 router.post('/:visitId/tasks/:id/reset', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const taskId = req.params.id as string;
   const task = await prisma.task.findUnique({ where: { id: taskId } });
@@ -494,7 +509,7 @@ const addItemSchema = z.object({
 router.post('/:visitId/tasks/:taskId/items', validate(addItemSchema), async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const task = await prisma.task.findFirst({
     where: { id: req.params.taskId as string, visitId: req.params.visitId as string },
@@ -523,7 +538,7 @@ router.post('/:visitId/tasks/:taskId/items', validate(addItemSchema), async (req
 router.put('/:visitId/tasks/:taskId/items/:itemId', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const data: Record<string, any> = {};
   if (req.body.status !== undefined) data.status = req.body.status;
@@ -541,7 +556,7 @@ router.put('/:visitId/tasks/:taskId/items/:itemId', async (req: AuthRequest, res
 router.delete('/:visitId/tasks/:taskId/items/:itemId', async (req: AuthRequest, res: Response) => {
   const visit = await prisma.visit.findUnique({ where: { id: req.params.visitId as string } });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
-  if (!(await canAccessVisit(visit.userId, req))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
   const itemId = req.params.itemId as string;
   // Удаляем фото единицы
