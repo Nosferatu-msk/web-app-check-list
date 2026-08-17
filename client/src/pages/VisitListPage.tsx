@@ -340,11 +340,33 @@ export default function VisitListPage() {
                     <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
                       {new Date(v.dateStart).toLocaleDateString('ru-RU')} в {v.timeStart}
                       {' · '}Задач: {v._count?.tasks || 0}
-                      {v.user && v.user.id !== user?.id && (
-                        <span> · {v.user.fullName}
-                          {getSpecBadges(v.user)}
-                        </span>
-                      )}
+                      {(() => {
+                        // Собираем всех инженеров: visitEngineers + user (если нет в visitEngineers)
+                        const allEngineers: { id: string; fullName: string; specs?: any }[] = [];
+                        const engineerIds = new Set<string>();
+                        if (v.visitEngineers?.length > 0) {
+                          for (const ve of v.visitEngineers) {
+                            if (ve.engineer && !engineerIds.has(ve.engineer.id)) {
+                              allEngineers.push({ id: ve.engineer.id, fullName: ve.engineer.fullName, specs: ve.engineer });
+                              engineerIds.add(ve.engineer.id);
+                            }
+                          }
+                        }
+                        if (v.user && !engineerIds.has(v.user.id)) {
+                          allEngineers.push({ id: v.user.id, fullName: v.user.fullName, specs: v.user });
+                        }
+                        // Показываем всех, кроме текущего пользователя
+                        const otherEngineers = allEngineers.filter(e => e.id !== user?.id);
+                        if (otherEngineers.length === 0) return null;
+                        return (
+                          <span> · {otherEngineers.map(e => (
+                            <span key={e.id}>
+                              {e.fullName}{getSpecBadges(e.specs)}
+                            </span>
+                          )).reduce((prev, curr, idx) => idx === 0 ? [curr] : [...prev, ', ', curr], [] as any[])}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   {/* Десктоп: обычные кнопки */}

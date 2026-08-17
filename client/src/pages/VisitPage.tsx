@@ -106,7 +106,7 @@ export default function VisitPage() {
         form.setFieldsValue({
           addressId: v.addressId,
           addressSearch: v.address?.fullAddress || '',
-          engineerName: v.engineerName,
+          engineerName: user?.role === 'engineer' ? (user?.fullName || v.engineerName) : v.engineerName,
           dateStart: dayjs(v.dateStart),
           timeStart: dayjs(v.timeStart, 'HH:mm'),
           season: v.season,

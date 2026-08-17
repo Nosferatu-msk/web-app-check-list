@@ -156,6 +156,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         assignedBy: { select: { id: true, fullName: true, email: true } },
         deletedBy: { select: { id: true, fullName: true, email: true } },
         importedRequests: { select: { externalRequestId: true } },
+        visitEngineers: { include: { engineer: { select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } } } },
         _count: { select: { tasks: true } },
       },
     }),
@@ -203,6 +204,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       user: { select: { id: true, fullName: true, email: true } },
       assignedBy: { select: { id: true, fullName: true, email: true } },
       importedRequests: { select: { externalRequestId: true } },
+      visitEngineers: { include: { engineer: { select: { id: true, fullName: true, email: true } } } },
       tasks: {
         orderBy: { sortOrder: 'asc' },
         include: taskInclude,
