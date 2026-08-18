@@ -562,6 +562,15 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
     },
     include: taskInclude,
   });
+
+  // Автоматически переводим визит в "В работе" при создании задачи
+  if (['not_started', 'planned', 'awaiting_assignment'].includes(visit.status)) {
+    await prisma.visit.update({
+      where: { id: visit.id },
+      data: { status: 'in_progress' },
+    });
+  }
+
   await logAudit({ userId: req.userId, action: 'create', entityType: 'task', entityId: task.id, newValue: data, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json(task);
 });
@@ -616,6 +625,15 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
     data,
     include: taskInclude,
   });
+
+  // Автоматически переводим визит в "В работе" при первом изменении задачи
+  if (['not_started', 'planned', 'awaiting_assignment'].includes(visit.status)) {
+    await prisma.visit.update({
+      where: { id: visit.id },
+      data: { status: 'in_progress' },
+    });
+  }
+
   await logAudit({ userId: req.userId, action: 'update', entityType: 'task', entityId: task.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(task);
 });
