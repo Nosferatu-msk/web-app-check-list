@@ -105,7 +105,12 @@ export default function VisitPage() {
       setRmTypeMap(new Map(rt.map((r: any) => [r.code, r])));
     });
     if (!isNew && id) {
-      api.getVisit(id).then(v => {
+      api.getVisit(id).then(async v => {
+        // Автоматически переводим визит в "В работе" при первом посещении инженером
+        if (user?.role === 'engineer' && ['planned', 'not_started', 'awaiting_assignment'].includes(v.status)) {
+          await api.updateVisit(id, { status: 'in_progress' });
+          v.status = 'in_progress';
+        }
         setVisit(v);
         setTasks(v.tasks || []);
         form.setFieldsValue({
