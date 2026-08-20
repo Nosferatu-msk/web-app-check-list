@@ -24,6 +24,17 @@ screenshots/
 .qwen/
 .vscode/
 .git/
+.factory/
+.gemini/
+.github/
+.kilocode/
+.kiro/
+.opencode/
+.qoder/
+.roo/
+.trae/
+.warp/
+.windsurf/
 autotest/
 copy_key.py
 check_server*.py
