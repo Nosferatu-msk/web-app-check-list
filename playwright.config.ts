@@ -6,6 +6,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
+  globalSetup: './e2e/global-setup.ts',
   reporter: [
     ['html', { outputFolder: 'test-reports/html', open: 'never' }],
     ['json', { outputFolder: 'test-reports', outputFile: 'results.json' }],
@@ -28,10 +29,19 @@ export default defineConfig({
       use: { ...devices['Pixel 5'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    cwd: './client',
-  },
+  webServer: [
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:3001/api/health',
+      reuseExistingServer: true,
+      timeout: 60_000,
+      cwd: './server',
+    },
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: true,
+      cwd: './client',
+    },
+  ],
 });

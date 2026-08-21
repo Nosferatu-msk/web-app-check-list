@@ -13,23 +13,30 @@ import { test, expect, Page } from '@playwright/test';
  */
 async function loginAsEngineer(page: Page) {
   await page.goto('/login');
+
+  // Заполняем форму логина — Ant Design Form.Item генерирует label[for=email/password]
   await page.getByLabel('Email').fill('engineer@example.com');
   await page.getByLabel('Пароль').fill('engineer123');
-  await page.getByRole('button', { name: 'Войти' }).click();
 
-  // Ждём редирект — может быть на SpecializationGate или сразу на список визитов
+  // Кликаем «Войти» и ждём навигацию (URL должен измениться с /login)
+  await Promise.all([
+    page.waitForURL(url => !url.toString().includes('/login'), { timeout: 15_000 }),
+    page.getByRole('button', { name: 'Войти' }).click(),
+  ]);
+
+  // Ждём, пока приложение определит состояние (checkAuth, редиректы)
   await page.waitForTimeout(2000);
 
   // Если показан SpecializationGate — выбираем специализацию и продолжаем
-  const gate = page.getByText('Выберите специализацию');
-  if (await gate.isVisible({ timeout: 2000 }).catch(() => false)) {
+  const gate = page.getByText(/Выберите специализацию/);
+  if (await gate.isVisible({ timeout: 3000 }).catch(() => false)) {
     // Выбираем первую доступную специализацию (ИСЖ)
-    const checkbox = page.getByLabel('ИСЖ');
+    const checkbox = page.locator('.ant-checkbox').filter({ hasText: /ИСЖ/ });
     if (await checkbox.isVisible().catch(() => false)) {
-      await checkbox.check();
+      await checkbox.click();
     } else {
       // Fallback — кликаем по первому чекбоксу
-      await page.locator('.ant-checkbox-input').first().check();
+      await page.locator('.ant-checkbox').first().click();
     }
     await page.getByRole('button', { name: 'Продолжить' }).click();
     await page.waitForTimeout(2000);
@@ -49,7 +56,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.goto('/visit/new');
     await page.waitForTimeout(1000);
 
-    // Проверяем, что форма открылась
+    // Проверяем, что форма открылась (заголовок «Новый визит» в div.page-title)
     await expect(page.getByText('Новый визит').first()).toBeVisible({ timeout: 5000 });
 
     // Пытаемся сохранить без заполнения полей
@@ -94,7 +101,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await dateField.click();
     await page.waitForTimeout(500);
 
-    // Выбираем сегодняшнюю дату (ячейка с классом ant-picker-cell-selected или ant-picker-cell-today)
+    // Выбираем сегодняшнюю дату (ячейка с классом ant-picker-cell-today)
     const todayCell = page.locator('.ant-picker-cell-today').first();
     if (await todayCell.isVisible().catch(() => false)) {
       await todayCell.click();
@@ -105,13 +112,11 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(500);
 
     // Проверяем, что сезон определился автоматически
-    // Лето (апрель-октябрь) или Зима (ноябрь-март)
     const currentMonth = new Date().getMonth() + 1;
     const expectedSeason = (currentMonth >= 4 && currentMonth <= 10) ? 'Лето' : 'Зима';
 
     // Значение сезона должно отобразиться в Select
     const seasonValue = page.locator('.ant-select').filter({ has: page.getByLabel('Сезон') });
-    // Проверяем, что сезон заполнен (есть выбранное значение)
     const seasonSelection = seasonValue.locator('.ant-select-selection-item');
     if (await seasonSelection.isVisible({ timeout: 3000 }).catch(() => false)) {
       const seasonText = await seasonSelection.textContent();
@@ -129,17 +134,17 @@ test.describe('Инженер ТО — Визиты', () => {
 
     await expect(page.getByText('Новый визит').first()).toBeVisible({ timeout: 5000 });
 
-    // Находим поле адреса (Select с автокомплитом)
+    // Находим поле адреса (Ant Design Select с showSearch)
     const addressField = page.getByLabel('Адрес');
     await expect(addressField).toBeVisible({ timeout: 5000 });
 
-    // Кликаем и вводим минимум 2 символа для запуска поиска
+    // Кликаем по полю, чтобы открыть Select
     await addressField.click();
     await page.waitForTimeout(300);
-    await addressField.fill('а');
-    await page.waitForTimeout(300);
-    await addressField.fill('ад');
-    await page.waitForTimeout(1500); // Ждём ответ сервера с вариантами
+
+    // Вводим текст для поиска — используем keyboard.type для надёжности с Ant Design Select
+    await page.keyboard.type('ад', { delay: 100 });
+    await page.waitForTimeout(2000); // Ждём ответ сервера с вариантами
 
     // Проверяем, что появился dropdown с вариантами (или сообщение «Адрес не найден»)
     const dropdown = page.locator('.ant-select-dropdown').last();
@@ -168,13 +173,11 @@ test.describe('Инженер ТО — Визиты', () => {
   // TC-007: Добавление задачи — модальное окно с вкладками
   // ───────────────────────────────────────────────
   test('TC-007: Добавление задачи — модальное окно с вкладками', async ({ page }) => {
-    // Для этого теста нужен существующий визит — создаём минимальный визит через API
-    // Или переходим на первый визит из списка
     await page.goto('/');
     await page.waitForTimeout(2000);
 
     // Ищем карточку визита в списке и кликаем
-    const visitCard = page.locator('.ant-card, .visit-card, [class*="visit"]').first();
+    const visitCard = page.locator('.visit-card').first();
     const hasVisits = await visitCard.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasVisits) {
@@ -209,11 +212,9 @@ test.describe('Инженер ТО — Визиты', () => {
 
     // Проверяем названия вкладок
     const tabTexts = await tabs.allTextContents();
-    // Ожидаем вкладки: «Уровень помещения», «Уровень объекта», «Добавить новое»
     const hasRoomTab = tabTexts.some(t => t.includes('помещен') || t.includes('Уровень'));
-    const hasObjectTab = tabTexts.some(t => t.includes('объект') || t.includes('Уровень'));
     const hasNewTab = tabTexts.some(t => t.includes('новое') || t.includes('Добавить'));
-    expect(hasRoomTab || hasObjectTab || hasNewTab).toBeTruthy();
+    expect(hasRoomTab || hasNewTab).toBeTruthy();
 
     // Переключаемся на вкладку «Добавить новое»
     const newTab = modal.locator('.ant-tabs-tab').filter({ hasText: /новое/i });
@@ -235,7 +236,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Находим первый визит и кликаем
-    const visitCard = page.locator('.ant-card, .visit-card, [class*="visit"]').first();
+    const visitCard = page.locator('.visit-card').first();
     const hasVisits = await visitCard.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasVisits) {
@@ -246,16 +247,9 @@ test.describe('Инженер ТО — Визиты', () => {
     await visitCard.click();
     await page.waitForTimeout(2000);
 
-    // Проверяем, что есть хотя бы одна задача в таблице
-    // На десктопе — таблица, на мобильном — карточки
-    const deleteBtn = page.locator('button, .ant-popover-open').filter({
-      has: page.locator('[class*="delete"], [aria-label="delete"], .anticon-delete')
-    }).first();
-
-    // Альтернатива: ищем кнопку удаления через текст
-    const deleteBtnAlt = page.getByRole('button', { name: /удалить/i }).first();
-    const hasDeleteBtn = await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false)
-      || await deleteBtnAlt.isVisible({ timeout: 3000 }).catch(() => false);
+    // Ищем кнопку удаления задачи — иконка DeleteOutlined в таблице задач
+    const deleteBtn = page.locator('.anticon-delete').first();
+    const hasDeleteBtn = await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false);
 
     if (!hasDeleteBtn) {
       test.skip();
@@ -263,22 +257,15 @@ test.describe('Инженер ТО — Визиты', () => {
     }
 
     // Кликаем по кнопке удаления (Popconfirm)
-    const btn = await deleteBtn.isVisible().catch(() => false) ? deleteBtn : deleteBtnAlt;
-    await btn.click();
+    await deleteBtn.click();
     await page.waitForTimeout(500);
 
-    // Подтверждаем удаление — кнопка «Да»
+    // Подтверждаем удаление — кнопка «Да» в Popconfirm
     const confirmBtn = page.getByRole('button', { name: 'Да' });
     if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await confirmBtn.click();
       await page.waitForTimeout(1000);
     }
-
-    // Проверяем, что задача удалена (успешное сообщение или уменьшение количества)
-    // Ант Design показывает message.success
-    const successMsg = page.locator('.ant-message').getByText(/удален|удалено|успешно/i);
-    // Сообщение может не появиться, но страница должна обновиться
-    await page.waitForTimeout(500);
   });
 
   // ───────────────────────────────────────────────
@@ -289,7 +276,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Находим первый визит и кликаем
-    const visitCard = page.locator('.ant-card, .visit-card, [class*="visit"]').first();
+    const visitCard = page.locator('.visit-card').first();
     const hasVisits = await visitCard.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasVisits) {
@@ -312,7 +299,6 @@ test.describe('Инженер ТО — Визиты', () => {
 
       if (isDisabled) {
         // Кнопка заблокирована — нет выполненных задач, это ожидаемое поведение
-        // Тест проходит — проверяем, что кнопка существует
         await expect(disabledBtn).toBeVisible();
         return;
       }
@@ -341,17 +327,16 @@ test.describe('Инженер ТО — Визиты', () => {
     }
 
     // Кликаем по родительской карточке визита
-    const visitCard = completedVisit.locator('xpath=ancestor::div[contains(@class, "card") or contains(@class, "visit") or contains(@class, "ant-card")]').first();
+    const visitCard = completedVisit.locator('xpath=ancestor::div[contains(@class, "visit-card")]').first();
     if (await visitCard.isVisible().catch(() => false)) {
       await visitCard.click();
     } else {
       // Fallback — кликаем по первому визиту
-      await page.locator('.ant-card, .visit-card, [class*="visit"]').first().click();
+      await page.locator('.visit-card').first().click();
     }
     await page.waitForTimeout(2000);
 
     // Ищем ссылку/кнопку для перехода к отчёту
-    // Отчёт может быть доступен через Steps (шаг «Отчёт») или через прямую ссылку
     const reportLink = page.getByText('Отчёт').or(page.getByRole('button', { name: /отчёт/i })).first();
     const hasReportLink = await reportLink.isVisible({ timeout: 3000 }).catch(() => false);
 
@@ -391,7 +376,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Считаем количество визитов до удаления
-    const cardsBefore = page.locator('.ant-card, .visit-card, [class*="visit"]');
+    const cardsBefore = page.locator('.visit-card');
     const countBefore = await cardsBefore.count();
 
     if (countBefore === 0) {
@@ -399,8 +384,8 @@ test.describe('Инженер ТО — Визиты', () => {
       return;
     }
 
-    // Ищем кнопку удаления (иконка DeleteOutlined) на первой карточке
-    const deleteIcon = page.locator('.anticon-delete').first();
+    // Ищем кнопку удаления (иконка DeleteOutlined) на первом визите
+    const deleteIcon = page.locator('.visit-card .anticon-delete').first();
     const hasDelete = await deleteIcon.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasDelete) {
@@ -412,7 +397,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await deleteIcon.click();
     await page.waitForTimeout(500);
 
-    // Появляется модальное подтверждение
+    // Появляется модальное подтверждение (Modal.confirm)
     const modal = page.locator('.ant-modal-confirm, .ant-modal').last();
     await expect(modal).toBeVisible({ timeout: 5000 });
 
@@ -446,7 +431,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Кликаем по первому визиту
-    const visitCard = page.locator('.ant-card, .visit-card, [class*="visit"]').first();
+    const visitCard = page.locator('.visit-card').first();
     const hasVisits = await visitCard.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasVisits) {
@@ -488,9 +473,6 @@ test.describe('Инженер ТО — Визиты', () => {
   // TC-114: Фильтрация задач по специализации
   // ───────────────────────────────────────────────
   test('TC-114: Фильтрация задач по специализации (ИСЖ не видит ВиК)', async ({ page }) => {
-    // Этот тест проверяет, что инженер с выбранной специализацией ИСЖ
-    // не видит оборудование, относящееся к специализации ВиК
-
     // Сначала проверяем/устанавливаем специализацию через профиль
     await page.goto('/profile');
     await page.waitForTimeout(2000);
@@ -518,7 +500,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Кликаем по первому визиту
-    const visitCard = page.locator('.ant-card, .visit-card, [class*="visit"]').first();
+    const visitCard = page.locator('.visit-card').first();
     const hasVisits = await visitCard.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasVisits) {
@@ -547,16 +529,11 @@ test.describe('Инженер ТО — Визиты', () => {
       return;
     }
 
-    // Проверяем, что среди задач нет оборудования ВиК (кондиционеры, вентиляция)
-    // если инженер выбрал только ИСЖ
+    // Проверяем, что среди задач нет оборудования ВиК
     const pageContent = await page.locator('.ant-table, .ant-list').first().textContent().catch(() => '');
     const hasHVAC = /кондиционер|вентиц|split|чиллер|фancoil/i.test(pageContent || '');
 
-    // Если инженер с ИСЖ — оборудование ВиК не должно отображаться
-    // (Это проверка бизнес-логики — если сервер фильтрует корректно, то ВиК не будет)
-    // Тест не падает, а фиксирует текущее состояние
     if (hasHVAC) {
-      // Логируем, но не фейлим — возможно у инженера есть обе специализации
       console.log('Обнаружено оборудование ВиК — возможно, у инженера несколько специализаций');
     }
   });
@@ -569,8 +546,10 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Проверяем, что страница списка визитов загрузилась
+    // Заголовок «Мои визиты» отображается на десктопе в div.page-title
+    // На мобильном — в MobileHeader. Используем гибкий селектор.
     const title = page.getByText('Мои визиты');
-    await expect(title).toBeVisible({ timeout: 5000 });
+    await expect(title.first()).toBeVisible({ timeout: 5000 });
 
     // Находим кнопку «Новый визит»
     const newVisitBtn = page.getByRole('button', { name: /новый визит/i });
@@ -593,7 +572,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Кликаем по первому визиту
-    const visitCard = page.locator('.ant-card, .visit-card, [class*="visit"]').first();
+    const visitCard = page.locator('.visit-card').first();
     const hasVisits = await visitCard.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasVisits) {
@@ -617,7 +596,7 @@ test.describe('Инженер ТО — Визиты', () => {
     const stepItems = page.locator('.ant-steps-item-title');
     const stepTexts = await stepItems.allTextContents();
 
-    // Ожидаем шаги: Адрес, Задачи, Фото, Отчёт
+    // Ожидаем шаги: Адрес, Задачи (N/M), Фото, Отчёт
     expect(stepTexts.length).toBeGreaterThanOrEqual(3);
     const hasAddressStep = stepTexts.some(t => t.includes('Адрес'));
     const hasTaskStep = stepTexts.some(t => t.includes('Задач'));
@@ -633,7 +612,7 @@ test.describe('Инженер ТО — Визиты', () => {
     await page.waitForTimeout(2000);
 
     // Кликаем по первому визиту
-    const visitCard = page.locator('.ant-card, .visit-card, [class*="visit"]').first();
+    const visitCard = page.locator('.visit-card').first();
     const hasVisits = await visitCard.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (!hasVisits) {
