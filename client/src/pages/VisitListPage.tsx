@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton } from 'antd';
-import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -56,16 +56,17 @@ function getSpecBadges(userSpecs: Record<string, boolean | undefined> | undefine
 }
 
 export default function VisitListPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [visits, setVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [engineers, setEngineers] = useState<any[]>([]);
-  const [selectedEngineer, setSelectedEngineer] = useState<string>('');
+  const [selectedEngineer, setSelectedEngineer] = useState<string>(searchParams.get('engineer') || '');
   const [reassignModal, setReassignModal] = useState<{ visible: boolean; visitId?: string }>({ visible: false });
   const [reassignTarget, setReassignTarget] = useState<string>('');
   const [showDeleted, setShowDeleted] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(searchParams.get('statuses')?.split(',').filter(Boolean) || []);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [globalStats, setGlobalStats] = useState({ total: 0, planned: 0, inProgress: 0, completed: 0 });
@@ -101,6 +102,15 @@ export default function VisitListPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => { setCurrentPage(1); }, [selectedEngineer, showDeleted, selectedStatuses, searchQuery]);
+
+  // Синхронизация фильтров с URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedEngineer) params.set('engineer', selectedEngineer);
+    if (selectedStatuses.length > 0) params.set('statuses', selectedStatuses.join(','));
+    if (searchQuery) params.set('q', searchQuery);
+    setSearchParams(params, { replace: true });
+  }, [selectedEngineer, selectedStatuses, searchQuery, setSearchParams]);
 
   // Debounce для поиска
   useEffect(() => {
@@ -310,7 +320,23 @@ export default function VisitListPage() {
           ))}
         </div>
       ) : visits.length === 0 ? (
-        <Empty description="Нет визитов" />
+        <Empty
+          image={<CalendarOutlined style={{ fontSize: 64, color: '#94A3B8' }} />}
+          description={
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#0F172A', marginBottom: 4 }}>Нет визитов</div>
+              <div style={{ fontSize: 13, color: '#64748B' }}>
+                {user?.role === 'engineer' ? 'Создайте первый визит для начала работы' : 'Визиты появятся здесь после назначения'}
+              </div>
+            </div>
+          }
+        >
+          {user?.role === 'engineer' && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/visit/new')}>
+              Создать визит
+            </Button>
+          )}
+        </Empty>
       ) : (
         <>
           <List
@@ -353,11 +379,21 @@ export default function VisitListPage() {
               });
             }
 
+            // Цвет полоски статуса
+            const statusBorderColor = v.status === 'in_progress' ? '#D97706' :
+              v.status === 'completed' ? '#059669' :
+              v.status === 'planned' || v.status === 'not_started' ? '#0369A1' :
+              v.status === 'sent' || v.status === 'sent_by_engineer' || v.status === 'sent_by_tm' ? '#0369A1' :
+              v.status === 'corrected_by_tm' ? '#7C3AED' : '#E2E8F0';
+
             return (
               <div
                 className="visit-card"
                 onClick={() => navigate(`/visit/${v.id}`)}
-                style={isDeleted ? { opacity: 0.6, background: '#f5f5f5' } : undefined}
+                style={{
+                  borderLeft: `3px solid ${statusBorderColor}`,
+                  ...(isDeleted ? { opacity: 0.6, background: '#f5f5f5' } : {}),
+                }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
