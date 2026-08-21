@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, InputNumber, Switch, Select, Space, App, Popconfirm, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 
 const SPEC_OPTIONS = [
@@ -61,7 +61,7 @@ export default function AdminEquipment() {
         { title: 'Код', dataIndex: 'code' },
         { title: 'Фото', dataIndex: 'photosRequired' },
         { title: 'Специализация', dataIndex: 'specializationReq', width: 140, render: (v: string | null) => v ? <Tag color={SPEC_TAG_COLORS[v]}>{SPEC_SHORT[v] || v}</Tag> : <span style={{ color: '#999' }}>Все</span> },
-        { title: 'Активен', dataIndex: 'isActive', render: (v: boolean) => v ? '✅' : '❌' },
+        { title: 'Активен', dataIndex: 'isActive', render: (v: boolean) => v ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <CloseCircleOutlined style={{ color: '#ff4d4f' }} /> },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (
           <Space>
             <Button type="text" icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue({ ...r, specializationReq: r.specializationReq || '' }); setModalOpen(true); }} />

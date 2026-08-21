@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Badge, List, Typography, Button, Spin, Empty, Modal, Drawer, Tag } from 'antd';
-import { BellOutlined, CheckOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
+import { BellOutlined, CheckOutlined, DeleteOutlined, CloseOutlined, FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, HourglassOutlined, PushpinOutlined, RocketOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -11,18 +11,18 @@ import 'dayjs/locale/ru';
 dayjs.extend(relativeTime);
 dayjs.locale('ru');
 
-const TYPE_ICONS: Record<string, string> = {
-  proposal_created: '📋',
-  proposal_approved: '✅',
-  proposal_rejected: '❌',
-  proposal_expiring_soon: '⏰',
-  proposal_expired: '⌛',
-  equipment_removed: '🗑️',
-  request_assigned: '📌',
-  request_unassigned: '📌',
-  request_declined: '📌',
-  request_imported: '📌',
-  system_release: '🚀',
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  proposal_created: <FileTextOutlined />,
+  proposal_approved: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+  proposal_rejected: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+  proposal_expiring_soon: <ClockCircleOutlined style={{ color: '#faad14' }} />,
+  proposal_expired: <HourglassOutlined style={{ color: '#999' }} />,
+  equipment_removed: <DeleteOutlined style={{ color: '#ff4d4f' }} />,
+  request_assigned: <PushpinOutlined style={{ color: '#0F766E' }} />,
+  request_unassigned: <PushpinOutlined />,
+  request_declined: <PushpinOutlined style={{ color: '#ff4d4f' }} />,
+  request_imported: <PushpinOutlined style={{ color: '#52c41a' }} />,
+  system_release: <RocketOutlined style={{ color: '#52c41a' }} />,
 };
 
 function getNotificationLink(item: any): string | null {
@@ -133,7 +133,7 @@ export default function NotificationBell() {
 
   const renderNotificationItem = (item: any) => {
     const isSystemRelease = item.type === 'system_release';
-    const stripeColor = isSystemRelease ? '#52c41a' : '#1677ff';
+    const stripeColor = isSystemRelease ? '#52c41a' : '#0F766E';
 
     return (
       <List.Item
@@ -147,7 +147,7 @@ export default function NotificationBell() {
         onClick={() => handleClickNotification(item)}
       >
         <List.Item.Meta
-          avatar={<span style={{ fontSize: 20, flexShrink: 0 }}>{TYPE_ICONS[item.type] || '📌'}</span>}
+          avatar={<span style={{ fontSize: 20, flexShrink: 0 }}>{TYPE_ICONS[item.type] || <PushpinOutlined />}</span>}
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <Typography.Text style={{
@@ -201,7 +201,7 @@ export default function NotificationBell() {
       }}>
         {unreadCount > 0 && (
           <Button type="link" size="small" icon={<CheckOutlined />} onClick={handleMarkAllRead} block={isMobile}>
-            {isMobile ? '✓ Прочитано' : 'Прочитать всё'}
+            {isMobile ? 'Прочитано' : 'Прочитать всё'}
           </Button>
         )}
         <Button
@@ -213,7 +213,7 @@ export default function NotificationBell() {
           block={isMobile}
           onClick={showClearConfirm}
         >
-          {isMobile ? '🗑 Очистить' : 'Очистить'}
+          {isMobile ? 'Очистить' : 'Очистить'}
         </Button>
       </div>
     </>

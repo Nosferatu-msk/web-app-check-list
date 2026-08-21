@@ -164,7 +164,7 @@ export default function MtrVisitListPage() {
       {!isMobile && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/profile')}>
-            <UserOutlined style={{ fontSize: 24, color: '#1677ff' }} />
+            <UserOutlined style={{ fontSize: 24, color: '#0F766E' }} />
             <div>
               <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Визиты МТР</div>
               <div style={{ color: '#666', fontSize: 14 }}>{user?.fullName}</div>
@@ -237,7 +237,7 @@ export default function MtrVisitListPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
                         {statusIcon && (
-                          <span aria-label={`Статус: ${statusLabel}`} style={{ marginRight: 2, display: 'inline-flex', color: STATUS_COLORS[v.status] === 'processing' ? '#1677ff' : STATUS_COLORS[v.status] === 'success' || STATUS_COLORS[v.status] === 'green' ? '#52c41a' : STATUS_COLORS[v.status] === 'blue' ? '#1677ff' : STATUS_COLORS[v.status] === 'error' ? '#ff4d4f' : '#888' }}>
+                          <span aria-label={`Статус: ${statusLabel}`} style={{ marginRight: 2, display: 'inline-flex', color: STATUS_COLORS[v.status] === 'processing' ? '#0F766E' : STATUS_COLORS[v.status] === 'success' || STATUS_COLORS[v.status] === 'green' ? '#52c41a' : STATUS_COLORS[v.status] === 'blue' ? '#0F766E' : STATUS_COLORS[v.status] === 'error' ? '#ff4d4f' : '#888' }}>
                             {statusIcon}
                           </span>
                         )}

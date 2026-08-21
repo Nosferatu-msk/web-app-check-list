@@ -342,7 +342,7 @@ function TmProfile() {
             renderItem={(eng: any) => (
               <List.Item>
                 <List.Item.Meta
-                  avatar={<UserOutlined style={{ fontSize: 20, color: '#1677ff' }} />}
+                  avatar={<UserOutlined style={{ fontSize: 20, color: '#0F766E' }} />}
                   title={eng.fullName}
                   description={
                     <Space size={4}>
@@ -586,7 +586,7 @@ function TmMtrProfile() {
             renderItem={(eng: any) => (
               <List.Item>
                 <List.Item.Meta
-                  avatar={<UserOutlined style={{ fontSize: 20, color: '#1677ff' }} />}
+                  avatar={<UserOutlined style={{ fontSize: 20, color: '#0F766E' }} />}
                   title={eng.fullName}
                   description={<Text type="secondary">{eng.email}</Text>}
                 />
@@ -660,7 +660,7 @@ export default function ProfilePage() {
       <Card size="small" style={{ marginBottom: 16 }}>
         <Space direction="vertical" size={4} style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <UserOutlined style={{ fontSize: 18, color: '#1677ff' }} />
+            <UserOutlined style={{ fontSize: 18, color: '#0F766E' }} />
             <Text strong>{user.fullName}</Text>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

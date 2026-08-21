@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Table, Button, Modal, Form, Input, Select, Switch, Space, App, Popconfirm, Tag, Checkbox } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, CloseCircleOutlined, LockOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, CloseCircleOutlined, LockOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 
 const SPEC_LABELS: Record<string, string> = {
@@ -138,7 +138,7 @@ export default function AdminUsers() {
 
       {data.length >= 50 && search && (
         <div style={{ marginBottom: 8, color: '#faad14', fontSize: 13 }}>
-          ⚠ Найдено 50+ записей — уточните запрос для более точного результата
+          <WarningOutlined style={{ marginRight: 4 }} />Найдено 50+ записей — уточните запрос для более точного результата
         </div>
       )}
 
@@ -154,7 +154,7 @@ export default function AdminUsers() {
           const spec = getSpecDisplay(r);
           return spec === '—' ? <span style={{ color: '#bbb' }}>—</span> : <Tag color="cyan">{spec}</Tag>;
         }},
-        { title: 'Активен', dataIndex: 'isActive', render: (v: boolean) => v ? '✅' : '❌' },
+        { title: 'Активен', dataIndex: 'isActive', render: (v: boolean) => v ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <CloseCircleOutlined style={{ color: '#ff4d4f' }} /> },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (
           <Space>
             <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(r)} />

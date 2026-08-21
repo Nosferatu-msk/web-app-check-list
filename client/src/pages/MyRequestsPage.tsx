@@ -201,7 +201,7 @@ export default function MyRequestsPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
               {statusIcon && (
-                <span style={{ marginRight: 2, display: 'inline-flex', color: statusColor === 'processing' ? '#1677ff' : statusColor === 'success' ? '#52c41a' : statusColor === 'cyan' ? '#13c2c2' : statusColor === 'orange' ? '#fa8c16' : '#888' }}>
+                <span style={{ marginRight: 2, display: 'inline-flex', color: statusColor === 'processing' ? '#0F766E' : statusColor === 'success' ? '#52c41a' : statusColor === 'cyan' ? '#13c2c2' : statusColor === 'orange' ? '#fa8c16' : '#888' }}>
                   {statusIcon}
                 </span>
               )}

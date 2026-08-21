@@ -311,7 +311,7 @@ export default function SummaryReportPage() {
                 background: '#fafafa',
                 transition: 'border-color 0.2s',
               }}
-              onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#1677ff'; }}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#0F766E'; }}
               onDragLeave={(e) => { e.currentTarget.style.borderColor = '#d9d9d9'; }}
               onDrop={(e) => {
                 e.preventDefault();
@@ -323,7 +323,7 @@ export default function SummaryReportPage() {
                 }
               }}
             >
-              <InboxOutlined style={{ fontSize: 32, color: '#1677ff' }} />
+              <InboxOutlined style={{ fontSize: 32, color: '#0F766E' }} />
               <div style={{ marginTop: 8, color: '#666' }}>Перетащите файлы сюда или нажмите для выбора</div>
               <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>JPG, PNG, PDF. Макс. 10 файлов, 50 МБ</div>
             </div>

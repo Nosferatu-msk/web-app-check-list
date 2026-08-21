@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Цифровой чек-лист инженера',
         short_name: 'Чек-лист',
         description: 'Цифровой чек-лист инженера по техническому обслуживанию оборудования',
-        theme_color: '#1677ff',
-        background_color: '#ffffff',
+        theme_color: '#0F766E',
+        background_color: '#F8FAFC',
         display: 'standalone',
         orientation: 'portrait',
         icons: [

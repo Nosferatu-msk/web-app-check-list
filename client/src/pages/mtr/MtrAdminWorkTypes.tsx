@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Table, Space, Input, App, Modal, Form, Switch } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ImportOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ImportOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 import { MtrWorkType } from '../../../../shared/types/index';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -117,7 +117,7 @@ export default function MtrAdminWorkTypes() {
       dataIndex: 'isActive',
       key: 'isActive',
       width: 100,
-      render: (active: boolean) => active ? '✅' : '❌',
+      render: (active: boolean) => active ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
     },
     {
       title: 'Действия',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, Space, App, Popconfirm, Tag, Divider, List, AutoComplete } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, WarningOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 
 export default function AdminObjectEquipment() {
@@ -125,7 +125,7 @@ export default function AdminObjectEquipment() {
 
       <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }} columns={[
         { title: 'Тип оборудования', dataIndex: 'equipmentTypeCode', render: (v: string) => eqTypeMap.get(v) || v },
-        { title: 'Помещение', dataIndex: 'roomTypeCode', render: (v: string) => v ? (rmTypeMap.get(v) || v) : <span style={{ color: '#faad14' }}>⚠️ Не указано</span> },
+        { title: 'Помещение', dataIndex: 'roomTypeCode', render: (v: string) => v ? (rmTypeMap.get(v) || v) : <span style={{ color: '#faad14' }}><WarningOutlined style={{ marginRight: 4 }} />Не указано</span> },
         { title: 'Марка', dataIndex: 'brand' },
         { title: 'Модель', dataIndex: 'model' },
         { title: 'Серийный №', dataIndex: 'serialNumber' },

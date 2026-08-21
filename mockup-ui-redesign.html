@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Редизайн Чек-лист инженера — Макеты</title>
+<style>
+  :root {
+    --old-primary: #1677ff;
+    --old-bg: #f5f5f5;
+    --new-primary: #0F766E;
+    --new-primary-light: #14B8A6;
+    --new-accent: #0369A1;
+    --new-bg: #F8FAFC;
+    --new-surface: #FFFFFF;
+    --new-text: #0F172A;
+    --new-text-secondary: #475569;
+    --new-border: #E2E8F0;
+    --new-success: #059669;
+    --new-warning: #D97706;
+    --new-danger: #DC2626;
+    --new-radius: 12px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+
+  /* Navigation */
+  .mock-nav { position: sticky; top: 0; z-index: 100; background: #16213e; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 0 24px; display: flex; align-items: center; gap: 0; overflow-x: auto; }
+  .mock-nav-item { padding: 16px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: #8892b0; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .mock-nav-item:hover { color: #ccd6f6; }
+  .mock-nav-item.active { color: #64ffda; border-bottom-color: #64ffda; }
+  .mock-nav-title { padding: 16px 20px 16px 0; font-weight: 700; font-size: 16px; color: #64ffda; border-right: 1px solid rgba(255,255,255,0.1); margin-right: 8px; }
+
+  /* Section */
+  .mock-section { display: none; padding: 32px 24px; max-width: 1200px; margin: 0 auto; }
+  .mock-section.active { display: block; }
+  .section-title { font-size: 24px; font-weight: 700; color: #ccd6f6; margin-bottom: 8px; }
+  .section-desc { font-size: 14px; color: #8892b0; margin-bottom: 32px; line-height: 1.6; }
+
+  /* Before/After Toggle */
+  .ba-toggle { display: flex; gap: 0; margin-bottom: 24px; background: #16213e; border-radius: 8px; overflow: hidden; width: fit-content; }
+  .ba-btn { padding: 10px 24px; cursor: pointer; font-size: 14px; font-weight: 600; border: none; background: transparent; color: #8892b0; transition: all 0.2s; }
+  .ba-btn.active-before { background: #e74c3c; color: white; }
+  .ba-btn.active-after { background: #059669; color: white; }
+
+  /* Comparison container */
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .comparison { grid-template-columns: 1fr; } }
+  .comp-col { position: relative; }
+  .comp-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 8px 16px; border-radius: 8px 8px 0 0; }
+  .comp-label.before { background: rgba(231,76,60,0.15); color: #e74c3c; }
+  .comp-label.after { background: rgba(5,150,105,0.15); color: #10b981; }
+
+  /* Phone frame */
+  .phone-frame { background: #111; border-radius: 32px; padding: 12px; box-shadow: var(--shadow-lg), 0 0 0 2px #333; max-width: 375px; margin: 0 auto; }
+  .phone-screen { background: #f5f5f5; border-radius: 22px; overflow: hidden; min-height: 600px; position: relative; }
+  .phone-notch { width: 120px; height: 24px; background: #111; border-radius: 0 0 16px 16px; margin: 0 auto; position: relative; z-index: 2; }
+
+  /* Desktop frame */
+  .desktop-frame { background: #1a1a1a; border-radius: 12px; padding: 8px; box-shadow: var(--shadow-lg); overflow: hidden; }
+  .desktop-toolbar { height: 32px; background: #2d2d2d; border-radius: 8px 8px 0 0; display: flex; align-items: center; padding: 0 12px; gap: 6px; }
+  .desktop-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .desktop-dot.r { background: #ff5f57; }
+  .desktop-dot.y { background: #febc2e; }
+  .desktop-dot.g { background: #28c840; }
+  .desktop-screen { background: white; border-radius: 0 0 8px 8px; overflow: hidden; min-height: 500px; }
+
+  /* Change list */
+  .changes-list { margin-top: 24px; }
+  .change-item { display: flex; gap: 12px; padding: 12px 16px; background: rgba(100,255,218,0.05); border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #64ffda; }
+  .change-icon { font-size: 18px; flex-shrink: 0; }
+  .change-text { font-size: 13px; color: #a8b2d1; line-height: 1.5; }
+  .change-text strong { color: #ccd6f6; }
+
+  /* Color palette */
+  .palette { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+  .palette-item { text-align: center; }
+  .palette-swatch { width: 56px; height: 56px; border-radius: 12px; box-shadow: var(--shadow-md); margin-bottom: 6px; }
+  .palette-label { font-size: 10px; color: #8892b0; }
+  .palette-hex { font-size: 11px; font-weight: 600; color: #ccd6f6; font-family: monospace; }
+
+  /* Annotations */
+  .annotation { position: absolute; background: rgba(100,255,218,0.15); border: 1px dashed #64ffda; border-radius: 8px; padding: 4px 8px; font-size: 10px; color: #64ffda; pointer-events: none; z-index: 10; }
+
+  /* === MOCKUP SPECIFIC STYLES === */
+
+  /* --- Login --- */
+  .login-old { display: flex; justify-content: center; align-items: center; min-height: 600px; background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%); }
+  .login-old-card { background: white; border-radius: 12px; padding: 32px; width: 85%; max-width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+  .login-old-title { text-align: center; font-size: 20px; font-weight: 700; color: #1677ff; margin-bottom: 4px; }
+  .login-old-sub { text-align: center; color: #666; font-size: 13px; margin-bottom: 20px; }
+  .login-old-input { width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; margin-bottom: 12px; outline: none; }
+  .login-old-btn { width: 100%; padding: 10px; background: #1677ff; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+  .login-new { display: flex; justify-content: center; align-items: center; min-height: 600px; background: linear-gradient(135deg, #0F766E 0%, #065F59 50%, #0369A1 100%); position: relative; overflow: hidden; }
+  .login-new::before { content: ''; position: absolute; top: -50%; right: -30%; width: 80%; height: 200%; background: radial-gradient(ellipse, rgba(20,184,166,0.2) 0%, transparent 70%); }
+  .login-new-card { background: white; border-radius: 16px; padding: 36px; width: 85%; max-width: 320px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); position: relative; }
+  .login-new-logo { width: 48px; height: 48px; background: linear-gradient(135deg, #0F766E, #14B8A6); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px; }
+  .login-new-title { text-align: center; font-size: 22px; font-weight: 700; color: #0F172A; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .login-new-sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px; }
+  .login-new-label { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+  .login-new-input { width: 100%; padding: 12px 14px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color 0.2s; background: #F8FAFC; }
+  .login-new-input:focus { border-color: #0F766E; background: white; }
+  .login-new-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #0F766E, #0D6B64); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(15,118,110,0.3); transition: transform 0.1s; }
+  .login-new-btn:active { transform: scale(0.98); }
+  .login-new-forgot { text-align: center; margin-top: 16px; }
+  .login-new-forgot a { color: #0F766E; font-size: 13px; text-decoration: none; font-weight: 500; }
+
+  /* --- Visit List --- */
+  .vl-header { padding: 12px 16px; background: white; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+  .vl-header-title { font-size: 16px; font-weight: 600; }
+  .vl-search-old { padding: 12px 16px; }
+  .vl-search-old input { width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; }
+
+  .vl-kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px; }
+  .vl-kpi-card { background: white; border-radius: 12px; padding: 14px; box-shadow: var(--shadow-sm); }
+  .vl-kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .vl-kpi-label { font-size: 11px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .vl-kpi-bar { height: 4px; background: #E2E8F0; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .vl-kpi-bar-fill { height: 100%; border-radius: 2px; }
+
+  .vl-filters-new { padding: 8px 16px; display: flex; gap: 8px; }
+  .vl-filter-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1.5px solid #E2E8F0; background: white; color: #475569; cursor: pointer; }
+  .vl-filter-chip.active { background: #0F766E; color: white; border-color: #0F766E; }
+
+  .vl-card-old { background: white; border-radius: 8px; padding: 12px 16px; margin: 0 16px 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .vl-card-old-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .vl-card-old-sub { font-size: 12px; color: #888; }
+  .vl-card-old-tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; margin-top: 6px; }
+
+  .vl-card-new { background: white; border-radius: 12px; padding: 14px 16px; margin: 0 16px 8px; box-shadow: var(--shadow-sm); border-left: 3px solid transparent; }
+  .vl-card-new.in-progress { border-left-color: #D97706; }
+  .vl-card-new.planned { border-left-color: #0369A1; }
+  .vl-card-new.completed { border-left-color: #059669; }
+  .vl-card-new-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px; }
+  .vl-card-new-title { font-size: 14px; font-weight: 600; color: #0F172A; letter-spacing: -0.01em; }
+  .vl-card-new-status { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .status-in-progress { background: #FEF3C7; color: #92400E; }
+  .status-planned { background: #DBEAFE; color: #1E40AF; }
+  .status-completed { background: #D1FAE5; color: #065F46; }
+  .vl-card-new-sub { font-size: 12px; color: #64748b; }
+  .vl-card-new-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #F1F5F9; }
+  .vl-card-new-meta { font-size: 11px; color: #94a3b8; }
+  .vl-card-new-progress { display: flex; align-items: center; gap: 6px; }
+  .vl-card-new-progress-bar { width: 48px; height: 4px; background: #E2E8F0; border-radius: 2px; overflow: hidden; }
+  .vl-card-new-progress-fill { height: 100%; background: #059669; border-radius: 2px; }
+  .vl-card-new-progress-text { font-size: 11px; color: #64748b; font-weight: 500; }
+
+  /* Skeleton */
+  .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .skeleton-card { background: white; border-radius: 12px; padding: 14px 16px; margin: 0 16px 8px; box-shadow: var(--shadow-sm); }
+  .skeleton-line { height: 14px; margin-bottom: 8px; border-radius: 4px; }
+  .skeleton-line.w60 { width: 60%; }
+  .skeleton-line.w40 { width: 40%; }
+  .skeleton-line.w80 { width: 80%; }
+  .skeleton-line.w30 { width: 30%; height: 10px; }
+  .skeleton-kpi { background: white; border-radius: 12px; padding: 14px; box-shadow: var(--shadow-sm); }
+  .skeleton-circle { width: 40px; height: 40px; border-radius: 50%; }
+
+  /* --- Visit Page with Steps --- */
+  .vp-steps { display: flex; align-items: center; padding: 16px; background: white; gap: 0; }
+  .vp-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+  .vp-step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; z-index: 1; }
+  .vp-step-circle.done { background: #059669; color: white; }
+  .vp-step-circle.active { background: #0F766E; color: white; box-shadow: 0 0 0 4px rgba(15,118,110,0.2); }
+  .vp-step-circle.pending { background: #E2E8F0; color: #94a3b8; }
+  .vp-step-label { font-size: 10px; color: #64748b; margin-top: 4px; font-weight: 500; }
+  .vp-step-label.active { color: #0F766E; font-weight: 600; }
+  .vp-step-line { position: absolute; top: 16px; left: calc(50% + 20px); right: calc(-50% + 20px); height: 2px; background: #E2E8F0; }
+  .vp-step-line.done { background: #059669; }
+
+  .vp-content { padding: 16px; }
+  .vp-task-list { display: flex; flex-direction: column; gap: 8px; }
+  .vp-task-item { background: white; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm); }
+  .vp-task-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .vp-task-icon.done { background: #D1FAE5; }
+  .vp-task-icon.active { background: #FEF3C7; }
+  .vp-task-icon.pending { background: #F1F5F9; }
+  .vp-task-info { flex: 1; min-width: 0; }
+  .vp-task-name { font-size: 13px; font-weight: 600; color: #0F172A; }
+  .vp-task-room { font-size: 11px; color: #94a3b8; }
+  .vp-task-status { font-size: 18px; flex-shrink: 0; }
+
+  /* --- Admin --- */
+  .admin-old-layout { display: flex; min-height: 500px; }
+  .admin-old-sider { width: 220px; background: white; border-right: 1px solid #f0f0f0; padding: 16px 0; flex-shrink: 0; }
+  .admin-old-sider-title { padding: 0 16px 12px; font-weight: 700; font-size: 16px; color: #1677ff; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px; }
+  .admin-old-item { padding: 8px 16px; font-size: 13px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .admin-old-item:hover { background: #f5f5f5; }
+  .admin-old-item.active { background: #e6f7ff; color: #1677ff; font-weight: 500; }
+  .admin-old-content { flex: 1; padding: 20px; background: #f5f5f5; }
+
+  .admin-new-layout { display: flex; min-height: 500px; }
+  .admin-new-sider { width: 240px; background: white; border-right: 1px solid var(--new-border); flex-shrink: 0; display: flex; flex-direction: column; }
+  .admin-new-sider-header { padding: 16px; border-bottom: 1px solid var(--new-border); display: flex; align-items: center; gap: 10px; }
+  .admin-new-logo { width: 32px; height: 32px; background: linear-gradient(135deg, #0F766E, #14B8A6); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .admin-new-sider-title { font-weight: 700; font-size: 15px; color: #0F172A; letter-spacing: -0.01em; }
+  .admin-new-group { padding: 8px 0; }
+  .admin-new-group-label { padding: 4px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+  .admin-new-item { padding: 8px 16px; font-size: 13px; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 0; transition: all 0.15s; margin: 1px 8px; border-radius: 6px; }
+  .admin-new-item:hover { background: #F1F5F9; color: #0F172A; }
+  .admin-new-item.active { background: rgba(15,118,110,0.08); color: #0F766E; font-weight: 600; }
+  .admin-new-item-icon { font-size: 16px; width: 20px; text-align: center; }
+  .admin-new-content { flex: 1; padding: 20px; background: var(--new-bg); }
+  .admin-new-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+  .admin-new-breadcrumb a { color: #64748b; text-decoration: none; }
+  .admin-new-breadcrumb a:hover { color: #0F766E; }
+  .admin-new-breadcrumb .current { color: #0F172A; font-weight: 500; }
+  .admin-new-page-title { font-size: 20px; font-weight: 700; color: #0F172A; margin-bottom: 16px; letter-spacing: -0.02em; }
+
+  /* Table mock */
+  .mock-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .mock-table th { text-align: left; padding: 10px 12px; background: #fafafa; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0; }
+  .mock-table td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; color: #333; }
+  .mock-table-new th { text-align: left; padding: 10px 12px; background: #F8FAFC; font-weight: 600; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--new-border); }
+  .mock-table-new td { padding: 10px 12px; border-bottom: 1px solid #F1F5F9; color: #334155; }
+  .mock-table-new tr:hover td { background: rgba(15,118,110,0.02); }
+  .mock-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .mock-tag-new { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+
+  /* Bottom nav */
+  .bottom-nav-mock { display: flex; justify-content: space-around; padding: 8px 0 12px; background: white; border-top: 1px solid #f0f0f0; }
+  .bottom-nav-mock-new { display: flex; justify-content: space-around; padding: 8px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: white; border-top: 1px solid var(--new-border); }
+  .bn-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: #8c8c8c; }
+  .bn-item.active { color: #1677ff; }
+  .bn-item.active-new { color: #0F766E; }
+  .bn-item-icon { font-size: 20px; }
+
+  /* Empty state */
+  .empty-state-new { text-align: center; padding: 40px 20px; }
+  .empty-state-new-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state-new-title { font-size: 16px; font-weight: 600; color: #0F172A; margin-bottom: 4px; }
+  .empty-state-new-text { font-size: 13px; color: #94a3b8; margin-bottom: 16px; }
+  .empty-state-new-btn { padding: 10px 20px; background: #0F766E; color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .comparison { grid-template-columns: 1fr; }
+    .admin-old-sider, .admin-new-sider { width: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="mock-nav">
+  <div class="mock-nav-title">🎨 Редизайн</div>
+  <div class="mock-nav-item active" onclick="showSection('login')">Страница входа</div>
+  <div class="mock-nav-item" onclick="showSection('visits')">Список визитов</div>
+  <div class="mock-nav-item" onclick="showSection('visit-page')">Страница визита</div>
+  <div class="mock-nav-item" onclick="showSection('admin')">Админ-панель</div>
+  <div class="mock-nav-item" onclick="showSection('palette')">Палитра и шрифты</div>
+</nav>
+
+<!-- ==================== SECTION: LOGIN ==================== -->
+<div class="mock-section active" id="section-login">
+  <div class="section-title">Страница входа</div>
+  <div class="section-desc">Первое впечатление пользователя. Новый дизайн добавляет брендинг, глубину и современную эстетику.</div>
+
+  <div class="comparison">
+    <!-- BEFORE -->
+    <div class="comp-col">
+      <div class="comp-label before">⬤ Текущий дизайн</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="login-old">
+            <div class="login-old-card">
+              <div class="login-old-title">🔧 Чек-лист инженера</div>
+              <div class="login-old-sub">Цифровой чек-лист ТО оборудования</div>
+              <input class="login-old-input" placeholder="Email" value="engineer@example.com">
+              <input class="login-old-input" type="password" placeholder="Пароль" value="••••••••">
+              <button class="login-old-btn">Войти</button>
+              <div style="text-align:center;margin-top:12px"><a href="#" style="color:#1677ff;font-size:13px;text-decoration:none">Забыли пароль?</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="comp-col">
+      <div class="comp-label after">⬤ Новый дизайн</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="login-new">
+            <div class="login-new-card">
+              <div class="login-new-logo">🔧</div>
+              <div class="login-new-title">Чек-лист инженера</div>
+              <div class="login-new-sub">Цифровой чек-лист ТО оборудования</div>
+              <label class="login-new-label">Email</label>
+              <input class="login-new-input" placeholder="name@company.ru" value="engineer@example.com">
+              <label class="login-new-label">Пароль</label>
+              <input class="login-new-input" type="password" placeholder="Введите пароль" value="••••••••">
+              <button class="login-new-btn">Войти</button>
+              <div class="login-new-forgot"><a href="#">Забыли пароль?</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes-list">
+    <div class="change-item"><span class="change-icon">🎨</span><span class="change-text"><strong>Градиент:</strong> плоский синий → многослойный teal-to-blue с радиальным свечением. Ощущение глубины и профессионализма</span></div>
+    <div class="change-item"><span class="change-icon">🔲</span><span class="change-text"><strong>Логотип:</strong> эмодзи → брендовая иконка в квадрате с градиентом (12px radius). Визуальная идентичность</span></div>
+    <div class="change-item"><span class="change-icon">📝</span><span class="change-text"><strong>Форма:</strong> добавлены лейблы над инпутами (uppercase, 12px). Поля с фокус-состоянием (border-color transition). Background #F8FAFC → white при фокусе</span></div>
+    <div class="change-item"><span class="change-icon">🔘</span><span class="change-text"><strong>Кнопка:</strong> градиент + box-shadow с цветом бренда. Press-эффект (scale 0.98). Border-radius 10px</span></div>
+    <div class="change-item"><span class="change-icon">📐</span><span class="change-text"><strong>Скругления:</strong> карточка 12px → 16px. Более мягкий, современный вид</span></div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: VISITS LIST ==================== -->
+<div class="mock-section" id="section-visits">
+  <div class="section-title">Список визитов (мобильный)</div>
+  <div class="section-desc">Главный экран инженера. Добавлены KPI-карточки, skeleton loading, улучшенные карточки с прогрессом и цветовой кодировкой.</div>
+
+  <div class="comparison">
+    <!-- BEFORE -->
+    <div class="comp-col">
+      <div class="comp-label before">⬤ Текущий дизайн</div>
+      <div class="phone-frame">
+        <div class="phone-screen" style="background:#f5f5f5">
+          <div class="phone-notch"></div>
+          <div class="vl-header">
+            <span class="vl-header-title">Мои визиты</span>
+            <span style="font-size:20px">🔔</span>
+          </div>
+          <div class="vl-search-old">
+            <input placeholder="Поиск...">
+          </div>
+          <div class="vl-card-old">
+            <div class="vl-card-old-title">ул. Ленина, д. 15</div>
+            <div class="vl-card-old-sub">15.08.2026 • Иванов И.И.</div>
+            <div class="vl-card-old-tag" style="background:#e6f7ff;color:#1677ff">🔄 В работе</div>
+          </div>
+          <div class="vl-card-old">
+            <div class="vl-card-old-title">пр. Мира, д. 42</div>
+            <div class="vl-card-old-sub">16.08.2026 • Петров П.П.</div>
+            <div class="vl-card-old-tag" style="background:#f0f0f0;color:#666">⏸ Не начат</div>
+          </div>
+          <div class="vl-card-old">
+            <div class="vl-card-old-title">ул. Садовая, д. 7</div>
+            <div class="vl-card-old-sub">14.08.2026 • Сидоров С.С.</div>
+            <div class="vl-card-old-tag" style="background:#f6ffed;color:#52c41a">✅ Завершён</div>
+          </div>
+          <div class="vl-card-old">
+            <div class="vl-card-old-title">ул. Пушкина, д. 23</div>
+            <div class="vl-card-old-sub">17.08.2026 • Козлов К.К.</div>
+            <div class="vl-card-old-tag" style="background:#e6f7ff;color:#1677ff">🔄 В работе</div>
+          </div>
+          <div style="height:16px"></div>
+          <div class="bottom-nav-mock">
+            <div class="bn-item active"><span class="bn-item-icon">☰</span>Визиты</div>
+            <div class="bn-item"><span class="bn-item-icon">📋</span>Заявки</div>
+            <div class="bn-item"><span class="bn-item-icon">👤</span>Профиль</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="comp-col">
+      <div class="comp-label after">⬤ Новый дизайн</div>
+      <div class="phone-frame">
+        <div class="phone-screen" style="background:var(--new-bg)">
+          <div class="phone-notch"></div>
+          <div style="padding:12px 16px;background:white;border-bottom:1px solid var(--new-border)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:16px;font-weight:700;color:var(--new-text);letter-spacing:-0.02em">Мои визиты</span>
+              <span style="font-size:20px">🔔</span>
+            </div>
+          </div>
+
+          <!-- KPI Cards -->
+          <div class="vl-kpi">
+            <div class="vl-kpi-card">
+              <div class="vl-kpi-value" style="color:var(--new-text)">24</div>
+              <div class="vl-kpi-label">Всего</div>
+            </div>
+            <div class="vl-kpi-card">
+              <div class="vl-kpi-value" style="color:#D97706">8</div>
+              <div class="vl-kpi-label">В работе</div>
+              <div class="vl-kpi-bar"><div class="vl-kpi-bar-fill" style="width:33%;background:#D97706"></div></div>
+            </div>
+            <div class="vl-kpi-card">
+              <div class="vl-kpi-value" style="color:var(--new-accent)">6</div>
+              <div class="vl-kpi-label">Запланировано</div>
+            </div>
+            <div class="vl-kpi-card">
+              <div class="vl-kpi-value" style="color:var(--new-success)">10</div>
+              <div class="vl-kpi-label">Завершено</div>
+              <div class="vl-kpi-bar"><div class="vl-kpi-bar-fill" style="width:42%;background:var(--new-success)"></div></div>
+            </div>
+          </div>
+
+          <!-- Filter chips -->
+          <div class="vl-filters-new">
+            <div class="vl-filter-chip active">Все</div>
+            <div class="vl-filter-chip">В работе</div>
+            <div class="vl-filter-chip">Новые</div>
+            <div class="vl-filter-chip">Готово</div>
+          </div>
+
+          <!-- Cards -->
+          <div class="vl-card-new in-progress">
+            <div class="vl-card-new-header">
+              <div class="vl-card-new-title">ул. Ленина, д. 15</div>
+              <div class="vl-card-new-status status-in-progress">В работе</div>
+            </div>
+            <div class="vl-card-new-sub">15.08.2026 • Иванов И.И.</div>
+            <div class="vl-card-new-footer">
+              <div class="vl-card-new-meta">Обновлён 2ч назад</div>
+              <div class="vl-card-new-progress">
+                <div class="vl-card-new-progress-bar"><div class="vl-card-new-progress-fill" style="width:60%"></div></div>
+                <span class="vl-card-new-progress-text">3/5</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="vl-card-new planned">
+            <div class="vl-card-new-header">
+              <div class="vl-card-new-title">пр. Мира, д. 42</div>
+              <div class="vl-card-new-status status-planned">Новый</div>
+            </div>
+            <div class="vl-card-new-sub">16.08.2026 • Петров П.П.</div>
+            <div class="vl-card-new-footer">
+              <div class="vl-card-new-meta">Назначен вчера</div>
+              <div class="vl-card-new-progress">
+                <div class="vl-card-new-progress-bar"><div class="vl-card-new-progress-fill" style="width:0%"></div></div>
+                <span class="vl-card-new-progress-text">0/8</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="vl-card-new completed">
+            <div class="vl-card-new-header">
+              <div class="vl-card-new-title">ул. Садовая, д. 7</div>
+              <div class="vl-card-new-status status-completed">Готово</div>
+            </div>
+            <div class="vl-card-new-sub">14.08.2026 • Сидоров С.С.</div>
+            <div class="vl-card-new-footer">
+              <div class="vl-card-new-meta">Завершён 14.08</div>
+              <div class="vl-card-new-progress">
+                <div class="vl-card-new-progress-bar"><div class="vl-card-new-progress-fill" style="width:100%"></div></div>
+                <span class="vl-card-new-progress-text">4/4</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:8px"></div>
+          <div class="bottom-nav-mock-new">
+            <div class="bn-item active-new"><span class="bn-item-icon">☰</span>Визиты</div>
+            <div class="bn-item"><span class="bn-item-icon">📋</span>Заявки</div>
+            <div class="bn-item"><span class="bn-item-icon">👤</span>Профиль</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes-list">
+    <div class="change-item"><span class="change-icon">📊</span><span class="change-text"><strong>KPI-карточки:</strong> 4 карточки с ключевыми метриками (всего, в работе, запланировано, завершено). Прогресс-бары для визуализации. Сетка 2×2</span></div>
+    <div class="change-item"><span class="change-icon">🏷</span><span class="change-text"><strong>Filter chips:</strong> компактные «таблетки» вместо dropdown. Быстрый доступ к фильтрам одним тапом</span></div>
+    <div class="change-item"><span class="change-icon">🃏</span><span class="change-text"><strong>Карточки визитов:</strong> цветная полоска слева (border-left 3px) для мгновенного распознавания статуса. Прогресс выполнения задач (3/5). Более крупные скругления (12px)</span></div>
+    <div class="change-item"><span class="change-icon">💀</span><span class="change-text"><strong>Skeleton loading:</strong> вместо Spin — skeleton-карточки с shimmer-анимацией. Ощущение скорости</span></div>
+    <div class="change-item"><span class="change-icon">🎨</span><span class="change-text"><strong>Статус-бейджи:</strong> uppercase + letter-spacing. Более контрастные цвета (amber/green/blue вместо голубого/серого)</span></div>
+  </div>
+
+  <!-- Skeleton preview -->
+  <div style="margin-top:32px">
+    <h3 style="color:#ccd6f6;font-size:16px;margin-bottom:16px">💀 Skeleton Loading (состояние загрузки)</h3>
+    <div style="max-width:375px;margin:0 auto">
+      <div class="phone-frame">
+        <div class="phone-screen" style="background:var(--new-bg)">
+          <div class="phone-notch"></div>
+          <div style="padding:12px 16px;background:white;border-bottom:1px solid var(--new-border)">
+            <div class="skeleton" style="width:120px;height:18px"></div>
+          </div>
+          <div class="vl-kpi">
+            <div class="skeleton-kpi"><div class="skeleton" style="width:50px;height:28px;margin-bottom:6px"></div><div class="skeleton" style="width:70px;height:10px"></div></div>
+            <div class="skeleton-kpi"><div class="skeleton" style="width:40px;height:28px;margin-bottom:6px"></div><div class="skeleton" style="width:60px;height:10px"></div></div>
+            <div class="skeleton-kpi"><div class="skeleton" style="width:45px;height:28px;margin-bottom:6px"></div><div class="skeleton" style="width:65px;height:10px"></div></div>
+            <div class="skeleton-kpi"><div class="skeleton" style="width:35px;height:28px;margin-bottom:6px"></div><div class="skeleton" style="width:55px;height:10px"></div></div>
+          </div>
+          <div class="skeleton-card"><div class="skeleton skeleton-line w80"></div><div class="skeleton skeleton-line w40"></div><div class="skeleton skeleton-line w30"></div></div>
+          <div class="skeleton-card"><div class="skeleton skeleton-line w60"></div><div class="skeleton skeleton-line w80"></div><div class="skeleton skeleton-line w30"></div></div>
+          <div class="skeleton-card"><div class="skeleton skeleton-line w80"></div><div class="skeleton skeleton-line w40"></div><div class="skeleton skeleton-line w30"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: VISIT PAGE ==================== -->
+<div class="mock-section" id="section-visit-page">
+  <div class="section-title">Страница визита (инженер)</div>
+  <div class="section-desc">Ключевое улучшение — прогресс-индикатор (Steps). Инженер видит, на каком этапе он находится и сколько осталось.</div>
+
+  <div class="comparison">
+    <!-- BEFORE -->
+    <div class="comp-col">
+      <div class="comp-label before">⬤ Текущий дизайн</div>
+      <div class="phone-frame">
+        <div class="phone-screen" style="background:#f5f5f5">
+          <div class="phone-notch"></div>
+          <div style="padding:8px 16px;background:white;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px;cursor:pointer">←</span>
+            <span style="font-size:16px;font-weight:600;flex:1">Визит #RU/77/423</span>
+            <span style="font-size:12px;color:#1677ff;background:#e6f7ff;padding:2px 8px;border-radius:12px">В работе</span>
+          </div>
+          <div style="padding:16px">
+            <div style="background:white;border-radius:8px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+              <div style="font-size:12px;color:#888;margin-bottom:4px">Адрес</div>
+              <div style="font-size:14px;font-weight:600">ул. Ленина, д. 15</div>
+              <div style="font-size:12px;color:#888;margin-top:8px">Дата: 15.08.2026, 10:00</div>
+            </div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:8px">Задачи (5)</div>
+            <div style="background:white;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px">
+              <span style="font-size:18px">✅</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Кондиционер сплит-система</div><div style="font-size:11px;color:#888">Серверная</div></div>
+            </div>
+            <div style="background:white;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px">
+              <span style="font-size:18px">✅</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Вентиляция приточная</div><div style="font-size:11px;color:#888">Серверная</div></div>
+            </div>
+            <div style="background:white;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px">
+              <span style="font-size:18px">🔄</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Электрощит</div><div style="font-size:11px;color:#888">Электрощитовая</div></div>
+            </div>
+            <div style="background:white;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px">
+              <span style="font-size:18px;color:#d9d9d9">⬜</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Освещение LED</div><div style="font-size:11px;color:#888">Зона обслуживания</div></div>
+            </div>
+            <div style="background:white;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px">
+              <span style="font-size:18px;color:#d9d9d9">⬜</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Пожарная сигнализация</div><div style="font-size:11px;color:#888">Коридор 1 этаж</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="comp-col">
+      <div class="comp-label after">⬤ Новый дизайн</div>
+      <div class="phone-frame">
+        <div class="phone-screen" style="background:var(--new-bg)">
+          <div class="phone-notch"></div>
+          <div style="padding:8px 16px;background:white;border-bottom:1px solid var(--new-border);display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px;cursor:pointer;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</span>
+            <span style="font-size:16px;font-weight:700;flex:1;color:var(--new-text);letter-spacing:-0.02em">Визит #RU/77/423</span>
+          </div>
+
+          <!-- Steps Progress -->
+          <div style="background:white;padding:16px 12px;border-bottom:1px solid var(--new-border)">
+            <div class="vp-steps" style="padding:0">
+              <div class="vp-step">
+                <div class="vp-step-circle done">✓</div>
+                <div class="vp-step-label done">Адрес</div>
+                <div class="vp-step-line done"></div>
+              </div>
+              <div class="vp-step">
+                <div class="vp-step-circle active">2</div>
+                <div class="vp-step-label active">Задачи</div>
+                <div class="vp-step-line"></div>
+              </div>
+              <div class="vp-step">
+                <div class="vp-step-circle pending">3</div>
+                <div class="vp-step-label">Фото</div>
+                <div class="vp-step-line"></div>
+              </div>
+              <div class="vp-step">
+                <div class="vp-step-circle pending">4</div>
+                <div class="vp-step-label">Отчёт</div>
+              </div>
+            </div>
+            <div style="text-align:center;margin-top:8px;font-size:12px;color:var(--new-text-secondary)">Шаг 2 из 4 • Задачи: 2/5 выполнено</div>
+          </div>
+
+          <!-- Address card -->
+          <div style="padding:12px 16px 0">
+            <div style="background:white;border-radius:var(--new-radius);padding:14px;box-shadow:var(--shadow-sm)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span style="font-size:16px">📍</span>
+                <span style="font-size:14px;font-weight:600;color:var(--new-text)">ул. Ленина, д. 15</span>
+              </div>
+              <div style="font-size:12px;color:#94a3b8">15.08.2026, 10:00 • Иванов И.И.</div>
+            </div>
+          </div>
+
+          <!-- Task list -->
+          <div style="padding:12px 16px">
+            <div style="font-size:13px;font-weight:600;color:var(--new-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Задачи оборудования</div>
+            <div class="vp-task-list">
+              <div class="vp-task-item">
+                <div class="vp-task-icon done">✅</div>
+                <div class="vp-task-info">
+                  <div class="vp-task-name">Кондиционер сплит-система</div>
+                  <div class="vp-task-room">Серверная</div>
+                </div>
+                <div class="vp-task-status" style="font-size:12px;color:var(--new-success);font-weight:600">OK</div>
+              </div>
+              <div class="vp-task-item">
+                <div class="vp-task-icon done">✅</div>
+                <div class="vp-task-info">
+                  <div class="vp-task-name">Вентиляция приточная</div>
+                  <div class="vp-task-room">Серверная</div>
+                </div>
+                <div class="vp-task-status" style="font-size:12px;color:var(--new-success);font-weight:600">OK</div>
+              </div>
+              <div class="vp-task-item" style="border:1.5px solid #FEF3C7;background:#FFFBEB">
+                <div class="vp-task-icon active">🔄</div>
+                <div class="vp-task-info">
+                  <div class="vp-task-name" style="color:#92400E">Электрощит</div>
+                  <div class="vp-task-room" style="color:#D97706">Электрощитовая</div>
+                </div>
+                <div class="vp-task-status" style="font-size:12px;color:var(--new-warning);font-weight:600">В работе</div>
+              </div>
+              <div class="vp-task-item">
+                <div class="vp-task-icon pending">⬜</div>
+                <div class="vp-task-info">
+                  <div class="vp-task-name" style="color:#94a3b8">Освещение LED</div>
+                  <div class="vp-task-room">Зона обслуживания</div>
+                </div>
+              </div>
+              <div class="vp-task-item">
+                <div class="vp-task-icon pending">⬜</div>
+                <div class="vp-task-info">
+                  <div class="vp-task-name" style="color:#94a3b8">Пожарная сигнализация</div>
+                  <div class="vp-task-room">Коридор 1 этаж</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes-list">
+    <div class="change-item"><span class="change-icon">📍</span><span class="change-text"><strong>Прогресс-индикатор (Steps):</strong> 4 шага: Адрес → Задачи → Фото → Отчёт. Активный шаг подсвечен с ring-эффектом. Завершённые — зелёные с галочкой</span></div>
+    <div class="change-item"><span class="change-icon">📊</span><span class="change-text"><strong>Контекстная строка:</strong> «Шаг 2 из 4 • Задачи: 2/5 выполнено» — инженер всегда знает, сколько осталось</span></div>
+    <div class="change-item"><span class="change-icon">🎯</span><span class="change-text"><strong>Активная задача выделена:</strong> жёлтая рамка + фон #FFFBEB. Мгновенно видно, где инженер остановился</span></div>
+    <div class="change-item"><span class="change-icon">🏷</span><span class="change-text"><strong>Статус задачи справа:</strong> OK (зелёный) / В работе (amber) / — (серый). Быстрое сканирование прогресса</span></div>
+    <div class="change-item"><span class="change-icon">📐</span><span class="change-text"><strong>Адрес — компактная карточка:</strong> иконка + текст в одну строку. Экономия места для задач</span></div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: ADMIN ==================== -->
+<div class="mock-section" id="section-admin">
+  <div class="section-title">Админ-панель (десктоп)</div>
+  <div class="section-desc">Группировка меню, breadcrumbs, новый стиль таблицы и карточек. 16 пунктов → 5 логических групп.</div>
+
+  <div class="comparison">
+    <!-- BEFORE -->
+    <div class="comp-col">
+      <div class="comp-label before">⬤ Текущий дизайн</div>
+      <div class="desktop-frame">
+        <div class="desktop-toolbar">
+          <div class="desktop-dot r"></div>
+          <div class="desktop-dot y"></div>
+          <div class="desktop-dot g"></div>
+        </div>
+        <div class="desktop-screen">
+          <div class="admin-old-layout">
+            <div class="admin-old-sider">
+              <div class="admin-old-sider-title">🔧 Админ-панель</div>
+              <div class="admin-old-item">← Визиты</div>
+              <div class="admin-old-item active">📍 Адреса</div>
+              <div class="admin-old-item">🔧 Оборудование</div>
+              <div class="admin-old-item">🏪 Производители</div>
+              <div class="admin-old-item">📦 Модели</div>
+              <div class="admin-old-item">🏠 Помещения</div>
+              <div class="admin-old-item">📄 Рекомендации</div>
+              <div class="admin-old-item">👤 Пользователи</div>
+              <div class="admin-old-item">👥 Привязки ТМ</div>
+              <div class="admin-old-item">📥 Импорт CSV</div>
+              <div class="admin-old-item">🔧 Об. объектов</div>
+              <div class="admin-old-item">✅ Модерация</div>
+              <div class="admin-old-item">🧪 МТР: Виды работ</div>
+              <div class="admin-old-item">🔗 МТР: Привязки</div>
+              <div class="admin-old-item">🚀 Уведомления</div>
+              <div class="admin-old-item">📋 Аудит</div>
+            </div>
+            <div class="admin-old-content">
+              <h2 style="font-size:18px;margin-bottom:16px;color:#333">Адреса</h2>
+              <div style="margin-bottom:12px;display:flex;gap:8px">
+                <input style="padding:6px 12px;border:1px solid #d9d9d9;border-radius:6px;flex:1" placeholder="Поиск...">
+                <button style="padding:6px 16px;background:#1677ff;color:white;border:none;border-radius:6px;cursor:pointer">+ Добавить</button>
+              </div>
+              <table class="mock-table">
+                <tr><th>Город</th><th>Улица</th><th>Дом</th><th>Объектов</th><th></th></tr>
+                <tr><td>Москва</td><td>ул. Ленина</td><td>15</td><td>3</td><td><a href="#" style="color:#1677ff">✏️</a></td></tr>
+                <tr><td>Москва</td><td>пр. Мира</td><td>42</td><td>5</td><td><a href="#" style="color:#1677ff">✏️</a></td></tr>
+                <tr><td>СПб</td><td>ул. Садовая</td><td>7</td><td>2</td><td><a href="#" style="color:#1677ff">✏️</a></td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="comp-col">
+      <div class="comp-label after">⬤ Новый дизайн</div>
+      <div class="desktop-frame">
+        <div class="desktop-toolbar">
+          <div class="desktop-dot r"></div>
+          <div class="desktop-dot y"></div>
+          <div class="desktop-dot g"></div>
+        </div>
+        <div class="desktop-screen" style="background:var(--new-bg)">
+          <div class="admin-new-layout">
+            <div class="admin-new-sider">
+              <div class="admin-new-sider-header">
+                <div class="admin-new-logo">🔧</div>
+                <div class="admin-new-sider-title">Админ-панель</div>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:8px 0">
+                <div class="admin-new-group">
+                  <div class="admin-new-group-label">Объекты</div>
+                  <div class="admin-new-item active"><span class="admin-new-item-icon">📍</span>Адреса</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">🔧</span>Оборудование объектов</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">🏠</span>Помещения</div>
+                </div>
+                <div class="admin-new-group">
+                  <div class="admin-new-group-label">Справочники</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">⚙️</span>Оборудование</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">🏪</span>Производители</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">📦</span>Модели</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">📄</span>Рекомендации</div>
+                </div>
+                <div class="admin-new-group">
+                  <div class="admin-new-group-label">Пользователи</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">👤</span>Пользователи</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">👥</span>Привязки ТМ</div>
+                </div>
+                <div class="admin-new-group">
+                  <div class="admin-new-group-label">МТР</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">🧪</span>Виды работ</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">🔗</span>Привязки</div>
+                </div>
+                <div class="admin-new-group">
+                  <div class="admin-new-group-label">Система</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">✅</span>Модерация</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">📥</span>Импорт CSV</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">🚀</span>Уведомления</div>
+                  <div class="admin-new-item"><span class="admin-new-item-icon">📋</span>Аудит</div>
+                </div>
+              </div>
+            </div>
+            <div class="admin-new-content">
+              <div class="admin-new-breadcrumb">
+                <a href="#">🏠 Главная</a>
+                <span>›</span>
+                <span class="current">Адреса</span>
+              </div>
+              <div class="admin-new-page-title">Адреса объектов</div>
+              <div style="margin-bottom:16px;display:flex;gap:8px">
+                <input style="padding:8px 14px;border:1.5px solid var(--new-border);border-radius:8px;flex:1;font-size:13px;background:white;outline:none" placeholder="Поиск по адресу...">
+                <button style="padding:8px 20px;background:var(--new-primary);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(15,118,110,0.2)">+ Добавить</button>
+              </div>
+              <div style="background:white;border-radius:var(--new-radius);box-shadow:var(--shadow-sm);overflow:hidden">
+                <table class="mock-table-new">
+                  <tr><th>Город</th><th>Улица</th><th>Дом</th><th>Объектов</th><th></th></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">ул. Ленина</td><td>15</td><td><span class="mock-tag-new" style="background:#D1FAE5;color:#065F46">3</span></td><td><button style="padding:4px 12px;border:1px solid var(--new-border);border-radius:6px;background:white;font-size:12px;cursor:pointer">✏️ Изменить</button></td></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">пр. Мира</td><td>42</td><td><span class="mock-tag-new" style="background:#DBEAFE;color:#1E40AF">5</span></td><td><button style="padding:4px 12px;border:1px solid var(--new-border);border-radius:6px;background:white;font-size:12px;cursor:pointer">✏️ Изменить</button></td></tr>
+                  <tr><td>СПб</td><td style="font-weight:500">ул. Садовая</td><td>7</td><td><span class="mock-tag-new" style="background:#FEF3C7;color:#92400E">2</span></td><td><button style="padding:4px 12px;border:1px solid var(--new-border);border-radius:6px;background:white;font-size:12px;cursor:pointer">✏️ Изменить</button></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes-list">
+    <div class="change-item"><span class="change-icon">📂</span><span class="change-text"><strong>Группировка меню:</strong> 16 пунктов → 5 групп (Объекты, Справочники, Пользователи, МТР, Система). Uppercase-лейблы групп (10px, letter-spacing 1px)</span></div>
+    <div class="change-item"><span class="change-icon">🍞</span><span class="change-text"><strong>Breadcrumbs:</strong> «Главная › Адреса» — всегда видно, где находишься. Кликабельные для навигации назад</span></div>
+    <div class="change-item"><span class="change-icon">🎨</span><span class="change-text"><strong>Логотип в сайдбаре:</strong> градиентный квадрат 32×32 с эмодзи + название. Брендинг</span></div>
+    <div class="change-item"><span class="change-icon">📊</span><span class="change-text"><strong>Таблица в карточке:</strong> white background + border-radius 12px + shadow. Более современные ячейки. Числа — цветные бейджи</span></div>
+    <div class="change-item"><span class="change-icon">🔘</span><span class="change-text"><strong>Кнопки:</strong> «Добавить» с box-shadow в цвете бренда. «Изменить» — outline-стиль вместо голой ссылки</span></div>
+    <div class="change-item"><span class="change-icon">🎯</span><span class="change-text"><strong>Active item:</strong> мягкий teal фон (rgba(15,118,110,0.08)) + teal текст + font-weight 600. Border-radius 6px с отступом 8px</span></div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: PALETTE ==================== -->
+<div class="mock-section" id="section-palette">
+  <div class="section-title">Палитра и типографика</div>
+  <div class="section-desc">Рекомендуемая дизайн-система на основе UI/UX Pro Max (B2B Service palette). Trust teal + professional blue.</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+    <!-- Old palette -->
+    <div>
+      <h3 style="color:#e74c3c;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">⬤ Текущая палитра</h3>
+      <div class="palette">
+        <div class="palette-item"><div class="palette-swatch" style="background:#1677ff"></div><div class="palette-label">Primary</div><div class="palette-hex">#1677ff</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#f5f5f5;border:1px solid #333"></div><div class="palette-label">Background</div><div class="palette-hex">#f5f5f5</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#52c41a"></div><div class="palette-label">Success</div><div class="palette-hex">#52c41a</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#faad14"></div><div class="palette-label">Warning</div><div class="palette-hex">#faad14</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#ff4d4f"></div><div class="palette-label">Danger</div><div class="palette-hex">#ff4d4f</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#262626"></div><div class="palette-label">Text</div><div class="palette-hex">#262626</div></div>
+      </div>
+      <div style="margin-top:16px;padding:16px;background:rgba(231,76,60,0.1);border-radius:8px;border-left:3px solid #e74c3c">
+        <div style="font-size:13px;color:#e74c3c;font-weight:600;margin-bottom:4px">Проблемы</div>
+        <ul style="font-size:12px;color:#a8b2d1;padding-left:16px;line-height:1.8">
+          <li>Стандартный Ant Design blue — нет брендинга</li>
+          <li>Серый фон #f5f5f5 — «холодный», казённый</li>
+          <li>Нет design tokens — сложно менять</li>
+          <li>Скругления 6-8px — устаревший вид</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- New palette -->
+    <div>
+      <h3 style="color:#10b981;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">⬤ Новая палитра</h3>
+      <div class="palette">
+        <div class="palette-item"><div class="palette-swatch" style="background:#0F766E"></div><div class="palette-label">Primary</div><div class="palette-hex">#0F766E</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#14B8A6"></div><div class="palette-label">Secondary</div><div class="palette-hex">#14B8A6</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#0369A1"></div><div class="palette-label">Accent</div><div class="palette-hex">#0369A1</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#F8FAFC"></div><div class="palette-label">Background</div><div class="palette-hex">#F8FAFC</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#059669"></div><div class="palette-label">Success</div><div class="palette-hex">#059669</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#D97706"></div><div class="palette-label">Warning</div><div class="palette-hex">#D97706</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#DC2626"></div><div class="palette-label">Danger</div><div class="palette-hex">#DC2626</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#0F172A"></div><div class="palette-label">Text</div><div class="palette-hex">#0F172A</div></div>
+        <div class="palette-item"><div class="palette-swatch" style="background:#E2E8F0"></div><div class="palette-label">Border</div><div class="palette-hex">#E2E8F0</div></div>
+      </div>
+      <div style="margin-top:16px;padding:16px;background:rgba(16,185,129,0.1);border-radius:8px;border-left:3px solid #10b981">
+        <div style="font-size:13px;color:#10b981;font-weight:600;margin-bottom:4px">Преимущества</div>
+        <ul style="font-size:12px;color:#a8b2d1;padding-left:16px;line-height:1.8">
+          <li>Trust teal — вызывает доверие, профессионализм</li>
+          <li>Тёплый серый фон #F8FAFC — мягче, современнее</li>
+          <li>Design tokens — централизованное управление</li>
+          <li>Скругления 10-12px — современный, дружелюбный вид</li>
+          <li>Тени с прозрачностью — глубина без тяжести</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Typography -->
+  <div style="margin-top:32px">
+    <h3 style="color:#ccd6f6;font-size:16px;margin-bottom:16px">📝 Типографическая шкала</h3>
+    <div style="background:#16213e;border-radius:12px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:24px;font-weight:700;color:#ccd6f6;letter-spacing:-0.02em;margin-bottom:4px">Заголовок страницы — 24/600</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">24px / font-weight: 700 / letter-spacing: -0.02em</div>
+      </div>
+      <div>
+        <div style="font-size:18px;font-weight:600;color:#ccd6f6;letter-spacing:-0.01em;margin-bottom:4px">Заголовок секции — 18/600</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">18px / font-weight: 600 / letter-spacing: -0.01em</div>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:600;color:#ccd6f6;margin-bottom:4px">Заголовок карточки — 16/600</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">16px / font-weight: 600 / line-height: 1.4</div>
+      </div>
+      <div>
+        <div style="font-size:14px;color:#a8b2d1;margin-bottom:4px">Основной текст — 14/400</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">14px / font-weight: 400 / line-height: 1.5</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Подписи — 12/500</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">12px / font-weight: 500 / color: #94a3b8</div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:500;color:#0F766E;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">ЛЕЙБЛ — 12/500/UPPERCASE</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">12px / 500 / uppercase / letter-spacing: 0.5px</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Design Tokens -->
+  <div style="margin-top:32px">
+    <h3 style="color:#ccd6f6;font-size:16px;margin-bottom:16px">🔧 Design Tokens (ConfigProvider)</h3>
+    <div style="background:#16213e;border-radius:12px;padding:20px;font-family:monospace;font-size:13px;line-height:1.8;color:#a8b2d1;overflow-x:auto">
+<pre style="margin:0"><span style="color:#64ffda">theme</span> = {
+  <span style="color:#64ffda">token</span>: {
+    <span style="color:#8892b0">colorPrimary</span>:      <span style="color:#c3e88d">'#0F766E'</span>,
+    <span style="color:#8892b0">colorSuccess</span>:      <span style="color:#c3e88d">'#059669'</span>,
+    <span style="color:#8892b0">colorWarning</span>:      <span style="color:#c3e88d">'#D97706'</span>,
+    <span style="color:#8892b0">colorError</span>:        <span style="color:#c3e88d">'#DC2626'</span>,
+    <span style="color:#8892b0">colorBgBase</span>:       <span style="color:#c3e88d">'#F8FAFC'</span>,
+    <span style="color:#8892b0">colorText</span>:         <span style="color:#c3e88d">'#0F172A'</span>,
+    <span style="color:#8892b0">colorBorder</span>:       <span style="color:#c3e88d">'#E2E8F0'</span>,
+    <span style="color:#8892b0">borderRadius</span>:      <span style="color:#f78c6c">10</span>,
+    <span style="color:#8892b0">borderRadiusLG</span>:    <span style="color:#f78c6c">12</span>,
+    <span style="color:#8892b0">controlHeight</span>:     <span style="color:#f78c6c">40</span>,
+    <span style="color:#8892b0">fontFamily</span>:        <span style="color:#c3e88d">"-apple-system, 'Segoe UI', Roboto, sans-serif"</span>,
+  },
+  <span style="color:#64ffda">components</span>: {
+    <span style="color:#64ffda">Card</span>:    { <span style="color:#8892b0">borderRadiusLG</span>: <span style="color:#f78c6c">12</span> },
+    <span style="color:#64ffda">Button</span>:  { <span style="color:#8892b0">controlHeight</span>: <span style="color:#f78c6c">44</span>, <span style="color:#8892b0">borderRadius</span>: <span style="color:#f78c6c">10</span> },
+    <span style="color:#64ffda">Table</span>:   { <span style="color:#8892b0">borderRadius</span>: <span style="color:#f78c6c">12</span>, <span style="color:#8892b0">headerBg</span>: <span style="color:#c3e88d">'#F8FAFC'</span> },
+    <span style="color:#64ffda">Input</span>:   { <span style="color:#8892b0">borderRadius</span>: <span style="color:#f78c6c">10</span>, <span style="color:#8892b0">activeBorderColor</span>: <span style="color:#c3e88d">'#0F766E'</span> },
+    <span style="color:#64ffda">Modal</span>:   { <span style="color:#8892b0">borderRadiusLG</span>: <span style="color:#f78c6c">16</span> },
+  }
+}</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.mock-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.mock-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Tooltip, Modal, App } from 'antd';
-import { BulbOutlined, BulbFilled, WarningOutlined } from '@ant-design/icons';
+import { BulbOutlined, BulbFilled, WarningOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useTorch } from '../hooks/useTorch';
 
 export default function TorchButton() {
@@ -114,7 +114,7 @@ export default function TorchButton() {
       </Tooltip>
 
       <Modal
-        title="🔦 Фонарик"
+        title={<><ThunderboltOutlined /> Фонарик</>}
         open={showIosFallback}
         onCancel={() => setShowIosFallback(false)}
         footer={null}
@@ -123,7 +123,7 @@ export default function TorchButton() {
         <p><strong>Включите фонарик через Пункт управления:</strong></p>
         <ol>
           <li>Свайп вниз из правого верхнего угла экрана</li>
-          <li>Нажмите на иконку 🔦</li>
+          <li>Нажмите на иконку <ThunderboltOutlined /></li>
         </ol>
       </Modal>
     </>

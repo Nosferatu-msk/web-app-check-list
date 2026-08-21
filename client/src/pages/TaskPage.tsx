@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Tooltip, AutoComplete, Collapse } from 'antd';
-import { ArrowLeftOutlined, CameraOutlined, SaveOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CameraOutlined, SaveOutlined, FileTextOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -618,7 +618,7 @@ export default function TaskPage() {
                         <span>
                           {p.label}{' '}
                           <Tooltip title="Автозаполнено из справочника объекта">
-                            <span style={{ cursor: 'help' }}>📋</span>
+                            <span style={{ cursor: 'help' }}><FileTextOutlined style={{ color: '#0F766E' }} /></span>
                           </Tooltip>
                         </span>
                       ) : p.label
@@ -695,7 +695,7 @@ export default function TaskPage() {
                       <span>
                         {p.label}{' '}
                         <Tooltip title="Автозаполнено из справочника объекта">
-                          <span style={{ cursor: 'help' }}>📋</span>
+                          <span style={{ cursor: 'help' }}><FileTextOutlined style={{ color: '#0F766E' }} /></span>
                         </Tooltip>
                       </span>
                     ) : p.label

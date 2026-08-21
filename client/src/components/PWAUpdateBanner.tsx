@@ -1,5 +1,5 @@
 import { Button, Space } from 'antd';
-import { ReloadOutlined, CloseOutlined } from '@ant-design/icons';
+import { ReloadOutlined, CloseOutlined, SyncOutlined } from '@ant-design/icons';
 import { usePWAUpdate } from '../hooks/usePWAUpdate';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -25,10 +25,10 @@ export default function PWAUpdateBanner() {
       alignItems: isMobile ? 'stretch' : 'center',
       gap: isMobile ? 10 : 8,
       boxShadow: '0 -2px 12px rgba(0,0,0,0.3)',
-      borderTop: '2px solid #1677ff',
+      borderTop: '2px solid #0F766E',
     }}>
       <span style={{ fontSize: isMobile ? 15 : 14, fontWeight: 500, textAlign: isMobile ? 'center' : 'left' }}>
-        🔄 Доступна новая версия приложения
+        <SyncOutlined style={{ marginRight: 6 }} />Доступна новая версия приложения
       </span>
       <Space size={8} style={{ justifyContent: isMobile ? 'center' : 'flex-end' }}>
         <Button
@@ -39,7 +39,7 @@ export default function PWAUpdateBanner() {
           style={{
             fontWeight: 600,
             background: '#fff',
-            color: '#1677ff',
+            color: '#0F766E',
             borderColor: '#fff',
           }}
         >

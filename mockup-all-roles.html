@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Макеты всех страниц — Чек-лист инженера</title>
+<style>
+:root {
+  --p:#0F766E;--pl:#14B8A6;--ac:#0369A1;--bg:#F8FAFC;--sf:#FFFFFF;
+  --tx:#0F172A;--tx2:#475569;--tx3:#94a3b8;--bd:#E2E8F0;
+  --ok:#059669;--wn:#D97706;--err:#DC2626;--info:#0369A1;
+  --r:12px;--rs:8px;--rl:16px;
+  --sh:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shm:0 4px 6px -1px rgba(0,0,0,0.07),0 2px 4px -2px rgba(0,0,0,0.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0}
+
+/* === NAV === */
+.top-nav{position:sticky;top:0;z-index:100;background:#1e293b;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;overflow-x:auto;padding:0 16px}
+.top-nav-brand{padding:12px 16px 12px 0;font-weight:700;font-size:15px;color:#64ffda;border-right:1px solid rgba(255,255,255,0.08);margin-right:8px;white-space:nowrap}
+.nav-tab{padding:12px 16px;cursor:pointer;font-size:13px;font-weight:500;color:#64748b;border-bottom:2px solid transparent;white-space:nowrap;transition:.2s}
+.nav-tab:hover{color:#cbd5e1}
+.nav-tab.active{color:#64ffda;border-bottom-color:#64ffda}
+
+/* === SECTIONS === */
+.role-section{display:none;padding:24px 16px;max-width:1400px;margin:0 auto}
+.role-section.active{display:block}
+.role-header{margin-bottom:24px}
+.role-title{font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:4px}
+.role-desc{font-size:13px;color:#64748b;line-height:1.5}
+.role-devices{display:flex;gap:8px;margin-top:8px}
+.device-tag{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(100,255,218,0.1);color:#64ffda}
+
+/* Page tabs */
+.page-tabs{display:flex;gap:0;margin-bottom:20px;overflow-x:auto;background:#1e293b;border-radius:8px;width:fit-content}
+.page-tab{padding:8px 16px;cursor:pointer;font-size:12px;font-weight:500;color:#64748b;white-space:nowrap;border-radius:8px;transition:.2s}
+.page-tab:hover{color:#cbd5e1}
+.page-tab.active{background:var(--p);color:white}
+.page-content{display:none}
+.page-content.active{display:block}
+
+/* Layout helpers */
+.screens-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.screen-col{flex-shrink:0}
+.screen-label{text-align:center;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+
+/* Phone frame */
+.phone{background:#111;border-radius:28px;padding:10px;box-shadow:var(--shm),0 0 0 2px #333;width:320px}
+.phone-screen{background:var(--bg);border-radius:20px;overflow:hidden;min-height:560px}
+.phone-notch{width:100px;height:20px;background:#111;border-radius:0 0 14px 14px;margin:0 auto;position:relative;z-index:2}
+
+/* Desktop frame */
+.desktop{background:#1a1a1a;border-radius:10px;padding:6px;box-shadow:var(--shm);overflow:hidden;width:700px}
+.desktop-bar{height:28px;background:#2d2d2d;border-radius:6px 6px 0 0;display:flex;align-items:center;padding:0 10px;gap:5px}
+.desktop-bar span{width:8px;height:8px;border-radius:50%}
+.desktop-bar .r{background:#ff5f57}.desktop-bar .y{background:#febc2e}.desktop-bar .g{background:#28c840}
+.desktop-screen{background:white;border-radius:0 0 6px 6px;overflow:hidden;min-height:420px}
+
+/* iPad frame */
+.ipad{background:#1a1a1a;border-radius:16px;padding:12px;box-shadow:var(--shm);width:580px}
+.ipad-screen{background:white;border-radius:8px;overflow:hidden;min-height:420px}
+
+/* === COMMON UI ELEMENTS === */
+/* Mobile header */
+.m-header{padding:8px 12px;background:white;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;min-height:44px}
+.m-header .back{min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border-radius:8px}
+.m-header .title{flex:1;font-size:15px;font-weight:700;color:var(--tx);letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-header .actions{display:flex;gap:4px}
+
+/* Bottom nav */
+.bnav{display:flex;justify-content:space-around;padding:6px 0 10px;background:white;border-top:1px solid var(--bd)}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:9px;color:var(--tx3);min-width:44px;min-height:40px;justify-content:center}
+.bnav-item.active{color:var(--p)}
+.bnav-item .ico{font-size:18px}
+
+/* Cards */
+.card{background:white;border-radius:var(--r);padding:12px;box-shadow:var(--sh);margin-bottom:8px}
+.card-accent{border-left:3px solid transparent}
+.card-accent.ok{border-left-color:var(--ok)}
+.card-accent.wn{border-left-color:var(--wn)}
+.card-accent.info{border-left-color:var(--info)}
+.card-accent.err{border-left-color:var(--err)}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 12px}
+.kpi{background:white;border-radius:var(--r);padding:10px;box-shadow:var(--sh)}
+.kpi-val{font-size:24px;font-weight:700;letter-spacing:-0.02em}
+.kpi-lbl{font-size:10px;color:var(--tx3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.kpi-bar{height:3px;background:var(--bd);border-radius:2px;margin-top:6px;overflow:hidden}
+.kpi-bar-fill{height:100%;border-radius:2px}
+
+/* Status badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.badge-ok{background:#D1FAE5;color:#065F46}
+.badge-wn{background:#FEF3C7;color:#92400E}
+.badge-info{background:#DBEAFE;color:#1E40AF}
+.badge-err{background:#FEE2E2;color:#991B1B}
+.badge-default{background:#F1F5F9;color:#475569}
+.badge-purple{background:#EDE9FE;color:#5B21B6}
+
+/* Filter chips */
+.chips{display:flex;gap:6px;padding:6px 12px;flex-wrap:wrap}
+.chip{padding:5px 12px;border-radius:16px;font-size:11px;font-weight:500;border:1.5px solid var(--bd);background:white;color:var(--tx2);cursor:pointer}
+.chip.active{background:var(--p);color:white;border-color:var(--p)}
+
+/* Steps */
+.steps{display:flex;align-items:center;padding:12px;background:white}
+.step{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;z-index:1}
+.step-circle.done{background:var(--ok);color:white}
+.step-circle.active{background:var(--p);color:white;box-shadow:0 0 0 3px rgba(15,118,110,0.2)}
+.step-circle.pending{background:var(--bd);color:var(--tx3)}
+.step-label{font-size:9px;color:var(--tx3);margin-top:3px;font-weight:500}
+.step-label.active{color:var(--p);font-weight:600}
+.step-line{position:absolute;top:14px;left:calc(50% + 18px);right:calc(-50% + 18px);height:2px;background:var(--bd)}
+.step-line.done{background:var(--ok)}
+
+/* Task items */
+.task-item{background:white;border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh);margin-bottom:6px}
+.task-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.task-icon.done{background:#D1FAE5}
+.task-icon.active{background:#FEF3C7}
+.task-icon.pending{background:#F1F5F9}
+.task-name{font-size:12px;font-weight:600;color:var(--tx)}
+.task-sub{font-size:10px;color:var(--tx3)}
+.task-status{font-size:11px;font-weight:600;margin-left:auto;flex-shrink:0}
+
+/* Skeleton */
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+
+/* Photo grid */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.photo-box{border-radius:var(--rs);overflow:hidden;position:relative}
+.photo-placeholder{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:24px}
+.photo-label{position:absolute;bottom:0;left:0;right:0;padding:4px 8px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.photo-label.before{background:rgba(220,38,38,0.85);color:white}
+.photo-label.after{background:rgba(5,150,105,0.85);color:white}
+
+/* Form elements */
+.form-group{margin-bottom:10px}
+.form-label{font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block}
+.form-input{width:100%;padding:8px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:var(--bg);outline:none}
+.form-input:focus{border-color:var(--p);background:white}
+.form-select{width:100%;padding:8px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:white;appearance:none}
+.btn-primary{padding:10px 20px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(15,118,110,0.2);width:100%}
+.btn-secondary{padding:8px 16px;background:white;color:var(--p);border:1.5px solid var(--p);border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer}
+.btn-danger{padding:8px 16px;background:var(--err);color:white;border:none;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer}
+
+/* Desktop table */
+.dtbl{width:100%;border-collapse:collapse;font-size:12px}
+.dtbl th{text-align:left;padding:8px 10px;background:var(--bg);font-weight:600;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)}
+.dtbl td{padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#334155}
+.dtbl tr:hover td{background:rgba(15,118,110,0.02)}
+
+/* Desktop admin layout */
+.admin-layout{display:flex;min-height:420px}
+.admin-sider{width:200px;background:white;border-right:1px solid var(--bd);flex-shrink:0;display:flex;flex-direction:column}
+.admin-sider-h{padding:12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px}
+.admin-sider-logo{width:28px;height:28px;background:linear-gradient(135deg,var(--p),var(--pl));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.admin-sider-title{font-weight:700;font-size:13px;color:var(--tx)}
+.admin-group-label{padding:4px 12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--tx3)}
+.admin-item{padding:6px 12px;font-size:12px;color:var(--tx2);cursor:pointer;display:flex;align-items:center;gap:8px;margin:1px 6px;border-radius:6px}
+.admin-item:hover{background:#F1F5F9}
+.admin-item.active{background:rgba(15,118,110,0.08);color:var(--p);font-weight:600}
+.admin-content{flex:1;padding:16px;background:var(--bg)}
+.breadcrumb{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx3);margin-bottom:12px}
+.breadcrumb a{color:var(--tx2);text-decoration:none}
+.breadcrumb a:hover{color:var(--p)}
+.breadcrumb .cur{color:var(--tx);font-weight:500}
+.page-title{font-size:18px;font-weight:700;color:var(--tx);margin-bottom:12px;letter-spacing:-0.02em}
+
+/* Annotations */
+.anno{margin-top:16px;padding:12px;background:rgba(100,255,218,0.05);border-radius:var(--rs);border-left:3px solid #64ffda}
+.anno-title{font-size:12px;font-weight:700;color:#64ffda;margin-bottom:4px}
+.anno-text{font-size:11px;color:#94a3b8;line-height:1.5}
+
+/* Responsive */
+@media(max-width:900px){.screens-row{flex-direction:column;align-items:center}.desktop,.ipad{width:100%;max-width:700px}}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<symbol id="wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+<symbol id="map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></symbol>
+<symbol id="monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+<symbol id="menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+<symbol id="clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="12" y1="11" x2="16" y2="11"/><line x1="12" y1="16" x2="16" y2="16"/><line x1="8" y1="11" x2="8.01" y2="11"/><line x1="8" y1="16" x2="8.01" y2="16"/></symbol>
+<symbol id="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+<symbol id="zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+<symbol id="camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+<symbol id="file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></symbol>
+<symbol id="send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+<symbol id="download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+<symbol id="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+<symbol id="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+<symbol id="circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+<symbol id="check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+<symbol id="refresh-cw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+<symbol id="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+<symbol id="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+<symbol id="store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-4h16l1 4"/><path d="M3 9v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M3 9h18"/><path d="M9 21V13h6v8"/></symbol>
+<symbol id="package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+<symbol id="briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+<symbol id="rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+<symbol id="flask-conical" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></symbol>
+<symbol id="link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+<symbol id="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></symbol>
+<symbol id="arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+<symbol id="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+<symbol id="hard-hat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 15V6a2 2 0 0 1 4 0v9"/><path d="M4 15v-3a8 8 0 0 1 16 0v3"/></symbol>
+<symbol id="bone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 3.5a2.5 2.5 0 0 0-3.54 0l-11 11a2.5 2.5 0 0 0 3.54 3.54l11-11a2.5 2.5 0 0 0 0-3.54z"/><path d="M5.5 18.5L3.5 20.5"/><path d="M18.5 5.5l2-2"/></symbol>
+<symbol id="sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.912 5.813L20 10l-6.088 1.187L12 17l-1.912-5.813L4 10l6.088-1.187L12 3z"/><path d="M18 14l.944 2.868L22 18l-3.056 1.132L18 22l-.944-2.868L14 18l3.056-1.132L18 14z"/></symbol>
+<symbol id="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+<symbol id="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+<symbol id="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></symbol>
+<symbol id="image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
+<symbol id="layout-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+<symbol id="filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+<symbol id="bar-chart-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+<symbol id="log-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+<symbol id="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+<symbol id="alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+<symbol id="upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+<symbol id="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+<symbol id="edit-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></symbol>
+<symbol id="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+<symbol id="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+</svg>
+
+<nav class="top-nav">
+  <div class="top-nav-brand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Все макеты</div>
+  <div class="nav-tab active" onclick="showRole('eng-to',this)">Инженер ТО</div>
+  <div class="nav-tab" onclick="showRole('eng-mtr',this)">Инженер МТР</div>
+  <div class="nav-tab" onclick="showRole('tm-to',this)">ТМ ТО</div>
+  <div class="nav-tab" onclick="showRole('tm-mtr',this)">ТМ МТР</div>
+  <div class="nav-tab" onclick="showRole('admin',this)">Админ</div>
+</nav>
+
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║           ИНЖЕНЕР ТО                         ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div class="role-section active" id="eng-to">
+  <div class="role-header">
+    <div class="role-title"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#hard-hat"/></svg> Инженер ТО</div>
+    <div class="role-desc">Основное устройство — смартфон (393px). ПК — эпизодически. Bottom navigation: Визиты → Заявки → Профиль.</div>
+    <div class="role-devices"><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон — основной</span><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК</span></div>
+  </div>
+
+  <div class="page-tabs">
+    <div class="page-tab active" onclick="showPage('eto-login',this)">Вход</div>
+    <div class="page-tab" onclick="showPage('eto-list',this)">Список визитов</div>
+    <div class="page-tab" onclick="showPage('eto-visit',this)">Визит (Steps)</div>
+    <div class="page-tab" onclick="showPage('eto-task',this)">Задача</div>
+    <div class="page-tab" onclick="showPage('eto-photo',this)">Фото</div>
+    <div class="page-tab" onclick="showPage('eto-report',this)">Отчёт</div>
+    <div class="page-tab" onclick="showPage('eto-req',this)">Мои заявки</div>
+    <div class="page-tab" onclick="showPage('eto-profile',this)">Профиль</div>
+    <div class="page-tab" onclick="showPage('eto-pc',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК вид</div>
+  </div>
+
+  <!-- Login -->
+  <div class="page-content active" id="eto-login">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон</div>
+        <div class="phone"><div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div style="display:flex;justify-content:center;align-items:center;min-height:540px;background:linear-gradient(135deg,var(--p) 0%,#065F59 50%,var(--ac) 100%);position:relative;overflow:hidden">
+            <div style="position:absolute;top:-30%;right:-20%;width:70%;height:180%;background:radial-gradient(ellipse,rgba(20,184,166,0.2),transparent 70%)"></div>
+            <div style="background:white;border-radius:var(--rl);padding:28px;width:85%;box-shadow:0 20px 40px rgba(0,0,0,0.2);position:relative">
+              <div style="width:44px;height:44px;background:linear-gradient(135deg,var(--p),var(--pl));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg></div>
+              <div style="text-align:center;font-size:18px;font-weight:700;color:var(--tx);margin-bottom:4px;letter-spacing:-0.02em">Чек-лист инженера</div>
+              <div style="text-align:center;color:var(--tx3);font-size:12px;margin-bottom:20px">Цифровой чек-лист ТО оборудования</div>
+              <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="engineer@example.com"></div>
+              <div class="form-group"><label class="form-label">Пароль</label><input class="form-input" type="password" value="••••••••"></div>
+              <button class="btn-primary" style="margin-top:8px">Войти</button>
+              <div style="text-align:center;margin-top:12px"><a style="color:var(--p);font-size:12px;text-decoration:none;font-weight:500">Забыли пароль?</a></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Изменения</div><div class="anno-text">Градиентный фон с радиальным свечением. Брендовый логотип в квадрате. Лейблы над инпутами. Кнопка с тенью и press-эффектом.</div></div>
+  </div>
+
+  <!-- Visit List -->
+  <div class="page-content" id="eto-list">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Список визитов</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Мои визиты</span><div class="actions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bell"/></svg></div></div>
+          <!-- KPI -->
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-val" style="color:var(--tx)">24</div><div class="kpi-lbl">Всего</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--wn)">8</div><div class="kpi-lbl">В работе</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:33%;background:var(--wn)"></div></div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--info)">6</div><div class="kpi-lbl">Новые</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--ok)">10</div><div class="kpi-lbl">Завершено</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:42%;background:var(--ok)"></div></div></div>
+          </div>
+          <!-- Chips -->
+          <div class="chips"><div class="chip active">Все</div><div class="chip">В работе</div><div class="chip">Новые</div><div class="chip">Готово</div></div>
+          <!-- Cards -->
+          <div style="padding:0 12px">
+            <div class="card card-accent wn">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+                <div style="font-size:13px;font-weight:600;color:var(--tx)">ул. Ленина, д. 15</div>
+                <div class="badge badge-wn">В работе</div>
+              </div>
+              <div style="font-size:11px;color:var(--tx3)">15.08 • Иванов И.И.</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid #F1F5F9">
+                <div style="font-size:10px;color:var(--tx3)">Обновлён 2ч назад</div>
+                <div style="display:flex;align-items:center;gap:4px"><div style="width:40px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:60%;height:100%;background:var(--ok);border-radius:2px"></div></div><span style="font-size:10px;color:var(--tx2);font-weight:500">3/5</span></div>
+              </div>
+            </div>
+            <div class="card card-accent info">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+                <div style="font-size:13px;font-weight:600;color:var(--tx)">пр. Мира, д. 42</div>
+                <div class="badge badge-info">Новый</div>
+              </div>
+              <div style="font-size:11px;color:var(--tx3)">16.08 • Петров П.П.</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid #F1F5F9">
+                <div style="font-size:10px;color:var(--tx3)">Назначен вчера</div>
+                <div style="display:flex;align-items:center;gap:4px"><div style="width:40px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:0%;height:100%;background:var(--ok);border-radius:2px"></div></div><span style="font-size:10px;color:var(--tx2);font-weight:500">0/8</span></div>
+              </div>
+            </div>
+            <div class="card card-accent ok">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+                <div style="font-size:13px;font-weight:600;color:var(--tx)">ул. Садовая, д. 7</div>
+                <div class="badge badge-ok">Готово</div>
+              </div>
+              <div style="font-size:11px;color:var(--tx3)">14.08 • Сидоров С.С.</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid #F1F5F9">
+                <div style="font-size:10px;color:var(--tx3)">Завершён 14.08</div>
+                <div style="display:flex;align-items:center;gap:4px"><div style="width:40px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:100%;height:100%;background:var(--ok);border-radius:2px"></div></div><span style="font-size:10px;color:var(--tx2);font-weight:500">4/4</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- Bottom nav -->
+          <div class="bnav">
+            <div class="bnav-item active"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#menu"/></svg></span>Визиты</div>
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg></span>Заявки</div>
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg></span>Профиль</div>
+          </div>
+        </div></div>
+      </div>
+      <!-- Skeleton state -->
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bone"/></svg> Skeleton (загрузка)</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div style="padding:10px 12px;background:white;border-bottom:1px solid var(--bd)"><div class="skel" style="width:100px;height:16px"></div></div>
+          <div class="kpi-grid">
+            <div class="kpi"><div class="skel" style="width:40px;height:24px;margin-bottom:4px"></div><div class="skel" style="width:60px;height:8px"></div></div>
+            <div class="kpi"><div class="skel" style="width:30px;height:24px;margin-bottom:4px"></div><div class="skel" style="width:50px;height:8px"></div></div>
+            <div class="kpi"><div class="skel" style="width:35px;height:24px;margin-bottom:4px"></div><div class="skel" style="width:55px;height:8px"></div></div>
+            <div class="kpi"><div class="skel" style="width:28px;height:24px;margin-bottom:4px"></div><div class="skel" style="width:48px;height:8px"></div></div>
+          </div>
+          <div style="padding:8px 12px"><div style="display:flex;gap:6px"><div class="skel" style="width:50px;height:24px;border-radius:12px"></div><div class="skel" style="width:60px;height:24px;border-radius:12px"></div><div class="skel" style="width:45px;height:24px;border-radius:12px"></div></div></div>
+          <div style="padding:0 12px">
+            <div class="card"><div class="skel" style="width:70%;height:12px;margin-bottom:6px"></div><div class="skel" style="width:40%;height:10px;margin-bottom:6px"></div><div class="skel" style="width:30%;height:8px"></div></div>
+            <div class="card"><div class="skel" style="width:60%;height:12px;margin-bottom:6px"></div><div class="skel" style="width:50%;height:10px;margin-bottom:6px"></div><div class="skel" style="width:25%;height:8px"></div></div>
+            <div class="card"><div class="skel" style="width:75%;height:12px;margin-bottom:6px"></div><div class="skel" style="width:35%;height:10px;margin-bottom:6px"></div><div class="skel" style="width:28%;height:8px"></div></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Изменения</div><div class="anno-text">KPI-карточки 2×2 с прогресс-барами. Filter chips вместо dropdown. Карточки с цветной полоской статуса + прогресс выполнения задач. Skeleton loading с shimmer-анимацией.</div></div>
+  </div>
+
+  <!-- Visit page with Steps -->
+  <div class="page-content" id="eto-visit">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Визит — прогресс-индикатор</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Визит #RU/77/423</span></div>
+          <!-- Steps -->
+          <div style="background:white;padding:10px 8px;border-bottom:1px solid var(--bd)">
+            <div class="steps" style="padding:0">
+              <div class="step"><div class="step-circle done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check"/></svg></div><div class="step-label">Адрес</div><div class="step-line done"></div></div>
+              <div class="step"><div class="step-circle active">2</div><div class="step-label active">Задачи</div><div class="step-line"></div></div>
+              <div class="step"><div class="step-circle pending">3</div><div class="step-label">Фото</div><div class="step-line"></div></div>
+              <div class="step"><div class="step-circle pending">4</div><div class="step-label">Отчёт</div></div>
+            </div>
+            <div style="text-align:center;font-size:11px;color:var(--tx2);margin-top:4px">Шаг 2 из 4 • Задачи: 2/5</div>
+          </div>
+          <!-- Address -->
+          <div style="padding:8px 12px">
+            <div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#map-pin"/></svg>
+              <div><div style="font-size:12px;font-weight:600;color:var(--tx)">ул. Ленина, д. 15</div><div style="font-size:10px;color:var(--tx3)">15.08.2026, 10:00</div></div>
+            </div>
+          </div>
+          <!-- Tasks -->
+          <div style="padding:0 12px">
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Задачи</div>
+            <div class="task-item"><div class="task-icon done"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check-circle"/></svg></div><div><div class="task-name">Кондиционер сплит</div><div class="task-sub">Серверная</div></div><div class="task-status" style="color:var(--ok)">OK</div></div>
+            <div class="task-item"><div class="task-icon done"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check-circle"/></svg></div><div><div class="task-name">Вентиляция</div><div class="task-sub">Серверная</div></div><div class="task-status" style="color:var(--ok)">OK</div></div>
+            <div class="task-item" style="border:1.5px solid #FEF3C7;background:#FFFBEB"><div class="task-icon active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#refresh-cw"/></svg></div><div><div class="task-name" style="color:#92400E">Электрощит</div><div class="task-sub" style="color:var(--wn)">Электрощитовая</div></div><div class="task-status" style="color:var(--wn)">В работе</div></div>
+            <div class="task-item"><div class="task-icon pending"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#circle"/></svg></div><div><div class="task-name" style="color:var(--tx3)">Освещение LED</div><div class="task-sub">Зона обслужив.</div></div></div>
+            <div class="task-item"><div class="task-icon pending"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#circle"/></svg></div><div><div class="task-name" style="color:var(--tx3)">Пожарная сигнал.</div><div class="task-sub">Коридор 1 эт.</div></div></div>
+          </div>
+          <div style="padding:8px 12px"><button class="btn-primary">Продолжить <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-right"/></svg></button></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Изменения</div><div class="anno-text">Steps-индикатор: Адрес → Задачи → Фото → Отчёт. Активная задача выделена жёлтой рамкой. Контекст: «Шаг 2 из 4 • Задачи: 2/5». Кнопка «Продолжить» внизу.</div></div>
+  </div>
+
+  <!-- Task page -->
+  <div class="page-content" id="eto-task">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Задача — чек-лист оборудования</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Электрощит</span><div class="actions"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#zap"/></svg></div></div>
+          <div style="padding:8px 12px">
+            <div class="card" style="padding:10px">
+              <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Оборудование</div>
+              <div style="font-size:13px;font-weight:600;color:var(--tx)">Электрощит ЩР-01</div>
+              <div style="font-size:11px;color:var(--tx3)">Электрощитовая • Инв. №ЭЛ-0042</div>
+            </div>
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">Параметры осмотра</div>
+            <div class="card" style="padding:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F1F5F9">
+                <span style="font-size:12px;color:var(--tx)">Целостность корпуса</span>
+                <div style="display:flex;gap:4px"><div style="width:28px;height:28px;border-radius:6px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check"/></svg></div><div style="width:28px;height:28px;border-radius:6px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#x"/></svg></div></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F1F5F9">
+                <span style="font-size:12px;color:var(--tx)">Маркировка</span>
+                <div style="display:flex;gap:4px"><div style="width:28px;height:28px;border-radius:6px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check"/></svg></div><div style="width:28px;height:28px;border-radius:6px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#x"/></svg></div></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F1F5F9">
+                <span style="font-size:12px;color:var(--tx)">Состояние автоматов</span>
+                <div style="display:flex;gap:4px"><div style="width:28px;height:28px;border-radius:6px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check"/></svg></div><div style="width:28px;height:28px;border-radius:6px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;font-size:14px;border:1.5px solid var(--err)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#x"/></svg></div></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+                <span style="font-size:12px;color:var(--tx)">Загрязнённость</span>
+                <div style="display:flex;gap:4px"><div style="width:28px;height:28px;border-radius:6px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check"/></svg></div><div style="width:28px;height:28px;border-radius:6px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#x"/></svg></div></div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:8px">
+              <label class="form-label">Заключение</label>
+              <div style="display:flex;gap:6px">
+                <div style="flex:1;padding:8px;border-radius:var(--rs);text-align:center;font-size:11px;font-weight:600;background:#D1FAE5;color:#065F46;border:1.5px solid var(--ok)">Исправен</div>
+                <div style="flex:1;padding:8px;border-radius:var(--rs);text-align:center;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;border:1.5px solid transparent">Замечания</div>
+                <div style="flex:1;padding:8px;border-radius:var(--rs);text-align:center;font-size:11px;font-weight:600;background:#F1F5F9;color:var(--tx3);border:1.5px solid transparent">Неисправен</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Комментарий</label>
+              <textarea class="form-input" rows="2" style="resize:none" placeholder="Опишите неисправность..."></textarea>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-secondary" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg> Фото</button>
+              <button class="btn-primary" style="flex:1">Сохранить</button>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Изменения</div><div class="anno-text">Компактные toggle-кнопки ✓/✗ для параметров (44px touch target). Сегментированный выбор заключения. Кнопка фото рядом с «Сохранить». Фонарик в шапке.</div></div>
+  </div>
+
+  <!-- Photo page -->
+  <div class="page-content" id="eto-photo">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Фото — до/после</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Фото</span><div class="actions"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#zap"/></svg></div></div>
+          <div style="padding:8px 12px">
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Электрощит ЩР-01</div>
+            <div style="font-size:10px;font-weight:600;color:var(--err);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg> Фото ДО (1/2)</div>
+            <div class="photo-grid">
+              <div class="photo-box"><div class="photo-placeholder" style="background:#e8d5b7"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg></div><div class="photo-label before">ДО</div></div>
+              <div class="photo-box" style="border:2px dashed var(--bd);display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;border-radius:var(--rs);cursor:pointer"><div style="text-align:center"><div style="font-size:24px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg></div><div style="font-size:9px;color:var(--tx3);margin-top:2px">Сделать фото</div></div></div>
+            </div>
+            <div style="font-size:10px;font-weight:600;color:var(--ok);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg> Фото ПОСЛЕ (0/2)</div>
+            <div class="photo-grid">
+              <div class="photo-box" style="border:2px dashed var(--bd);display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;border-radius:var(--rs);cursor:pointer"><div style="text-align:center"><div style="font-size:24px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg></div><div style="font-size:9px;color:var(--tx3);margin-top:2px">Сделать фото</div></div></div>
+              <div class="photo-box" style="border:2px dashed var(--bd);display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;border-radius:var(--rs);cursor:pointer"><div style="text-align:center"><div style="font-size:24px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg></div><div style="font-size:9px;color:var(--tx3);margin-top:2px">Сделать фото</div></div></div>
+            </div>
+            <button class="btn-primary" style="margin-top:12px">Готово <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check"/></svg></button>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Изменения</div><div class="anno-text">Счётчик фото (1/2). Пунктирные placeholder для недостающих фото. Цветовая кодировка: красное «ДО», зелёное «ПОСЛЕ». Крупная кнопка камеры.</div></div>
+  </div>
+
+  <!-- Report -->
+  <div class="page-content" id="eto-report">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Отчёт по визиту</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Отчёт</span></div>
+          <div style="padding:8px 12px">
+            <!-- Summary card -->
+            <div class="card" style="padding:14px">
+              <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg> Итоги визита</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div style="text-align:center;padding:8px;background:#D1FAE5;border-radius:var(--rs)"><div style="font-size:20px;font-weight:700;color:#065F46">4</div><div style="font-size:9px;color:#065F46">Исправно</div></div>
+                <div style="text-align:center;padding:8px;background:#FEE2E2;border-radius:var(--rs)"><div style="font-size:20px;font-weight:700;color:#991B1B">1</div><div style="font-size:9px;color:#991B1B">Неисправно</div></div>
+              </div>
+            </div>
+            <!-- Recommendations -->
+            <div class="card" style="padding:14px">
+              <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Рекомендации</div>
+              <div style="font-size:12px;color:var(--tx);line-height:1.5;padding:8px;background:#FEF3C7;border-radius:var(--rs);border-left:3px solid var(--wn)">Заменить автомат A16 на щите ЩР-01</div>
+            </div>
+            <!-- Actions -->
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+              <button class="btn-primary" style="display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#file-text"/></svg> Скачать PDF-отчёт</button>
+              <button class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#send"/></svg> Отправить ТМ</button>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Изменения</div><div class="anno-text">Карточка итогов с цветными блоками (исправно/неисправно). Рекомендации выделены жёлтым. Две основные кнопки: скачать PDF и отправить ТМ.</div></div>
+  </div>
+
+  <!-- My Requests -->
+  <div class="page-content" id="eto-req">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Мои заявки</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Мои заявки</span></div>
+          <div class="chips" style="padding:8px 12px"><div class="chip active">Все (5)</div><div class="chip">Ожидают (2)</div><div class="chip">В работе (2)</div><div class="chip">Готово (1)</div></div>
+          <div style="padding:0 12px">
+            <div class="card card-accent info" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:12px;font-weight:600;color:var(--tx)">SD-0001234567</div><div class="badge badge-info">Ожидает</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">ул. Ленина, д. 15 • Замена кондиционера</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">Назначена 15.08.2026</div>
+            </div>
+            <div class="card card-accent wn" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:12px;font-weight:600;color:var(--tx)">SD-0001234568</div><div class="badge badge-wn">В работе</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">пр. Мира, д. 42 • ТО вентиляции</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">Визит создан 14.08.2026</div>
+            </div>
+            <div class="card card-accent ok" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:12px;font-weight:600;color:var(--tx)">SD-0001234569</div><div class="badge badge-ok">Выполнена</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">ул. Садовая, д. 7 • Проверка ДГУ</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">Завершена 10.08.2026</div>
+            </div>
+          </div>
+          <div class="bnav">
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#menu"/></svg></span>Визиты</div>
+            <div class="bnav-item active"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg></span>Заявки</div>
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg></span>Профиль</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="page-content" id="eto-profile">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Профиль инженера</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Профиль</span></div>
+          <div style="padding:12px">
+            <div class="card" style="text-align:center;padding:20px">
+              <div style="width:56px;height:56px;background:linear-gradient(135deg,var(--p),var(--pl));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;margin:0 auto 8px">ИИ</div>
+              <div style="font-size:16px;font-weight:700;color:var(--tx)">Иванов Иван Иванович</div>
+              <div style="font-size:12px;color:var(--tx3);margin-top:2px">Инженер ТО</div>
+              <div style="display:flex;gap:4px;justify-content:center;margin-top:8px;flex-wrap:wrap">
+                <span class="badge" style="background:#e6f7ff;color:#1677ff">ВиК</span>
+                <span class="badge" style="background:#f6ffed;color:#52c41a">ИСЖ</span>
+              </div>
+            </div>
+            <div class="card" style="padding:12px">
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9"><span style="font-size:12px;color:var(--tx3)">Email</span><span style="font-size:12px;color:var(--tx);font-weight:500">ivanov@example.com</span></div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9"><span style="font-size:12px;color:var(--tx3)">Телефон</span><span style="font-size:12px;color:var(--tx);font-weight:500">+7 (999) 123-45-67</span></div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:12px;color:var(--tx3)">Визитов выполнено</span><span style="font-size:12px;color:var(--tx);font-weight:700">142</span></div>
+            </div>
+            <button class="btn-danger" style="width:100%;margin-top:8px">Выйти из аккаунта</button>
+          </div>
+          <div class="bnav">
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#menu"/></svg></span>Визиты</div>
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg></span>Заявки</div>
+            <div class="bnav-item active"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg></span>Профиль</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PC View -->
+  <div class="page-content" id="eto-pc">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> Список визитов — ПК (max-width 1400px)</div>
+        <div class="desktop" style="width:700px"><div class="desktop-bar"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="desktop-screen" style="background:var(--bg)">
+          <div style="padding:12px 20px;background:white;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-size:18px;font-weight:700;color:var(--tx);letter-spacing:-0.02em">Мои визиты</span>
+              <span style="font-size:12px;color:var(--tx3)">24 визита</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input style="padding:6px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;width:180px" placeholder="Поиск по адресу...">
+              <button style="padding:6px 14px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#plus"/></svg> Новый визит</button>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bell"/></svg>
+            </div>
+          </div>
+          <div style="padding:12px 20px">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+              <div style="background:white;border-radius:var(--r);padding:14px;box-shadow:var(--sh)"><div style="font-size:28px;font-weight:700;color:var(--tx)">24</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Всего</div></div>
+              <div style="background:white;border-radius:var(--r);padding:14px;box-shadow:var(--sh)"><div style="font-size:28px;font-weight:700;color:var(--wn)">8</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">В работе</div><div style="height:3px;background:var(--bd);border-radius:2px;margin-top:6px"><div style="width:33%;height:100%;background:var(--wn);border-radius:2px"></div></div></div>
+              <div style="background:white;border-radius:var(--r);padding:14px;box-shadow:var(--sh)"><div style="font-size:28px;font-weight:700;color:var(--info)">6</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Новые</div></div>
+              <div style="background:white;border-radius:var(--r);padding:14px;box-shadow:var(--sh)"><div style="font-size:28px;font-weight:700;color:var(--ok)">10</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Завершено</div><div style="height:3px;background:var(--bd);border-radius:2px;margin-top:6px"><div style="width:42%;height:100%;background:var(--ok);border-radius:2px"></div></div></div>
+            </div>
+            <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+              <table class="dtbl">
+                <tr><th>Адрес</th><th>Дата</th><th>Статус</th><th>Прогресс</th><th>Действия</th></tr>
+                <tr><td style="font-weight:500">ул. Ленина, д. 15</td><td>15.08.2026</td><td><span class="badge badge-wn">В работе</span></td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:60px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:60%;height:100%;background:var(--ok);border-radius:2px"></div></div><span style="font-size:11px;color:var(--tx2)">3/5</span></div></td><td><button style="padding:4px 10px;border:1px solid var(--bd);border-radius:6px;background:white;font-size:11px;cursor:pointer">Открыть</button></td></tr>
+                <tr><td style="font-weight:500">пр. Мира, д. 42</td><td>16.08.2026</td><td><span class="badge badge-info">Новый</span></td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:60px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:0%;height:100%;background:var(--ok);border-radius:2px"></div></div><span style="font-size:11px;color:var(--tx2)">0/8</span></div></td><td><button style="padding:4px 10px;border:1px solid var(--bd);border-radius:6px;background:white;font-size:11px;cursor:pointer">Открыть</button></td></tr>
+                <tr><td style="font-weight:500">ул. Садовая, д. 7</td><td>14.08.2026</td><td><span class="badge badge-ok">Готово</span></td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:60px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:100%;height:100%;background:var(--ok);border-radius:2px"></div></div><span style="font-size:11px;color:var(--tx2)">4/4</span></div></td><td><button style="padding:4px 10px;border:1px solid var(--bd);border-radius:6px;background:white;font-size:11px;cursor:pointer">Отчёт</button></td></tr>
+              </table>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК-версия</div><div class="anno-text">Те же KPI-карточки в 4 колонки. Таблица вместо карточек. Поиск по адресу в шапке. maxWidth: 1400px. Задачи плоской таблицей (без группировки по помещениям).</div></div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║           ИНЖЕНЕР МТР                        ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div class="role-section" id="eng-mtr">
+  <div class="role-header">
+    <div class="role-title"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg> Инженер МТР</div>
+    <div class="role-desc">Мелкий текущий ремонт. Основной сценарий: Фото ДО → Добавление работ → Фото ПОСЛЕ → Завершить. Bottom nav: Визиты → Профиль.</div>
+    <div class="role-devices"><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон — основной</span><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК</span></div>
+  </div>
+  <div class="page-tabs">
+    <div class="page-tab active" onclick="showPage('mtr-list',this)">Список визитов</div>
+    <div class="page-tab" onclick="showPage('mtr-visit',this)">Визит МТР</div>
+    <div class="page-tab" onclick="showPage('mtr-report',this)">Отчёт МТР</div>
+    <div class="page-tab" onclick="showPage('mtr-profile',this)">Профиль</div>
+  </div>
+
+  <div class="page-content active" id="mtr-list">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Список визитов МТР</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Визиты МТР</span><div class="actions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#plus"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bell"/></svg></div></div>
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-val" style="color:var(--tx)">12</div><div class="kpi-lbl">Всего</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--wn)">3</div><div class="kpi-lbl">Черновики</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--info)">4</div><div class="kpi-lbl">В работе</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--ok)">5</div><div class="kpi-lbl">Отправлено</div></div>
+          </div>
+          <div class="chips"><div class="chip active">Все</div><div class="chip">Черновики</div><div class="chip">В работе</div><div class="chip">Готово</div></div>
+          <div style="padding:0 12px">
+            <div class="card card-accent wn" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:12px;font-weight:600;color:var(--tx)">SD-0001234567</div><div class="badge badge-wn">Черновик</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">ул. Ленина, д. 15 • Замена смесителя</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">Создан 15.08 • 2 работы</div>
+            </div>
+            <div class="card card-accent info" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:12px;font-weight:600;color:var(--tx)">SD-0001234568</div><div class="badge badge-info">В работе</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">пр. Мира, д. 42 • Ремонт двери</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">Создан 14.08 • 5 работ</div>
+            </div>
+            <div class="card card-accent ok" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:12px;font-weight:600;color:var(--tx)">SD-0001234569</div><div class="badge badge-ok">Отправлен</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">ул. Садовая, д. 7 • Покраска стен</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">Завершён 10.08 • 8 работ</div>
+            </div>
+          </div>
+          <div class="bnav">
+            <div class="bnav-item active"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#menu"/></svg></span>Визиты</div>
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg></span>Профиль</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Паритет с ТО</div><div class="anno-text">Те же KPI-карточки, filter chips, карточки с полоской статуса. Отличие: заявки = номера SD, статусы МТР (Черновик/В работе/Отправлен).</div></div>
+  </div>
+
+  <div class="page-content" id="mtr-visit">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Визит МТР — добавление работ</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Визит МТР</span></div>
+          <div style="padding:8px 12px">
+            <div class="card" style="padding:10px">
+              <div style="display:flex;gap:8px;align-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#map-pin"/></svg><div><div style="font-size:12px;font-weight:600;color:var(--tx)">ул. Ленина, д. 15</div><div style="font-size:10px;color:var(--tx3)">Заявка SD-0001234567</div></div></div>
+            </div>
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">Выполненные работы (3)</div>
+            <div class="task-item"><div class="task-icon done"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg></div><div style="flex:1"><div class="task-name">Замена смесителя</div><div class="task-sub">Санузел 2 этаж • 2.5 ч</div></div></div>
+            <div class="task-item"><div class="task-icon done"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg></div><div style="flex:1"><div class="task-name">Замена сифона</div><div class="task-sub">Санузел 2 этаж • 0.5 ч</div></div></div>
+            <div class="task-item"><div class="task-icon done"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg></div><div style="flex:1"><div class="task-name">Устранение течи</div><div class="task-sub">Санузел 2 этаж • 1 ч</div></div></div>
+            <button class="btn-secondary" style="width:100%;margin:8px 0;display:flex;align-items:center;justify-content:center;gap:4px">+ Добавить работу</button>
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">Фото</div>
+            <div class="photo-grid">
+              <div class="photo-box"><div class="photo-placeholder" style="background:#d4e8d4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg></div><div class="photo-label before">ДО</div></div>
+              <div class="photo-box"><div class="photo-placeholder" style="background:#b8d4b8"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#camera"/></svg></div><div class="photo-label after">ПОСЛЕ</div></div>
+            </div>
+            <button class="btn-primary" style="margin-top:12px">Сохранить</button>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Сценарий МТР</div><div class="anno-text">Фото ДО → Добавление работ из справочника → Фото ПОСЛЕ → Сохранить. Черновики для многосменных ремонтов. Каждая работа — из справочника ~1000 видов.</div></div>
+  </div>
+
+  <div class="page-content" id="mtr-report">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Отчёт МТР</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Отчёт МТР</span></div>
+          <div style="padding:8px 12px">
+            <div class="card" style="padding:14px">
+              <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg> Итого по визиту</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+                <div style="text-align:center;padding:8px;background:#DBEAFE;border-radius:var(--rs)"><div style="font-size:18px;font-weight:700;color:#1E40AF">3</div><div style="font-size:9px;color:#1E40AF">Работ</div></div>
+                <div style="text-align:center;padding:8px;background:#FEF3C7;border-radius:var(--rs)"><div style="font-size:18px;font-weight:700;color:#92400E">4ч</div><div style="font-size:9px;color:#92400E">Время</div></div>
+                <div style="text-align:center;padding:8px;background:#D1FAE5;border-radius:var(--rs)"><div style="font-size:18px;font-weight:700;color:#065F46">6</div><div style="font-size:9px;color:#065F46">Фото</div></div>
+              </div>
+            </div>
+            <button class="btn-primary" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#file-text"/></svg> Скачать PDF + фото (ZIP)</button>
+            <button class="btn-secondary" style="margin-top:8px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#send"/></svg> Отправить ТМ</button>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-content" id="mtr-profile">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Профиль инженера МТР</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Профиль</span></div>
+          <div style="padding:12px">
+            <div class="card" style="text-align:center;padding:20px">
+              <div style="width:56px;height:56px;background:linear-gradient(135deg,var(--ac),#2563EB);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;margin:0 auto 8px">ПП</div>
+              <div style="font-size:16px;font-weight:700;color:var(--tx)">Петров Пётр Петрович</div>
+              <div style="font-size:12px;color:var(--tx3);margin-top:2px">Инженер МТР</div>
+            </div>
+            <div class="card" style="padding:12px">
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9"><span style="font-size:12px;color:var(--tx3)">Email</span><span style="font-size:12px;color:var(--tx);font-weight:500">petrov@example.com</span></div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:12px;color:var(--tx3)">Визитов МТР</span><span style="font-size:12px;color:var(--tx);font-weight:700">87</span></div>
+            </div>
+            <button class="btn-danger" style="width:100%;margin-top:8px">Выйти</button>
+          </div>
+          <div class="bnav">
+            <div class="bnav-item"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#menu"/></svg></span>Визиты</div>
+            <div class="bnav-item active"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg></span>Профиль</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║              ТМ ТО                            ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div class="role-section" id="tm-to">
+  <div class="role-header">
+    <div class="role-title"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#briefcase"/></svg> Территориальный менеджер (ТМ ТО)</div>
+    <div class="role-desc">Контроль инженеров, управление заявками, сводные отчёты. Смартфон + ПК.</div>
+    <div class="role-devices"><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон</span><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК — основной</span></div>
+  </div>
+  <div class="page-tabs">
+    <div class="page-tab active" onclick="showPage('tm-list',this)">Визиты (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg>)</div>
+    <div class="page-tab" onclick="showPage('tm-list-pc',this)">Визиты (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg>)</div>
+    <div class="page-tab" onclick="showPage('tm-req',this)">Заявки</div>
+    <div class="page-tab" onclick="showPage('tm-report',this)">Сводный отчёт</div>
+    <div class="page-tab" onclick="showPage('tm-profile',this)">Профиль</div>
+  </div>
+
+  <div class="page-content active" id="tm-list">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Визиты — вид ТМ (с фильтрами)</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Визиты</span><div class="actions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bell"/></svg></div></div>
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-val" style="color:var(--tx)">142</div><div class="kpi-lbl">Всего</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--wn)">23</div><div class="kpi-lbl">В работе</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:16%;background:var(--wn)"></div></div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--info)">45</div><div class="kpi-lbl">Запланировано</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--ok)">74</div><div class="kpi-lbl">Завершено</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:52%;background:var(--ok)"></div></div></div>
+          </div>
+          <!-- Filters for TM -->
+          <div style="padding:4px 12px">
+            <div class="form-group" style="margin-bottom:6px"><select class="form-select"><option>Все инженеры</option><option>Иванов И.И.</option><option>Петров П.П.</option></select></div>
+          </div>
+          <div class="chips"><div class="chip active">Все</div><div class="chip">Новые</div><div class="chip">В работе</div><div class="chip">Готово</div></div>
+          <div style="padding:0 12px">
+            <div class="card card-accent wn" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-size:12px;font-weight:600;color:var(--tx)">ул. Ленина, д. 15</div><div style="font-size:10px;color:var(--tx3)">Иванов И.И. • 15.08</div></div><div class="badge badge-wn">В работе</div></div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:6px"><div style="width:40px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:60%;height:100%;background:var(--ok);border-radius:2px"></div></div><span style="font-size:10px;color:var(--tx2)">3/5</span><span style="font-size:10px;color:var(--tx3);margin-left:auto">ВиК, ИСЖ</span></div>
+            </div>
+            <div class="card card-accent info" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-size:12px;font-weight:600;color:var(--tx)">пр. Мира, д. 42</div><div style="font-size:10px;color:var(--tx3)">Петров П.П. • 16.08</div></div><div class="badge badge-info">Новый</div></div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:6px"><span style="font-size:10px;color:var(--tx3)">Ожидает начала</span><span style="font-size:10px;color:var(--tx3);margin-left:auto">ВиК</span></div>
+            </div>
+            <div class="card card-accent ok" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-size:12px;font-weight:600;color:var(--tx)">ул. Садовая, д. 7</div><div style="font-size:10px;color:var(--tx3)">Сидоров С.С. • 14.08</div></div><div class="badge badge-ok">Готово</div></div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:6px"><span style="font-size:10px;color:var(--ok);font-weight:500"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check"/></svg> Отправлен на проверку</span></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Отличия от инженера</div><div class="anno-text">KPI по всем визитам (не только своим). Фильтр по инженеру (dropdown). Бейджи специализаций на карточках. Видны все инженеры, не только свои визиты.</div></div>
+  </div>
+
+  <div class="page-content" id="tm-list-pc">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> Визиты ТМ — ПК</div>
+        <div class="desktop" style="width:700px"><div class="desktop-bar"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="desktop-screen" style="background:var(--bg)">
+          <div style="padding:12px 20px;background:white;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:18px;font-weight:700;color:var(--tx)">Визиты</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px"><option>Все инженеры</option></select>
+              <input style="padding:6px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;width:160px" placeholder="Поиск...">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bell"/></svg>
+            </div>
+          </div>
+          <div style="padding:12px 20px">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+              <div style="background:white;border-radius:var(--r);padding:12px;box-shadow:var(--sh)"><div style="font-size:24px;font-weight:700">142</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase">Всего</div></div>
+              <div style="background:white;border-radius:var(--r);padding:12px;box-shadow:var(--sh)"><div style="font-size:24px;font-weight:700;color:var(--wn)">23</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase">В работе</div></div>
+              <div style="background:white;border-radius:var(--r);padding:12px;box-shadow:var(--sh)"><div style="font-size:24px;font-weight:700;color:var(--info)">45</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase">Планируется</div></div>
+              <div style="background:white;border-radius:var(--r);padding:12px;box-shadow:var(--sh)"><div style="font-size:24px;font-weight:700;color:var(--ok)">74</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase">Завершено</div></div>
+            </div>
+            <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+              <table class="dtbl">
+                <tr><th>Адрес</th><th>Инженер</th><th>Дата</th><th>Статус</th><th>Прогресс</th><th></th></tr>
+                <tr><td style="font-weight:500">ул. Ленина, 15</td><td>Иванов И.И. <span class="badge" style="background:#e6f7ff;color:#1677ff;font-size:9px">ВиК</span></td><td>15.08</td><td><span class="badge badge-wn">В работе</span></td><td>3/5</td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px">Открыть</button></td></tr>
+                <tr><td style="font-weight:500">пр. Мира, 42</td><td>Петров П.П.</td><td>16.08</td><td><span class="badge badge-info">Новый</span></td><td>0/8</td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px">Открыть</button></td></tr>
+                <tr><td style="font-weight:500">ул. Садовая, 7</td><td>Сидоров С.С.</td><td>14.08</td><td><span class="badge badge-ok">Готово</span></td><td>4/4</td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px">Отчёт</button></td></tr>
+              </table>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-content" id="tm-req">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Заявки (управление)</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Заявки</span><div class="actions"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#download"/></svg></div></div>
+          <div class="chips"><div class="chip active">Все (15)</div><div class="chip">Новые (5)</div><div class="chip">Назначены (7)</div><div class="chip">Выполнены (3)</div></div>
+          <div style="padding:0 12px">
+            <div class="card" style="padding:10px 12px;border-left:3px solid var(--err)">
+              <div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:600">SD-0001234570</div><div class="badge badge-err">Новая</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">ул. Пушкина, 23 • Замена кондиционера</div>
+              <div style="display:flex;gap:4px;margin-top:6px"><button style="padding:4px 10px;background:var(--p);color:white;border:none;border-radius:6px;font-size:10px;font-weight:600">Назначить</button><button style="padding:4px 10px;background:white;color:var(--tx2);border:1px solid var(--bd);border-radius:6px;font-size:10px">Подробнее</button></div>
+            </div>
+            <div class="card" style="padding:10px 12px;border-left:3px solid var(--info)">
+              <div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:600">SD-0001234571</div><div class="badge badge-info">Назначена</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">ул. Ленина, 15 • ТО вентиляции</div>
+              <div style="font-size:10px;color:var(--p);margin-top:4px;font-weight:500"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-right"/></svg> Иванов И.И.</div>
+            </div>
+            <div class="card" style="padding:10px 12px;border-left:3px solid var(--ok)">
+              <div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:600">SD-0001234572</div><div class="badge badge-ok">Выполнена</div></div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px">пр. Мира, 42 • Ремонт ДГУ</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">Завершена 12.08.2026</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Управление заявками</div><div class="anno-text">Кнопка «Назначить» для новых заявок. Цветная полоска слева по статусу. Импорт из CSV (иконка загрузки в шапке).</div></div>
+  </div>
+
+  <div class="page-content" id="tm-report">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Сводный отчёт</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg></span><span class="title">Сводный отчёт</span></div>
+          <div style="padding:8px 12px">
+            <div class="form-group"><label class="form-label">Период</label><div style="display:flex;gap:6px"><input class="form-input" value="01.08.2026" style="flex:1"><input class="form-input" value="20.08.2026" style="flex:1"></div></div>
+            <div class="form-group"><label class="form-label">Инженер</label><select class="form-select"><option>Все инженеры</option></select></div>
+            <button class="btn-primary" style="margin-bottom:12px">Сформировать</button>
+            <div class="kpi-grid" style="padding:0;margin-bottom:8px">
+              <div class="kpi"><div class="kpi-val" style="color:var(--ok)">38</div><div class="kpi-lbl">Завершено</div></div>
+              <div class="kpi"><div class="kpi-val" style="color:var(--wn)">5</div><div class="kpi-lbl">С замечаниями</div></div>
+            </div>
+            <button class="btn-secondary" style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#file-text"/></svg> Скачать PDF</button>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-content" id="tm-profile">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Профиль ТМ</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Профиль</span></div>
+          <div style="padding:12px">
+            <div class="card" style="text-align:center;padding:20px">
+              <div style="width:56px;height:56px;background:linear-gradient(135deg,#7C3AED,#A78BFA);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;margin:0 auto 8px">АС</div>
+              <div style="font-size:16px;font-weight:700;color:var(--tx)">Смирнова Анна</div>
+              <div style="font-size:12px;color:var(--tx3);margin-top:2px">Территориальный менеджер</div>
+            </div>
+            <div class="card" style="padding:12px">
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9"><span style="font-size:12px;color:var(--tx3)">Регион</span><span style="font-size:12px;color:var(--tx);font-weight:500">Москва и МО</span></div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9"><span style="font-size:12px;color:var(--tx3)">Инженеров</span><span style="font-size:12px;color:var(--tx);font-weight:700">8</span></div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:12px;color:var(--tx3)">Объектов</span><span style="font-size:12px;color:var(--tx);font-weight:700">24</span></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║              ТМ МТР                           ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div class="role-section" id="tm-mtr">
+  <div class="role-header">
+    <div class="role-title"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#briefcase"/></svg> ТМ МТР</div>
+    <div class="role-desc">Контроль визитов МТР. Компактный набор страниц.</div>
+    <div class="role-devices"><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон</span><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК</span></div>
+  </div>
+  <div class="page-tabs">
+    <div class="page-tab active" onclick="showPage('mtrtm-list',this)">Визиты МТР</div>
+    <div class="page-tab" onclick="showPage('mtrtm-profile',this)">Профиль</div>
+  </div>
+
+  <div class="page-content active" id="mtrtm-list">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Визиты МТР — вид ТМ</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Визиты МТР</span><div class="actions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bell"/></svg></div></div>
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-val" style="color:var(--tx)">56</div><div class="kpi-lbl">Всего</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--wn)">8</div><div class="kpi-lbl">В работе</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--info)">12</div><div class="kpi-lbl">Черновики</div></div>
+            <div class="kpi"><div class="kpi-val" style="color:var(--ok)">36</div><div class="kpi-lbl">Завершено</div></div>
+          </div>
+          <div style="padding:4px 12px"><div class="form-group" style="margin-bottom:6px"><select class="form-select"><option>Все инженеры МТР</option></select></div></div>
+          <div class="chips"><div class="chip active">Все</div><div class="chip">Черновики</div><div class="chip">В работе</div><div class="chip">Готово</div></div>
+          <div style="padding:0 12px">
+            <div class="card card-accent wn" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between"><div><div style="font-size:12px;font-weight:600">SD-0001234567</div><div style="font-size:10px;color:var(--tx3)">Козлов К.К. • ул. Ленина, 15</div></div><div class="badge badge-wn">В работе</div></div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">3 работы • 2 фото</div>
+            </div>
+            <div class="card card-accent ok" style="padding:10px 12px">
+              <div style="display:flex;justify-content:space-between"><div><div style="font-size:12px;font-weight:600">SD-0001234569</div><div style="font-size:10px;color:var(--tx3)">Козлов К.К. • ул. Садовая, 7</div></div><div class="badge badge-ok">Отправлен</div></div>
+              <div style="display:flex;gap:4px;margin-top:6px"><button style="padding:3px 8px;background:var(--p);color:white;border:none;border-radius:4px;font-size:10px;font-weight:600">Принять</button><button style="padding:3px 8px;background:white;color:var(--err);border:1px solid var(--err);border-radius:4px;font-size:10px">Отклонить</button></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Специфика ТМ МТР</div><div class="anno-text">Кнопки «Принять» / «Отклонить» для отправленных визитов. Фильтр по инженеру МТР. Те же паттерны KPI и chips, что и в ТО.</div></div>
+  </div>
+
+  <div class="page-content" id="mtrtm-profile">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Профиль ТМ МТР</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <div class="m-header"><span class="title">Профиль</span></div>
+          <div style="padding:12px">
+            <div class="card" style="text-align:center;padding:20px">
+              <div style="width:56px;height:56px;background:linear-gradient(135deg,#7C3AED,#A78BFA);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;margin:0 auto 8px">НК</div>
+              <div style="font-size:16px;font-weight:700;color:var(--tx)">Николаев К.</div>
+              <div style="font-size:12px;color:var(--tx3);margin-top:2px">ТМ МТР</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║              АДМИН                            ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div class="role-section" id="admin">
+  <div class="role-header">
+    <div class="role-title"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#settings"/></svg> Администратор</div>
+    <div class="role-desc">Управление справочниками, пользователями, объектами. 16 пунктов меню → 5 групп. Основной device — ПК, также iPad и смартфон.</div>
+    <div class="role-devices"><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК — основной</span><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> iPad</span><span class="device-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон</span></div>
+  </div>
+  <div class="page-tabs">
+    <div class="page-tab active" onclick="showPage('adm-pc',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> ПК (сайдбар)</div>
+    <div class="page-tab" onclick="showPage('adm-ipad',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> iPad</div>
+    <div class="page-tab" onclick="showPage('adm-mobile',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон</div>
+    <div class="page-tab" onclick="showPage('adm-users',this)">Пользователи</div>
+    <div class="page-tab" onclick="showPage('adm-equip',this)">Оборудование</div>
+    <div class="page-tab" onclick="showPage('adm-import',this)">Импорт CSV</div>
+  </div>
+
+  <!-- Admin PC -->
+  <div class="page-content active" id="adm-pc">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> Админка — ПК (группированное меню + breadcrumbs)</div>
+        <div class="desktop" style="width:700px"><div class="desktop-bar"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="desktop-screen" style="background:var(--bg)">
+          <div class="admin-layout">
+            <div class="admin-sider">
+              <div class="admin-sider-h"><div class="admin-sider-logo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg></div><div class="admin-sider-title">Админ-панель</div></div>
+              <div style="flex:1;overflow-y:auto;padding:4px 0">
+                <div class="admin-group-label">Объекты</div>
+                <div class="admin-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#map-pin"/></svg>Адреса</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg>Оборудование объектов</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg>Помещения</div>
+                <div class="admin-group-label" style="margin-top:4px">Справочники</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#settings"/></svg>Оборудование</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#store"/></svg>Производители</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#package"/></svg>Модели</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#file-text"/></svg>Рекомендации</div>
+                <div class="admin-group-label" style="margin-top:4px">Пользователи</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg>Пользователи</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#users"/></svg>Привязки ТМ</div>
+                <div class="admin-group-label" style="margin-top:4px">МТР</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#flask-conical"/></svg>Виды работ</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#link"/></svg>Привязки</div>
+                <div class="admin-group-label" style="margin-top:4px">Система</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check-circle"/></svg>Модерация</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#download"/></svg>Импорт CSV</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#rocket"/></svg>Уведомления</div>
+                <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg>Аудит</div>
+              </div>
+            </div>
+            <div class="admin-content">
+              <div class="breadcrumb"><a><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg> Главная</a><span style="color:var(--tx3)">›</span><span class="cur">Адреса</span></div>
+              <div class="page-title">Адреса объектов</div>
+              <div style="display:flex;gap:8px;margin-bottom:12px">
+                <input style="flex:1;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:white" placeholder="Поиск по адресу...">
+                <button style="padding:8px 16px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(15,118,110,0.2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#plus"/></svg> Добавить</button>
+              </div>
+              <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+                <table class="dtbl">
+                  <tr><th>Город</th><th>Улица</th><th>Дом</th><th>Объектов</th><th></th></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">ул. Ленина</td><td>15</td><td><span class="badge badge-ok">3</span></td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">пр. Мира</td><td>42</td><td><span class="badge badge-info">5</span></td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                  <tr><td>СПб</td><td style="font-weight:500">ул. Садовая</td><td>7</td><td><span class="badge badge-wn">2</span></td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#sparkles"/></svg> Изменения</div><div class="anno-text">16 пунктов → 5 групп (Объекты, Справочники, Пользователи, МТР, Система). Breadcrumbs. Таблица в карточке с border-radius 12px. Логотип в сайдбаре.</div></div>
+  </div>
+
+  <!-- Admin iPad -->
+  <div class="page-content" id="adm-ipad">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> iPad — адаптивная версия</div>
+        <div class="ipad"><div class="ipad-screen" style="background:var(--bg)">
+          <div class="admin-layout" style="min-height:420px">
+            <div class="admin-sider" style="width:180px">
+              <div class="admin-sider-h"><div class="admin-sider-logo" style="width:24px;height:24px;font-size:12px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg></div><div class="admin-sider-title" style="font-size:12px">Админ</div></div>
+              <div style="flex:1;overflow-y:auto;padding:4px 0;font-size:11px">
+                <div class="admin-group-label" style="font-size:8px">Объекты</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#map-pin"/></svg>Адреса</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg>Оборудование об.</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg>Помещения</div>
+                <div class="admin-group-label" style="font-size:8px;margin-top:4px">Справочники</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#settings"/></svg>Оборудование</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#store"/></svg>Производители</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#package"/></svg>Модели</div>
+                <div class="admin-group-label" style="font-size:8px;margin-top:4px">Пользователи</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg>Пользователи</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#users"/></svg>Привязки ТМ</div>
+                <div class="admin-group-label" style="font-size:8px;margin-top:4px">Система</div>
+                <div class="admin-item" style="font-size:11px;padding:5px 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg>Аудит</div>
+              </div>
+            </div>
+            <div class="admin-content" style="padding:12px">
+              <div class="breadcrumb" style="font-size:10px"><a><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg></a><span>›</span><span class="cur">Адреса</span></div>
+              <div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:10px">Адреса объектов</div>
+              <div style="display:flex;gap:6px;margin-bottom:10px">
+                <input style="flex:1;padding:6px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:11px;background:white" placeholder="Поиск...">
+                <button style="padding:6px 12px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:11px;font-weight:600">+</button>
+              </div>
+              <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+                <table class="dtbl" style="font-size:11px">
+                  <tr><th style="font-size:9px">Город</th><th style="font-size:9px">Улица</th><th style="font-size:9px">Дом</th><th style="font-size:9px">Объектов</th></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">ул. Ленина</td><td>15</td><td><span class="badge badge-ok" style="font-size:9px">3</span></td></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">пр. Мира</td><td>42</td><td><span class="badge badge-info" style="font-size:9px">5</span></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> iPad</div><div class="anno-text">Сайдбар сужается до 180px. Шрифты уменьшаются. Группировка меню сохраняется. Таблица адаптируется.</div></div>
+  </div>
+
+  <!-- Admin Mobile -->
+  <div class="page-content" id="adm-mobile">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Смартфон — Drawer навигация</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg)">
+          <div class="phone-notch"></div>
+          <!-- Mobile header with hamburger -->
+          <div style="padding:10px 12px;background:white;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:20px;cursor:pointer;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#menu"/></svg></span>
+              <span style="font-weight:700;font-size:14px;color:var(--p)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg> Админ</span>
+            </div>
+            <div style="display:flex;gap:4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#bell"/></svg></div>
+          </div>
+          <div style="padding:12px">
+            <div class="breadcrumb" style="font-size:10px"><a><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg></a><span>›</span><span class="cur">Адреса</span></div>
+            <div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:10px">Адреса объектов</div>
+            <div style="display:flex;gap:6px;margin-bottom:10px">
+              <input style="flex:1;padding:8px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:white" placeholder="Поиск...">
+              <button style="padding:8px 12px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:12px;font-weight:600">+</button>
+            </div>
+            <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+              <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+                <table class="dtbl" style="font-size:11px;min-width:400px">
+                  <tr><th style="font-size:9px">Город</th><th style="font-size:9px">Улица</th><th style="font-size:9px">Дом</th><th style="font-size:9px">Объектов</th><th></th></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">ул. Ленина</td><td>15</td><td><span class="badge badge-ok" style="font-size:9px">3</span></td><td><button style="padding:2px 6px;font-size:9px;border:1px solid var(--bd);border-radius:4px;background:white"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                  <tr><td>Москва</td><td style="font-weight:500">пр. Мира</td><td>42</td><td><span class="badge badge-info" style="font-size:9px">5</span></td><td><button style="padding:2px 6px;font-size:9px;border:1px solid var(--bd);border-radius:4px;background:white"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <!-- Drawer open state -->
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Drawer открыт</div>
+        <div class="phone"><div class="phone-screen" style="background:var(--bg);position:relative">
+          <div class="phone-notch"></div>
+          <div style="padding:10px 12px;background:white;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#menu"/></svg>
+            <span style="font-weight:700;font-size:14px;color:var(--p)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg> Админ</span>
+          </div>
+          <!-- Drawer overlay -->
+          <div style="position:absolute;top:0;left:0;width:75%;height:100%;background:white;z-index:10;box-shadow:4px 0 20px rgba(0,0,0,0.15);display:flex;flex-direction:column">
+            <div style="padding:12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px">
+              <div class="admin-sider-logo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg></div>
+              <div style="font-weight:700;font-size:14px;color:var(--tx)">Админ-панель</div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:4px 0">
+              <div class="admin-group-label">Объекты</div>
+              <div class="admin-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#map-pin"/></svg>Адреса</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#wrench"/></svg>Оборудование объектов</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg>Помещения</div>
+              <div class="admin-group-label" style="margin-top:4px">Справочники</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#settings"/></svg>Оборудование</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#store"/></svg>Производители</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#package"/></svg>Модели</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#file-text"/></svg>Рекомендации</div>
+              <div class="admin-group-label" style="margin-top:4px">Пользователи</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#user"/></svg>Пользователи</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#users"/></svg>Привязки ТМ</div>
+              <div class="admin-group-label" style="margin-top:4px">МТР</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#flask-conical"/></svg>Виды работ</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#link"/></svg>Привязки</div>
+              <div class="admin-group-label" style="margin-top:4px">Система</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#check-circle"/></svg>Модерация</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#download"/></svg>Импорт CSV</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#rocket"/></svg>Уведомления</div>
+              <div class="admin-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#clipboard-list"/></svg>Аудит</div>
+            </div>
+            <div style="padding:8px 12px;border-top:1px solid var(--bd)">
+              <button style="width:100%;padding:8px;background:white;color:var(--tx2);border:1px solid var(--bd);border-radius:var(--rs);font-size:12px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#arrow-left"/></svg> Назад к визитам</button>
+              <button style="width:100%;padding:8px;background:white;color:var(--err);border:1px solid var(--err);border-radius:var(--rs);font-size:12px;cursor:pointer">Выход</button>
+            </div>
+          </div>
+          <!-- Dimmed background -->
+          <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:5"></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="anno"><div class="anno-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#smartphone"/></svg> Мобильная админка</div><div class="anno-text">Hamburger-меню → Drawer (75% ширины). Группированное меню с прокруткой. Таблицы с горизонтальным скроллом. Кнопки «Назад» и «Выход» внизу drawer.</div></div>
+  </div>
+
+  <!-- Admin Users page -->
+  <div class="page-content" id="adm-users">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> Пользователи</div>
+        <div class="desktop" style="width:700px"><div class="desktop-bar"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="desktop-screen" style="background:var(--bg)">
+          <div style="padding:12px 20px">
+            <div class="breadcrumb"><a><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg> Главная</a><span style="color:var(--tx3)">›</span><a>Пользователи</a><span style="color:var(--tx3)">›</span><span class="cur">Список</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div class="page-title" style="margin:0">Пользователи</div>
+              <button style="padding:8px 16px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:12px;font-weight:600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#plus"/></svg> Добавить</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <input style="flex:1;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:white" placeholder="Поиск по имени или email...">
+              <select style="padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:white"><option>Все роли</option><option>Инженер ТО</option><option>Инженер МТР</option><option>ТМ ТО</option><option>ТМ МТР</option><option>Админ</option></select>
+            </div>
+            <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+              <table class="dtbl">
+                <tr><th>Имя</th><th>Email</th><th>Роль</th><th>Статус</th><th></th></tr>
+                <tr><td style="font-weight:500">Иванов И.И.</td><td>ivanov@example.com</td><td><span class="badge badge-info">Инженер ТО</span></td><td><span class="badge badge-ok">Активен</span></td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                <tr><td style="font-weight:500">Петров П.П.</td><td>petrov@example.com</td><td><span class="badge" style="background:#DBEAFE;color:#1E40AF">Инженер МТР</span></td><td><span class="badge badge-ok">Активен</span></td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                <tr><td style="font-weight:500">Смирнова А.</td><td>smirnova@example.com</td><td><span class="badge badge-purple">ТМ ТО</span></td><td><span class="badge badge-ok">Активен</span></td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                <tr><td style="font-weight:500">Админ</td><td>admin@example.com</td><td><span class="badge badge-default">Админ</span></td><td><span class="badge badge-ok">Активен</span></td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+              </table>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Equipment -->
+  <div class="page-content" id="adm-equip">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> Оборудование объектов</div>
+        <div class="desktop" style="width:700px"><div class="desktop-bar"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="desktop-screen" style="background:var(--bg)">
+          <div style="padding:12px 20px">
+            <div class="breadcrumb"><a><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg></a><span style="color:var(--tx3)">›</span><a>Объекты</a><span style="color:var(--tx3)">›</span><span class="cur">Оборудование</span></div>
+            <div class="page-title">Оборудование объектов</div>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <select style="padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:white;flex:1"><option>Выберите адрес...</option></select>
+              <button style="padding:8px 16px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:12px;font-weight:600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#plus"/></svg> Добавить</button>
+            </div>
+            <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+              <table class="dtbl">
+                <tr><th>Оборудование</th><th>Модель</th><th>Помещение</th><th>Инв. №</th><th></th></tr>
+                <tr><td style="font-weight:500">Кондиционер сплит</td><td>Daikin FTN25</td><td>Серверная</td><td>КЦ-0012</td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                <tr><td style="font-weight:500">Вентиляция</td><td>Systemair</td><td>Серверная</td><td>ВН-0003</td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+                <tr><td style="font-weight:500">Электрощит</td><td>ЩР-01</td><td>Электрощитовая</td><td>ЭЛ-0042</td><td><button style="padding:3px 8px;border:1px solid var(--bd);border-radius:4px;background:white;font-size:10px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#pencil"/></svg></button></td></tr>
+              </table>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Import -->
+  <div class="page-content" id="adm-import">
+    <div class="screens-row">
+      <div class="screen-col">
+        <div class="screen-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#monitor"/></svg> Импорт CSV</div>
+        <div class="desktop" style="width:700px"><div class="desktop-bar"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="desktop-screen" style="background:var(--bg)">
+          <div style="padding:12px 20px">
+            <div class="breadcrumb"><a><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#home"/></svg></a><span style="color:var(--tx3)">›</span><a>Система</a><span style="color:var(--tx3)">›</span><span class="cur">Импорт CSV</span></div>
+            <div class="page-title">Импорт данных из CSV</div>
+            <div style="background:white;border-radius:var(--r);box-shadow:var(--sh);padding:20px;text-align:center">
+              <div style="width:64px;height:64px;background:#DBEAFE;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><use href="#download"/></svg></div>
+              <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:4px">Загрузите CSV-файл</div>
+              <div style="font-size:12px;color:var(--tx3);margin-bottom:16px">Перетащите файл или нажмите для выбора</div>
+              <button style="padding:10px 24px;background:var(--p);color:white;border:none;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(15,118,110,0.2)">Выбрать файл</button>
+            </div>
+            <div style="margin-top:12px;background:white;border-radius:var(--r);box-shadow:var(--sh);padding:16px">
+              <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:8px">Последние импорты</div>
+              <table class="dtbl" style="font-size:11px">
+                <tr><th>Файл</th><th>Дата</th><th>Записей</th><th>Статус</th></tr>
+                <tr><td>addresses.csv</td><td>18.08.2026</td><td>133</td><td><span class="badge badge-ok">Успешно</span></td></tr>
+                <tr><td>equipment.csv</td><td>15.08.2026</td><td>12 450</td><td><span class="badge badge-ok">Успешно</span></td></tr>
+              </table>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showRole(id,el){
+  document.querySelectorAll('.role-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+function showPage(id,el){
+  const parent=el.closest('.role-section');
+  parent.querySelectorAll('.page-content').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.page-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

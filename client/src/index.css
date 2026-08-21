@@ -1,5 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; }
 #root { min-height: 100vh; }
 
 .page-container { max-width: 800px; margin: 0 auto; padding: 16px; }
@@ -14,14 +14,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
 .status-not-started { background: #f0f0f0; color: #666; }
-.status-in-progress { background: #e6f7ff; color: #1677ff; }
-.status-completed { background: #f6ffed; color: #52c41a; }
+.status-in-progress { background: #DBEAFE; color: #1E40AF; }
+.status-completed { background: #D1FAE5; color: #065F46; }
 
 .photo-progress { font-size: 12px; color: #888; }
 
-.login-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%); }
-.login-card { background: #fff; border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
-.login-title { text-align: center; font-size: 24px; font-weight: 700; color: #1677ff; margin-bottom: 8px; }
+.login-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #0F766E 0%, #065F59 50%, #0369A1 100%); }
+.login-card { background: #fff; border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+.login-title { text-align: center; font-size: 24px; font-weight: 700; color: #0F766E; margin-bottom: 8px; }
 .login-subtitle { text-align: center; color: #666; margin-bottom: 24px; font-size: 14px; }
 
 /* ─── Responsive admin layout ────────────────── */
@@ -141,7 +141,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 }
 
 .bottom-nav-item.active {
-  color: #1677ff;
+  color: #0F766E;
 }
 
 .bottom-nav-item .anticon {
@@ -156,7 +156,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: #ff4d4f;
+  background: #DC2626;
   color: #fff;
   font-size: 10px;
   line-height: 16px;
@@ -249,8 +249,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   font-size: 12px;
 }
 
-.status-icon-completed { color: #52c41a; }
-.status-icon-in-progress { color: #faad14; }
+.status-icon-completed { color: #059669; }
+.status-icon-in-progress { color: #D97706; }
 .status-icon-not-started { color: #d9d9d9; }
 
 /* ─── Photo grid (mobile) ─── */
@@ -277,11 +277,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   line-height: 1.4;
 }
 
-.spec-badge-vik { background: #e6f7ff; color: #1677ff; }
-.spec-badge-iszh { background: #f6ffed; color: #52c41a; }
-.spec-badge-gpm { background: #fff7e6; color: #fa8c16; }
-.spec-badge-dgu { background: #f9f0ff; color: #722ed1; }
-.spec-badge-ibp { background: #fff1f0; color: #f5222d; }
+.spec-badge-vik { background: #E0F2FE; color: #0369A1; }
+.spec-badge-iszh { background: #D1FAE5; color: #065F46; }
+.spec-badge-gpm { background: #FEF3C7; color: #92400E; }
+.spec-badge-dgu { background: #EDE9FE; color: #5B21B6; }
+.spec-badge-ibp { background: #FEE2E2; color: #991B1B; }
 
 /* ─── Room group header ─── */
 .room-group-header {

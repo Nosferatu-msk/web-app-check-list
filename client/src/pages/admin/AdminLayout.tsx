@@ -8,7 +8,7 @@ import NotificationBell from '../../components/NotificationBell';
 const { Content } = Layout;
 
 const menuItems = [
-  { key: '/', icon: <ArrowLeftOutlined />, label: '← Визиты' },
+  { key: '/', icon: <ArrowLeftOutlined />, label: 'Визиты' },
   { key: '/admin/addresses', icon: <EnvironmentOutlined />, label: 'Адреса' },
   { key: '/admin/equipment', icon: <ToolOutlined />, label: 'Оборудование' },
   { key: '/admin/manufacturers', icon: <ShopOutlined />, label: 'Производители' },
@@ -45,8 +45,8 @@ export default function AdminLayout() {
 
   const sidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: '16px', fontWeight: 700, fontSize: 18, color: '#1677ff', borderBottom: '1px solid #f0f0f0' }}>
-        🔧 Админ-панель
+      <div style={{ padding: '16px', fontWeight: 700, fontSize: 18, color: '#0F766E', borderBottom: '1px solid #f0f0f0' }}>
+        <ToolOutlined style={{ fontSize: 20, color: '#0F766E', marginRight: 8 }} />Админ-панель
       </div>
       <Menu
         mode="inline"
@@ -56,9 +56,6 @@ export default function AdminLayout() {
         style={{ flex: 1, borderRight: 0 }}
       />
       <div style={{ padding: 16, borderTop: '1px solid #f0f0f0' }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} block style={{ marginBottom: 8 }}>
-          Назад
-        </Button>
         <Button onClick={handleLogout} block danger>
           Выход
         </Button>
@@ -104,7 +101,7 @@ export default function AdminLayout() {
             onClick={() => setDrawerOpen(true)}
             style={{ fontSize: 20 }}
           />
-          <span style={{ fontWeight: 700, fontSize: 16, color: '#1677ff' }}>🔧 Админ</span>
+          <span style={{ fontWeight: 700, fontSize: 16, color: '#0F766E' }}><ToolOutlined style={{ marginRight: 4 }} />Админ</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NotificationBell />
             <Button type="text" onClick={handleLogout} size="small">Выход</Button>

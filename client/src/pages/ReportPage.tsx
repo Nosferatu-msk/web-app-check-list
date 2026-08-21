@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Space, App, Spin, Result } from 'antd';
-import { DownloadOutlined } from '@ant-design/icons';
+import { DownloadOutlined, CheckCircleOutlined, FileTextOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import JSZip from 'jszip';
 import { api } from '../api/client';
 
@@ -131,7 +131,7 @@ export default function ReportPage() {
           <>
             <Result
               status="success"
-              title="✅ Отчёт сформирован"
+              title={<><CheckCircleOutlined /> Отчёт сформирован</>}
               subTitle={`Акт выполненных работ по адресу: ${visit?.address?.fullAddress}`}
             />
             <Space style={{ width: '100%' }} direction="vertical" size="middle">
@@ -143,10 +143,10 @@ export default function ReportPage() {
                 block
                 size="large"
               >
-                💾 Скачать ZIP-архив
+                <SaveOutlined style={{ marginRight: 6 }} />Скачать ZIP-архив
               </Button>
               <Button onClick={() => navigate('/')} block>
-                ✖ Закрыть
+                <CloseOutlined /> Закрыть
               </Button>
             </Space>
           </>
@@ -155,7 +155,7 @@ export default function ReportPage() {
             <Result title="Визит завершён" subTitle="Сформируйте отчёт для скачивания" />
             <Space direction="vertical" size="middle">
               <Button type="primary" onClick={handleGenerate} loading={generating} size="large">
-                📄 Сформировать отчёт
+                <FileTextOutlined style={{ marginRight: 6 }} />Сформировать отчёт
               </Button>
               <Button onClick={() => navigate(`/visit/${id}`)}>Вернуться к визиту</Button>
             </Space>

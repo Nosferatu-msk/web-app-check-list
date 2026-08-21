@@ -4,6 +4,7 @@ import { Button, Tag, Input, App, Modal, List, Typography, Spin, Badge, Form, Se
 import {
   ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PlusOutlined,
   SaveOutlined, CheckCircleOutlined, SearchOutlined, CloudOutlined, FilePdfOutlined,
+  ToolOutlined, CheckOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api, isOffline } from '../../api/client';
@@ -538,7 +539,7 @@ export default function MtrVisitPage() {
       {/* Фото ДО — white card section (лимит: 1 фото) */}
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ДО {photosBefore.length > 0 && <span style={{ fontSize: 13, color: '#52c41a', fontWeight: 400 }}>✓ загружено</span>}</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}><CameraOutlined style={{ marginRight: 6 }} />Фото ДО {photosBefore.length > 0 && <span style={{ fontSize: 13, color: '#52c41a', fontWeight: 400 }}><CheckOutlined style={{ marginRight: 2 }} />загружено</span>}</h3>
           {canAddPhotoBefore && (
             <Button
               icon={<CameraOutlined />}
@@ -618,7 +619,7 @@ export default function MtrVisitPage() {
       {/* Работы — white card section */}
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>🔧 Работы ({works.length})</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}><ToolOutlined style={{ marginRight: 6 }} />Работы ({works.length})</h3>
           {canAddWork && (
             <Button
               type="primary"
@@ -661,7 +662,7 @@ export default function MtrVisitPage() {
       {/* Фото ПОСЛЕ — white card section (лимит: 1 фото) */}
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>📷 Фото ПОСЛЕ {photosAfter.length > 0 && <span style={{ fontSize: 13, color: '#52c41a', fontWeight: 400 }}>✓ загружено</span>}</h3>
+          <h3 style={{ margin: 0, fontSize: 16 }}><CameraOutlined style={{ marginRight: 6 }} />Фото ПОСЛЕ {photosAfter.length > 0 && <span style={{ fontSize: 13, color: '#52c41a', fontWeight: 400 }}><CheckOutlined style={{ marginRight: 2 }} />загружено</span>}</h3>
           {canAddPhotoAfter && (
             <Button
               icon={<CameraOutlined />}
@@ -761,7 +762,7 @@ export default function MtrVisitPage() {
               loading={saving}
               block
             >
-              ✅ Завершить визит
+              <CheckCircleOutlined style={{ marginRight: 4 }} />Завершить визит
             </Button>
           )}
           <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>

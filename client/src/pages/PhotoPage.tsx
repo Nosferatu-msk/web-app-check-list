@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Space, App, Spin, Modal, Alert } from 'antd';
-import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PictureOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PictureOutlined, WarningOutlined, SaveOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
@@ -77,7 +77,8 @@ export default function PhotoPage() {
     // Show 152-FZ warning for client zones
     if (t.roomType && CLIENT_ZONES.includes(t.roomType.code)) {
       Modal.warning({
-        title: '⚠️ ВНИМАНИЕ!',
+        title: 'ВНИМАНИЕ!',
+        icon: <WarningOutlined style={{ color: '#faad14', fontSize: 24 }} />,
         content: (
           <div>
             <p>Убедитесь, что в кадр не попали:</p>
@@ -197,7 +198,7 @@ export default function PhotoPage() {
         <div style={{ color: '#888', marginBottom: 16 }}>{task?.roomType?.name || task?.comment || ''}</div>
 
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontWeight: 500, marginBottom: 8 }}>📷 Фото ДО выполнения работ:</div>
+          <div style={{ fontWeight: 500, marginBottom: 8 }}><CameraOutlined style={{ marginRight: 6 }} />Фото ДО выполнения работ:</div>
           {beforePhoto ? (
             <div style={{ position: 'relative', display: 'inline-block', padding: 4 }}>
               <img src={photoUrls[beforePhoto.id] || ''} alt="Фото ДО" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, display: 'block' }} />
@@ -215,7 +216,7 @@ export default function PhotoPage() {
 
         {photosRequired >= 2 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>📷 Фото ПОСЛЕ выполнения работ:</div>
+            <div style={{ fontWeight: 500, marginBottom: 8 }}><CameraOutlined style={{ marginRight: 6 }} />Фото ПОСЛЕ выполнения работ:</div>
             {afterPhoto ? (
               <div style={{ position: 'relative', display: 'inline-block', padding: 4 }}>
                 <img src={photoUrls[afterPhoto.id] || ''} alt="Фото ПОСЛЕ" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, display: 'block' }} />
@@ -234,10 +235,10 @@ export default function PhotoPage() {
 
         <Space style={{ width: '100%' }} direction="vertical" size="middle">
           <Button type="primary" onClick={handleSaveAndReturn} block size="large">
-            💾 Сохранить и вернуться в чек-лист
+            <SaveOutlined style={{ marginRight: 6 }} />Сохранить и вернуться в чек-лист
           </Button>
           <Space>
-            <Button onClick={() => navigate(`/visit/${visitId}/task/${taskId}`)}>← К параметрам</Button>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}/task/${taskId}`)}>К параметрам</Button>
           </Space>
         </Space>
       </Card>

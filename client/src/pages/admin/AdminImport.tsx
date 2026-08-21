@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Upload, Table, Tag, Space, App, Steps, Alert, Collapse, Spin, Typography } from 'antd';
-import { UploadOutlined, FileTextOutlined, HistoryOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, SearchOutlined, CheckCircleFilled } from '@ant-design/icons';
+import { UploadOutlined, FileTextOutlined, HistoryOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, SearchOutlined, CheckCircleFilled, EnvironmentOutlined, ToolOutlined, HomeOutlined, TeamOutlined, LinkOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, BankOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 const API_BASE = '/api/admin/import';
 
 const IMPORT_TYPES = [
-  { key: 'addresses', label: 'Адреса объектов', icon: '📋', description: 'CSV: city, street, house, building, full_address, customer_email, object_code' },
-  { key: 'equipment-types', label: 'Виды оборудования', icon: '🔧', description: 'CSV: name, code, photos_required, is_active, specialization_req (vik/iszh/gpm/dgu/ibp)' },
-  { key: 'room-types', label: 'Типы помещений', icon: '🏠', description: 'CSV: name, code' },
-  { key: 'recommendations', label: 'Типовые рекомендации', icon: '📝', description: 'CSV: equipment_code, text, sort_order, is_active' },
-  { key: 'users', label: 'Пользователи', icon: '👥', description: 'CSV: full_name, email, role, password, tm_email' },
-  { key: 'tm-objects', label: 'Привязка объектов к ТМ', icon: '🔗', description: 'CSV: object_code, tm_email' },
-  { key: 'tm-engineers', label: 'Привязка инженеров к ТМ', icon: '🔗', description: 'CSV: engineer_email, tm_email' },
-  { key: 'object-equipment', label: 'Оборудование объектов', icon: '⚙️', description: 'CSV/XLSX: object_code, equipment_type, room_type (опц.), brand, model, serial_number, location_description' },
-  { key: 'manufacturers', label: 'Производители', icon: '🏭', description: 'CSV: name, country' },
-  { key: 'models', label: 'Модели оборудования', icon: '📦', description: 'CSV: eq_type, manufacture, model' },
-  { key: 'mtr-work-types', label: 'Виды работ МТР', icon: '🔨', description: 'CSV/XLSX: name (обязательно), category (опционально)' },
+  { key: 'addresses', label: 'Адреса объектов', icon: <FileTextOutlined />, description: 'CSV: city, street, house, building, full_address, customer_email, object_code' },
+  { key: 'equipment-types', label: 'Виды оборудования', icon: <ToolOutlined />, description: 'CSV: name, code, photos_required, is_active, specialization_req (vik/iszh/gpm/dgu/ibp)' },
+  { key: 'room-types', label: 'Типы помещений', icon: <HomeOutlined />, description: 'CSV: name, code' },
+  { key: 'recommendations', label: 'Типовые рекомендации', icon: <EditOutlined />, description: 'CSV: equipment_code, text, sort_order, is_active' },
+  { key: 'users', label: 'Пользователи', icon: <TeamOutlined />, description: 'CSV: full_name, email, role, password, tm_email' },
+  { key: 'tm-objects', label: 'Привязка объектов к ТМ', icon: <LinkOutlined />, description: 'CSV: object_code, tm_email' },
+  { key: 'tm-engineers', label: 'Привязка инженеров к ТМ', icon: <LinkOutlined />, description: 'CSV: engineer_email, tm_email' },
+  { key: 'object-equipment', label: 'Оборудование объектов', icon: <SettingOutlined />, description: 'CSV/XLSX: object_code, equipment_type, room_type (опц.), brand, model, serial_number, location_description' },
+  { key: 'manufacturers', label: 'Производители', icon: <BankOutlined />, description: 'CSV: name, country' },
+  { key: 'models', label: 'Модели оборудования', icon: <AppstoreOutlined />, description: 'CSV: eq_type, manufacture, model' },
+  { key: 'mtr-work-types', label: 'Виды работ МТР', icon: <ToolOutlined />, description: 'CSV/XLSX: name (обязательно), category (опционально)' },
 ];
 
 interface ImportResult {
@@ -154,7 +154,7 @@ export default function AdminImport() {
             key={t.key}
             size="small"
             hoverable
-            style={{ cursor: 'pointer', border: selectedType === t.key ? '2px solid #1677ff' : '1px solid #f0f0f0' }}
+            style={{ cursor: 'pointer', border: selectedType === t.key ? '2px solid #0F766E' : '1px solid #f0f0f0' }}
             onClick={() => { setSelectedType(t.key); setResult(null); setValidateResult(null); setFileList([]); setPhase('idle'); }}
           >
             <div style={{ fontSize: 24, marginBottom: 4 }}>{t.icon}</div>

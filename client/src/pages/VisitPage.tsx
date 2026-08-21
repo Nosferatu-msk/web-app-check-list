@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete, Dropdown } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -99,7 +99,15 @@ export default function VisitPage() {
 
   useEffect(() => {
     Promise.all([api.getEquipmentTypes(), api.getRoomTypes()]).then(([eq, rt]) => {
-      setEquipmentTypes(eq);
+      // Фильтрация типов оборудования по специализации инженера
+      let filtered = eq;
+      if (user?.role === 'engineer') {
+        filtered = eq.filter((e: any) => {
+          if (!e.specializationReq) return true; // без специализации — показывать всем
+          return user[`specialization${e.specializationReq.charAt(0).toUpperCase() + e.specializationReq.slice(1)}` as keyof typeof user] === true;
+        });
+      }
+      setEquipmentTypes(filtered);
       setRoomTypes(rt);
       setEqTypeMap(new Map(eq.map((e: any) => [e.code, e])));
       setRmTypeMap(new Map(rt.map((r: any) => [r.code, r])));
@@ -264,25 +272,38 @@ export default function VisitPage() {
     setRoomsLoading(false);
   }, []);
 
+  // Фильтрация оборудования по специализации инженера
+  const filterBySpec = useCallback((eq: any[]) => {
+    if (user?.role !== 'engineer') return eq;
+    return eq.filter((e: any) => {
+      const specReq = e.equipmentType?.specializationReq;
+      if (!specReq) return true;
+      const key = `specialization${specReq.charAt(0).toUpperCase() + specReq.slice(1)}` as keyof typeof user;
+      return user[key] === true;
+    });
+  }, [user]);
+
   const loadRoomEquipment = useCallback(async (addressId: string, roomTypeCode: string, visitId: string) => {
     setRoomEquipLoading(true);
     try {
       const eq = await api.getObjectEquipment(addressId, { exclude_visit_id: visitId, binding_level: 'room', room_type_code: roomTypeCode });
-      setRoomEquipment(eq);
-      setSelectedRoomEquipIds(eq.map((e: any) => e.id));
+      const filtered = filterBySpec(eq);
+      setRoomEquipment(filtered);
+      setSelectedRoomEquipIds(filtered.map((e: any) => e.id));
     } catch { /* ignore */ }
     setRoomEquipLoading(false);
-  }, []);
+  }, [filterBySpec]);
 
   const loadObjectEquipment = useCallback(async (addressId: string, visitId: string) => {
     setObjectEquipLoading(true);
     try {
       const eq = await api.getObjectEquipment(addressId, { exclude_visit_id: visitId, binding_level: 'object' });
-      setObjectEquipment(eq);
-      setSelectedObjectEquipIds(eq.map((e: any) => e.id));
+      const filtered = filterBySpec(eq);
+      setObjectEquipment(filtered);
+      setSelectedObjectEquipIds(filtered.map((e: any) => e.id));
     } catch { /* ignore */ }
     setObjectEquipLoading(false);
-  }, []);
+  }, [filterBySpec]);
 
   const loadOtherRoomsEquipment = useCallback(async (addressId: string, currentRoomTypeCode: string, visitId: string) => {
     setOtherRoomsLoading(true);
@@ -292,10 +313,10 @@ export default function VisitPage() {
         current_room_type_code: currentRoomTypeCode,
         exclude_visit_id: visitId,
       });
-      setOtherRoomsEquipment(eq);
+      setOtherRoomsEquipment(filterBySpec(eq));
     } catch { /* ignore */ }
     setOtherRoomsLoading(false);
-  }, []);
+  }, [filterBySpec]);
 
   const handleTransferEquipment = useCallback(async (equipmentId: string, newRoomTypeCode: string) => {
     setTransferringId(equipmentId);
@@ -350,9 +371,9 @@ export default function VisitPage() {
     // Загружаем всё оборудование объекта для переноса (включая из других помещений)
     if (visit?.addressId && visit?.id) {
       const eq = await api.getObjectEquipment(visit.addressId, { exclude_visit_id: visit.id });
-      setNewRoomObjectEquipment(eq);
+      setNewRoomObjectEquipment(filterBySpec(eq));
     }
-  }, [visit]);
+  }, [visit, filterBySpec]);
 
   const handleOpenAddModal = useCallback(async () => {
     let currentVisit = visit;
@@ -566,7 +587,7 @@ export default function VisitPage() {
           const items = r.equipmentItems || [];
           return (
             <div>
-              <span style={{ fontWeight: 500 }}>🌡 Климатическое оборудование</span>
+              <span style={{ fontWeight: 500 }}><WarningOutlined style={{ marginRight: 6 }} />Климатическое оборудование</span>
               <div style={{ fontSize: 12, color: '#666' }}>
                 Единиц: {items.length}
                 {items.length > 0 && (() => {
@@ -574,8 +595,8 @@ export default function VisitPage() {
                   const notOkCount = items.filter((i: any) => i.status === 'not_ok').length;
                   return (
                     <>
-                      {okCount > 0 && <span style={{ color: '#52c41a' }}> · ✅ {okCount}</span>}
-                      {notOkCount > 0 && <span style={{ color: '#ff4d4f' }}> · ⚠️ {notOkCount}</span>}
+                      {okCount > 0 && <span style={{ color: '#52c41a' }}> · <CheckCircleOutlined style={{ marginRight: 2 }} />{okCount}</span>}
+                      {notOkCount > 0 && <span style={{ color: '#ff4d4f' }}> · <WarningOutlined style={{ marginRight: 2 }} />{notOkCount}</span>}
                     </>
                   );
                 })()}
@@ -595,7 +616,7 @@ export default function VisitPage() {
       title: 'Фото',
       key: 'photos',
       width: 80,
-      render: (_: any, r: any) => <span className="photo-progress">📷 {getPhotoProgress(r)}</span>,
+      render: (_: any, r: any) => <span className="photo-progress"><CameraOutlined style={{ marginRight: 4 }} />{getPhotoProgress(r)}</span>,
     },
     {
       title: 'Статус',
@@ -802,11 +823,11 @@ export default function VisitPage() {
             tasksByRoom.map((group) => (
               <div key={group.key} className="room-group">
                 <div className="room-group-header">
-                  📍 {group.roomName}
+                  <EnvironmentOutlined style={{ marginRight: 6 }} />{group.roomName}
                 </div>
                 {group.tasks.map((task: any) => {
                   const eqName = task.taskType === 'group_climate'
-                    ? '🌡 Климатическое оборудование'
+                    ? 'Климатическое оборудование'
                     : (task.equipmentType?.name || 'Оборудование');
                   const subtitle = task.taskType === 'group_climate'
                     ? `Единиц: ${(task.equipmentItems || []).length}`
@@ -866,7 +887,7 @@ export default function VisitPage() {
       {visit && (
         <div style={{ marginTop: 16 }}>
           <Button type="primary" size="large" icon={<CheckOutlined />} onClick={handleComplete} disabled={tasks.filter(t => t.status === 'completed').length === 0} block>
-            ✅ Завершить визит
+            <CheckCircleOutlined style={{ marginRight: 4 }} />Завершить визит
           </Button>
         </div>
       )}
@@ -881,15 +902,15 @@ export default function VisitPage() {
         <Tabs activeKey={addModalTab} onChange={setAddModalTab} items={[
           {
             key: 'room',
-            label: '📍 Уровень помещения',
+            label: 'Уровень помещения',
             children: roomsLoading ? (
               <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
             ) : newRoomMode ? (
               // Режим создания нового помещения
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <Button size="small" onClick={() => { setNewRoomMode(false); setNewRoomTypeCode(null); setNewRoomObjectEquipment([]); setNewRoomSelectedEquipIds([]); }}>
-                    ← Назад
+                  <Button size="small" icon={<ArrowLeftOutlined />} onClick={() => { setNewRoomMode(false); setNewRoomTypeCode(null); setNewRoomObjectEquipment([]); setNewRoomSelectedEquipIds([]); }}>
+                    Назад
                   </Button>
                   <span style={{ fontWeight: 500 }}>Создать помещение</span>
                 </div>
@@ -948,9 +969,9 @@ export default function VisitPage() {
                                     </div>
                                     <div style={{ fontSize: 12, color: '#888' }}>
                                       {eq.roomTypeCode ? (
-                                        <span>📍 {rmTypeMap.get(eq.roomTypeCode)?.name || eq.roomTypeCode}</span>
+                                        <span><EnvironmentOutlined style={{ marginRight: 4 }} />{rmTypeMap.get(eq.roomTypeCode)?.name || eq.roomTypeCode}</span>
                                       ) : (
-                                        <span>🏠 Уровень объекта</span>
+                                        <span><HomeOutlined style={{ marginRight: 4 }} />Уровень объекта</span>
                                       )}
                                       {eq.serialNumber && <span> · SN: {eq.serialNumber}</span>}
                                     </div>
@@ -1014,8 +1035,8 @@ export default function VisitPage() {
                 ) : (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                      <Button size="small" onClick={() => { setSelectedRoom(null); setRoomEquipment([]); setSelectedRoomEquipIds([]); }}>
-                        ← Назад
+                      <Button size="small" icon={<ArrowLeftOutlined />} onClick={() => { setSelectedRoom(null); setRoomEquipment([]); setSelectedRoomEquipIds([]); }}>
+                        Назад
                       </Button>
                       <span style={{ fontWeight: 500 }}>
                         {rmTypeMap.get(selectedRoom)?.name || selectedRoom}
@@ -1083,7 +1104,7 @@ export default function VisitPage() {
                     ) : otherRoomsEquipment.length > 0 && (
                       <div style={{ marginTop: 16 }}>
                         <div style={{ fontWeight: 500, marginBottom: 8, color: '#666', fontSize: 13 }}>
-                          🔄 Оборудование из других помещений ({otherRoomsEquipment.length}):
+                          <SyncOutlined style={{ marginRight: 6 }} />Оборудование из других помещений ({otherRoomsEquipment.length}):
                         </div>
                         <List
                           size="small"
@@ -1100,7 +1121,7 @@ export default function VisitPage() {
                                     {(eq.brand || eq.model) && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand}{eq.brand && eq.model ? ' ' : ''}{eq.model}</span>}
                                   </div>
                                   <div style={{ fontSize: 12, color: '#888' }}>
-                                    📍 {roomName}
+                                    <EnvironmentOutlined style={{ marginRight: 4 }} />{roomName}
                                     {eq.serialNumber && <span> · SN: {eq.serialNumber}</span>}
                                   </div>
                                 </div>
@@ -1111,7 +1132,7 @@ export default function VisitPage() {
                                   disabled={eq.hasPendingProposal}
                                   onClick={() => handleTransferEquipment(eq.id, selectedRoom!)}
                                 >
-                                  {eq.hasPendingProposal ? '⏳ Ожидает' : `🔄 Перенести`}
+                                  {eq.hasPendingProposal ? <><HourglassOutlined style={{ marginRight: 4 }} />Ожидает</> : <><SyncOutlined style={{ marginRight: 4 }} />Перенести</>}
                                 </Button>
                               </List.Item>
                             );
@@ -1126,7 +1147,7 @@ export default function VisitPage() {
           },
           {
             key: 'object',
-            label: '🏠 Уровень объекта',
+            label: 'Уровень объекта',
             children: objectEquipLoading ? (
               <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
             ) : objectEquipment.length === 0 ? (

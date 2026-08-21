@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Button, Select, Space, App, Popconfirm, Tag, Input, Checkbox, Card, Row, Col, Empty, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, SortAscendingOutlined, SortDescendingOutlined, EnvironmentOutlined, ToolOutlined, UserOutlined, HomeOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, SortAscendingOutlined, SortDescendingOutlined, EnvironmentOutlined, ToolOutlined, UserOutlined, HomeOutlined, PlusOutlined, SyncOutlined, EditOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 import { REQUEST_TYPE_LABELS } from '@shared/types';
 import type { RequestType } from '@shared/types';
@@ -13,10 +13,10 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
   expired: { color: 'warning', label: 'Истекло' },
 };
 
-const REQUEST_TYPE_ICONS: Record<string, string> = {
-  new_equipment: '➕',
-  room_change: '🔄',
-  brand_change: '✏️',
+const REQUEST_TYPE_ICONS: Record<string, React.ReactNode> = {
+  new_equipment: <PlusOutlined />,
+  room_change: <SyncOutlined />,
+  brand_change: <EditOutlined />,
 };
 
 export default function AdminProposals() {
@@ -139,7 +139,7 @@ export default function AdminProposals() {
         <Card
           size="small"
           style={{
-            border: isSelected ? '2px solid #1677ff' : '1px solid #f0f0f0',
+            border: isSelected ? '2px solid #0F766E' : '1px solid #f0f0f0',
             background: isSelected ? '#f0f5ff' : '#fff',
             height: '100%',
             display: 'flex',
@@ -187,7 +187,7 @@ export default function AdminProposals() {
                 <HomeOutlined style={{ color: '#888', flexShrink: 0 }} />
                 <span>
                   <span style={{ color: '#999', textDecoration: 'line-through' }}>{r.oldRoomTypeCode}</span>
-                  {' → '}
+                  {' '}<ArrowRightOutlined style={{ fontSize: 12, color: '#888' }} />{' '}
                   <strong>{r.roomTypeCode}</strong>
                 </span>
               </div>
@@ -272,9 +272,9 @@ export default function AdminProposals() {
               placeholder="Тип запроса"
               allowClear
               options={[
-                { value: 'new_equipment', label: '➕ Новое оборудование' },
-                { value: 'room_change', label: '🔄 Перенос' },
-                { value: 'brand_change', label: '✏️ Смена бренда' },
+                { value: 'new_equipment', label: 'Новое оборудование' },
+                { value: 'room_change', label: 'Перенос' },
+                { value: 'brand_change', label: 'Смена бренда' },
               ]}
             />
           </Col>

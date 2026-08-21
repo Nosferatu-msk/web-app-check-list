@@ -29,8 +29,8 @@ export default function SyncBanner() {
         </>
       ) : syncStatus === 'syncing' ? (
         <>
-          <SyncOutlined spin style={{ color: '#1677ff' }} />
-          <span style={{ color: '#1677ff' }}>Синхронизация...</span>
+          <SyncOutlined spin style={{ color: '#0F766E' }} />
+          <span style={{ color: '#0F766E' }}>Синхронизация...</span>
           {pendingCount > 0 && <Tag color="blue">{pendingCount} операций</Tag>}
         </>
       ) : syncStatus === 'error' ? (

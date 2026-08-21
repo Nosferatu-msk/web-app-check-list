@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Select, Input, Button, Checkbox, Space, App, Spin, Card, Popconfirm, Collapse, Tag, Modal, List, Empty, Tabs } from 'antd';
-import { ArrowLeftOutlined, CameraOutlined, SaveOutlined, DeleteOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CameraOutlined, SaveOutlined, DeleteOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, HomeOutlined, WarningOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import VoiceInput from '../components/VoiceInput';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -352,7 +352,7 @@ export default function GroupTaskPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
           <div className="page-title" style={{ margin: 0 }}>
-            {isOutdoor ? '🏠 Наружные блоки кондиционеров' : '🌡 Климатическое оборудование'}
+            {isOutdoor ? <><HomeOutlined style={{ marginRight: 6 }} />Наружные блоки кондиционеров</> : <><WarningOutlined style={{ marginRight: 6 }} />Климатическое оборудование</>}
           </div>
         </div>
       )}
@@ -442,7 +442,7 @@ export default function GroupTaskPage() {
                       {item.status === 'ok' && <Tag color="success" icon={<CheckCircleOutlined />}>Исправно</Tag>}
                       {item.status === 'not_ok' && <Tag color="error" icon={<CloseCircleOutlined />}>Неисправно</Tag>}
                       {!item.status && <Tag color="default">Без статуса</Tag>}
-                      <Tag color={photosComplete ? 'success' : 'warning'}>📷 {getItemPhotoProgress(item)}</Tag>
+                      <Tag color={photosComplete ? 'success' : 'warning'} icon={<CameraOutlined />}>{getItemPhotoProgress(item)}</Tag>
                     </span>
                   </div>
                 ),
@@ -456,14 +456,14 @@ export default function GroupTaskPage() {
                           onClick={() => handleItemStatusChange(item.id, 'ok')}
                           style={item.status === 'ok' ? { background: '#52c41a', borderColor: '#52c41a' } : {}}
                         >
-                          ✅ Исправно
+                          <CheckCircleOutlined style={{ marginRight: 4 }} />Исправно
                         </Button>
                         <Button
                           type={item.status === 'not_ok' ? 'primary' : 'default'}
                           danger={item.status === 'not_ok'}
                           onClick={() => handleItemStatusChange(item.id, 'not_ok')}
                         >
-                          ⚠️ Неисправно
+                          <WarningOutlined style={{ marginRight: 4 }} />Неисправно
                         </Button>
                       </Space>
                     </div>
@@ -496,7 +496,7 @@ export default function GroupTaskPage() {
       {/* Кнопки управления */}
       <Space style={{ width: '100%' }} direction="vertical" size="middle">
         <Button type="primary" onClick={handleSave} loading={saving} icon={<SaveOutlined />} block size="large">
-          💾 Сохранить и вернуться в чек-лист
+          <SaveOutlined style={{ marginRight: 6 }} />Сохранить и вернуться в чек-лист
         </Button>
         <div style={{ textAlign: 'center', fontSize: 12, color: '#999', marginTop: -8 }}>
           Можно сохранить неполностью — незавершённые единицы останутся в статусе «В работе»
@@ -507,9 +507,9 @@ export default function GroupTaskPage() {
           </div>
         )}
         <Space>
-          <Button onClick={() => navigate(`/visit/${visitId}`)}>← Назад</Button>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}`)}>Назад</Button>
           <Popconfirm title="Сбросить задачу? Все данные будут удалены." onConfirm={handleReset} okText="Да" cancelText="Нет">
-            <Button danger>🗑 Сбросить задачу</Button>
+            <Button danger icon={<DeleteOutlined />}>Сбросить задачу</Button>
           </Popconfirm>
         </Space>
       </Space>

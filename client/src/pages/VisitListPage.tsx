@@ -189,7 +189,7 @@ export default function VisitListPage() {
       {!isMobile && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/profile')}>
-            <UserOutlined style={{ fontSize: 24, color: '#1677ff' }} />
+            <UserOutlined style={{ fontSize: 24, color: '#0F766E' }} />
             <div>
               <div className="page-title" style={{ margin: 0, fontSize: 16 }}>{pageTitle}</div>
               <div style={{ color: '#666', fontSize: 14 }}>{user?.fullName} ({roleLabel})</div>
@@ -219,7 +219,7 @@ export default function VisitListPage() {
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
           <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="Всего" value={stats.total} /></Card></Col>
           <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="Запланировано" value={stats.planned} valueStyle={{ color: '#13c2c2' }} /></Card></Col>
-          <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="В работе" value={stats.inProgress} valueStyle={{ color: '#1677ff' }} /></Card></Col>
+          <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="В работе" value={stats.inProgress} valueStyle={{ color: '#0F766E' }} /></Card></Col>
           <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="Завершено" value={stats.completed} valueStyle={{ color: '#52c41a' }} /></Card></Col>
         </Row>
       )}
@@ -329,7 +329,7 @@ export default function VisitListPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
                       {statusIcon && (
-                        <span aria-label={`Статус: ${statusLabel}`} style={{ marginRight: 2, display: 'inline-flex', color: STATUS_COLORS[v.status] === 'processing' ? '#1677ff' : STATUS_COLORS[v.status] === 'success' ? '#52c41a' : STATUS_COLORS[v.status] === 'cyan' ? '#13c2c2' : STATUS_COLORS[v.status] === 'blue' ? '#1677ff' : STATUS_COLORS[v.status] === 'geekblue' ? '#2f54eb' : STATUS_COLORS[v.status] === 'purple' ? '#722ed1' : '#888' }}>
+                        <span aria-label={`Статус: ${statusLabel}`} style={{ marginRight: 2, display: 'inline-flex', color: STATUS_COLORS[v.status] === 'processing' ? '#0F766E' : STATUS_COLORS[v.status] === 'success' ? '#52c41a' : STATUS_COLORS[v.status] === 'cyan' ? '#13c2c2' : STATUS_COLORS[v.status] === 'blue' ? '#0F766E' : STATUS_COLORS[v.status] === 'geekblue' ? '#2f54eb' : STATUS_COLORS[v.status] === 'purple' ? '#722ed1' : '#888' }}>
                           {statusIcon}
                         </span>
                       )}
@@ -372,7 +372,7 @@ export default function VisitListPage() {
                     <Space>
                       <Tag color={statusColor}>{statusLabel}</Tag>
                       {sentDate && (
-                        <span style={{ fontSize: 12, color: '#888' }}>📤 {sentDate}</span>
+                        <span style={{ fontSize: 12, color: '#888' }}><SendOutlined style={{ marginRight: 4 }} />{sentDate}</span>
                       )}
                       {isDeleted && (
                         <Tag color="default">Удалён</Tag>
@@ -399,7 +399,7 @@ export default function VisitListPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                       <Tag color={statusColor} style={{ margin: 0 }}>{statusLabel}</Tag>
                       {sentDate && (
-                        <span style={{ fontSize: 11, color: '#888' }}>📤</span>
+                        <span style={{ fontSize: 11, color: '#888' }}><SendOutlined /></span>
                       )}
                       {isDeleted && (
                         <Tag color="default" style={{ margin: 0, fontSize: 11 }}>Удалён</Tag>

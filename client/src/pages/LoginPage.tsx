@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Form, Input, Button, App } from 'antd';
+import { ToolOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../store/authStore';
 
 export default function LoginPage() {
@@ -24,7 +25,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-title">🔧 Чек-лист инженера</div>
+        <div className="login-title"><ToolOutlined style={{ marginRight: 8, color: '#0F766E' }} />Чек-лист инженера</div>
         <div className="login-subtitle">Цифровой чек-лист ТО оборудования</div>
         <Form onFinish={onFinish} layout="vertical" size="large">
           <Form.Item name="email" rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный email' }]}>
