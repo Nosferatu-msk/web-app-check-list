@@ -202,6 +202,7 @@ model Visit {
   tasks            Task[]
   visitEngineers   VisitEngineer[]
   importedRequests ImportedRequest[]
+  visitRequests    VisitRequest[]
 
   @@index([userId, dateStart])
   @@index([status])
@@ -580,6 +581,7 @@ model ImportedRequest {
   visit          Visit?                 @relation(fields: [visitId], references: [id])
   importedByUser User?                  @relation("ImportedBy", fields: [importedBy], references: [id])
   assignmentLogs RequestAssignmentLog[]
+  visitRequests  VisitRequest[]
 
   @@index([importStatus])
   @@index([objectCode])
@@ -604,6 +606,21 @@ model VisitEngineer {
   @@index([visitId])
   @@index([engineerId])
   @@map("visit_engineers")
+}
+
+model VisitRequest {
+  id                String   @id @default(uuid())
+  visitId           String   @map("visit_id")
+  importedRequestId String   @map("imported_request_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  visit           Visit           @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  importedRequest ImportedRequest @relation(fields: [importedRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([visitId, importedRequestId])
+  @@index([visitId])
+  @@index([importedRequestId])
+  @@map("visit_requests")
 }
 
 model RequestAssignmentLog {

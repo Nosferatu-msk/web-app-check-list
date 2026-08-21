@@ -190,6 +190,7 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
           },
         },
         include: {
+          equipmentType: true,
           visit: {
             include: {
               visitEngineers: true,
@@ -199,40 +200,58 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
         take: 20,
       });
 
-      // Назначение инженера на каждую заявку
+      // Привязка инженера к каждой заявке через VisitRequest
       for (const request of requests) {
-        if (!request.visitId || !request.visit) continue;
-        
-        const visitForRequest = request.visit;
-        
-        // Пропустить, если инженер уже назначен на этот визит
-        if (visitForRequest.visitEngineers.some(ve => ve.engineerId === req.userId)) continue;
-        
-        // Определить isPrimary
-        const isPrimary = visitForRequest.visitEngineers.length === 0;
-        
-        // Создать VisitEngineer
-        await prisma.visitEngineer.create({
-          data: {
-            visitId: visitForRequest.id,
-            engineerId: req.userId!,
-            isPrimary,
-            assignedBy: req.userId!, // инженер сам назначил
+        // Пропустить, если этот визит уже связан с заявкой
+        const existingLink = await prisma.visitRequest.findUnique({
+          where: {
+            visitId_importedRequestId: {
+              visitId: visit.id,
+              importedRequestId: request.id,
+            },
           },
         });
-        
-        // Обновить визит, если это первый инженер
-        if (isPrimary) {
-          await prisma.visit.update({
-            where: { id: visitForRequest.id },
-            data: {
-              userId: req.userId,
-              engineerName: engineer.fullName,
-              status: 'planned',
-            },
-          });
+        if (existingLink) continue;
+
+        // Создать VisitRequest — связать визит инженера с заявкой
+        await prisma.visitRequest.create({
+          data: {
+            visitId: visit.id,
+            importedRequestId: request.id,
+          },
+        });
+
+        // Также назначить инженера на визит заявки через VisitEngineers
+        if (request.visitId && request.visit) {
+          const visitForRequest = request.visit;
+          
+          // Пропустить, если инженер уже назначен на этот визит
+          if (!visitForRequest.visitEngineers.some(ve => ve.engineerId === req.userId)) {
+            const isPrimary = visitForRequest.visitEngineers.length === 0;
+
+            await prisma.visitEngineer.create({
+              data: {
+                visitId: visitForRequest.id,
+                engineerId: req.userId!,
+                isPrimary,
+                assignedBy: req.userId!,
+              },
+            });
+
+            // Обновить визит заявки, если это первый инженер
+            if (isPrimary) {
+              await prisma.visit.update({
+                where: { id: visitForRequest.id },
+                data: {
+                  userId: req.userId,
+                  engineerName: engineer.fullName,
+                  status: 'planned',
+                },
+              });
+            }
+          }
         }
-        
+
         // Записать в лог назначений
         await prisma.requestAssignmentLog.create({
           data: {
@@ -243,11 +262,11 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
             reason: 'Автоматически при создании визита',
           },
         });
-        
+
         autoAssignedRequests.push({
           requestId: request.id,
           externalRequestId: request.externalRequestId,
-          visitId: visitForRequest.id,
+          visitId: visit.id,
         });
       }
     }
@@ -310,7 +329,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   // Для globalStats — те же фильтры, но БЕЗ фильтра по статусам
   const { status: _statusFilter, ...statsWhere } = where;
 
-  const [data, total, statusCounts] = await Promise.all([
+  const [dataRaw, total, statusCounts] = await Promise.all([
     prisma.visit.findMany({
       where, skip: (page - 1) * pageSize, take: pageSize,
       orderBy: { dateStart: 'desc' },
@@ -320,6 +339,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         assignedBy: { select: { id: true, fullName: true, email: true } },
         deletedBy: { select: { id: true, fullName: true, email: true } },
         importedRequests: { select: { externalRequestId: true } },
+        visitRequests: {
+          select: {
+            importedRequest: { select: { externalRequestId: true } },
+          },
+        },
         visitEngineers: { include: { engineer: { select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } } } },
         _count: { select: { tasks: true } },
       },
@@ -331,6 +355,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       _count: { status: true },
     }),
   ]);
+
+  // Объединяем заявки из importedRequests и visitRequests
+  const data = dataRaw.map(v => {
+    const directRequests = v.importedRequests.map(r => r.externalRequestId);
+    const linkedRequests = v.visitRequests.map(vr => vr.importedRequest.externalRequestId);
+    const allRequestIds = [...new Set([...directRequests, ...linkedRequests])];
+    return {
+      ...v,
+      importedRequests: allRequestIds.map(id => ({ externalRequestId: id })),
+      visitRequests: undefined, // не возвращаем промежуточную таблицу
+    };
+  });
+
   const globalStats = {
     total,
     planned: 0,
