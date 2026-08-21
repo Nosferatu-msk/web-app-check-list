@@ -178,28 +178,102 @@ function formatDate(d: Date): string {
 }
 
 export async function generateReportHtml(visitId: string): Promise<string> {
-  const visit = await prisma.visit.findUnique({
+  const baseVisit = await prisma.visit.findUnique({
     where: { id: visitId },
     include: {
       address: true,
-      tasks: {
-        orderBy: { sortOrder: 'asc' },
+      visitRequests: {
         include: {
-          equipmentType: true,
-          roomType: true,
-          photos: true,
-          equipmentItems: {
-            orderBy: { sortOrder: 'asc' },
-            include: {
-              objectEquipment: true,
-              photos: true,
-            },
+          importedRequest: {
+            include: { equipmentType: true },
           },
         },
       },
     },
   });
-  if (!visit) throw new Error('Вizit not found');
+  if (!baseVisit) throw new Error('Визит не найден');
+
+  // Проверяем, связан ли визит с заявкой ИСЖ объекта
+  const iszhObjectRequest = baseVisit.visitRequests?.find(
+    vr => vr.importedRequest.equipmentType.code === 'iszh_object'
+  );
+
+  let allTasks: any[] = [];
+  let visit: any = baseVisit;
+
+  if (iszhObjectRequest) {
+    // Заявка ИСЖ объекта — собираем задачи из ВСЕХ связанных визитов
+    const allVisitRequests = await prisma.visitRequest.findMany({
+      where: { importedRequestId: iszhObjectRequest.importedRequestId },
+      include: {
+        visit: {
+          include: {
+            address: true,
+            user: { select: { id: true, fullName: true } },
+            tasks: {
+              orderBy: { sortOrder: 'asc' },
+              include: {
+                equipmentType: true,
+                roomType: true,
+                photos: true,
+                equipmentItems: {
+                  orderBy: { sortOrder: 'asc' },
+                  include: {
+                    objectEquipment: true,
+                    photos: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Объединяем задачи из всех визитов
+    for (const vr of allVisitRequests) {
+      const v = vr.visit;
+      // Добавляем информацию об инженере в каждую задачу
+      for (const task of v.tasks) {
+        allTasks.push({
+          ...task,
+          _engineerName: v.user?.fullName || v.engineerName || 'Инженер',
+          _visitDate: v.dateStart,
+        });
+      }
+    }
+
+    // Используем базовый визит для адреса и прочей информации
+    visit = {
+      ...baseVisit,
+      tasks: allTasks,
+    } as any;
+  } else {
+    // Обычная заявка или нет заявки — отчёт только по этому визиту
+    visit = await prisma.visit.findUnique({
+      where: { id: visitId },
+      include: {
+        address: true,
+        tasks: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            equipmentType: true,
+            roomType: true,
+            photos: true,
+            equipmentItems: {
+              orderBy: { sortOrder: 'asc' },
+              include: {
+                objectEquipment: true,
+                photos: true,
+              },
+            },
+          },
+        },
+      },
+    }) as any;
+  }
+
+  if (!visit) throw new Error('Визит не найден');
 
   const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
   const recMap = new Map(recommendations.map(r => [r.id, r.text]));
@@ -227,7 +301,7 @@ export async function generateReportHtml(visitId: string): Promise<string> {
   for (let i = 0; i < visit.tasks.length; i++) {
     const task = visit.tasks[i];
     const params = (task.parameters || {}) as Record<string, unknown>;
-    const selectedRecs = (task.selectedRecommendationIds || []).map(id => recMap.get(id)).filter(Boolean);
+    const selectedRecs = (task.selectedRecommendationIds || []).map((id: string) => recMap.get(id)).filter(Boolean);
     let recsHtml = '';
     for (const r of selectedRecs) { recsHtml += `<li>${r}</li>`; }
     if (task.additionalRecommendations) { recsHtml += `<li>${task.additionalRecommendations}</li>`; }
@@ -290,9 +364,11 @@ export async function generateReportHtml(visitId: string): Promise<string> {
         paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
       }
 
+      const engineerInfo = task._engineerName ? `<br><span style="font-size:13px;color:#666;">Инженер: ${task._engineerName}</span>` : '';
+
       tasksHtml += `
         <div style="margin:20px 0;padding:15px;border:1px solid #ccc;border-radius:4px;">
-          <h3 style="margin:0 0 10px;">${i + 1}. ${title}</h3>
+          <h3 style="margin:0 0 10px;">${i + 1}. ${title}${engineerInfo}</h3>
           <p><strong>📍 Местоположение:</strong> ${location}</p>
           ${paramsHtml ? `<p><strong>🔧 Общие параметры:</strong></p><table style="width:100%;border-collapse:collapse;margin:8px 0;">${paramsHtml}</table>` : ''}
           <p><strong>📋 Единицы оборудования:</strong></p>
@@ -323,7 +399,8 @@ export async function generateReportHtml(visitId: string): Promise<string> {
       }
 
       const location = task.roomType ? task.roomType.name : (task.comment || '—');
-      const taskTitle = `${i + 1}. ${task.equipmentType.name}${task.comment ? ` (${task.comment})` : ''}`;
+      const engineerInfo = task._engineerName ? `<br><span style="font-size:13px;color:#666;">Инженер: ${task._engineerName}</span>` : '';
+      const taskTitle = `${i + 1}. ${task.equipmentType.name}${task.comment ? ` (${task.comment})` : ''}${engineerInfo}`;
 
       tasksHtml += `
         <div style="margin:20px 0;padding:15px;border:1px solid #ccc;border-radius:4px;">
