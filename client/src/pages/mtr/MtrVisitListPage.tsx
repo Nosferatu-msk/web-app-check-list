@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Tag, Empty, Spin, Space, Select, Input, App, Badge, Dropdown, Pagination } from 'antd';
+import { Button, List, Tag, Empty, Spin, Space, Select, Input, App, Badge, Dropdown, Pagination, Card, Skeleton } from 'antd';
 import {
   PlusOutlined, LogoutOutlined, DeleteOutlined, UserOutlined,
   MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined,
@@ -204,7 +204,15 @@ export default function MtrVisitListPage() {
       </div>
 
       {/* Список визитов */}
-      {loading ? <Spin /> : visits.length === 0 ? (
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[1, 2, 3].map(i => (
+            <Card key={i} style={{ borderRadius: 12 }}>
+              <Skeleton active paragraph={{ rows: 1 }} title={{ width: '60%' }} />
+            </Card>
+          ))}
+        </div>
+      ) : visits.length === 0 ? (
         <Empty description="Нет визитов" />
       ) : (
         <>

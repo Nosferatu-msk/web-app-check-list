@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete, Dropdown } from 'antd';
+import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete, Dropdown, Steps, Card } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -734,6 +734,24 @@ export default function VisitPage() {
     return [...virtualClimateTasks, ...otherTasks];
   })();
 
+  // Определение текущего шага визита
+  const getVisitStep = (): number => {
+    if (isNew || !visit) return 0;
+    const hasTasks = tasks.length > 0;
+    const allTasksDone = tasks.length > 0 && tasks.every((t: any) => t.status === 'completed');
+    const allPhotosDone = tasks.length > 0 && tasks.every((t: any) => {
+      const before = (t.photos || []).filter((p: any) => p.moment === 'before').length;
+      const after = (t.photos || []).filter((p: any) => p.moment === 'after').length;
+      const required = t.equipmentType?.photosRequired || 1;
+      return before >= required && after >= required;
+    });
+    if (['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(visit.status)) return 3;
+    if (allTasksDone && allPhotosDone) return 3;
+    if (allTasksDone) return 2;
+    if (hasTasks) return 1;
+    return 0;
+  };
+
   return (
     <div className={`page-container${isMobile ? ' page-with-bottom-nav' : ''}`}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
@@ -747,6 +765,22 @@ export default function VisitPage() {
         <NotificationBell />
         <TorchButton />
       </div>
+
+      {/* Steps — прогресс-индикатор визита */}
+      {!isNew && visit && (
+        <Card size="small" style={{ marginBottom: 16, borderRadius: 12 }}>
+          <Steps
+            size="small"
+            current={getVisitStep()}
+            items={[
+              { title: 'Адрес' },
+              { title: `Задачи (${tasks.filter((t: any) => t.status === 'completed').length}/${tasks.length})` },
+              { title: 'Фото' },
+              { title: 'Отчёт' },
+            ]}
+          />
+        </Card>
+      )}
 
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <Form form={form} layout="vertical" onValuesChange={markAutoSaveDirty}>

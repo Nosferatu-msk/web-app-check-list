@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input } from 'antd';
+import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton } from 'antd';
 import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
@@ -214,13 +214,39 @@ export default function VisitListPage() {
         </div>
       )}
 
-      {/* Статистика — responsive: 2 в ряд на мобильных, 4 в ряд на десктопе */}
+      {/* KPI-карточки — responsive: 2 в ряд на мобильных, 4 в ряд на десктопе */}
       {isManager && (
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-          <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="Всего" value={stats.total} /></Card></Col>
-          <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="Запланировано" value={stats.planned} valueStyle={{ color: '#13c2c2' }} /></Card></Col>
-          <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="В работе" value={stats.inProgress} valueStyle={{ color: '#0F766E' }} /></Card></Col>
-          <Col xs={12} sm={12} md={6}><Card size="small"><Statistic title="Завершено" value={stats.completed} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+          <Col xs={12} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 12 }}>
+              <Statistic title="Всего" value={stats.total} valueStyle={{ color: '#0F172A', fontWeight: 700 }} />
+            </Card>
+          </Col>
+          <Col xs={12} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 12 }}>
+              <Statistic title="Запланировано" value={stats.planned} valueStyle={{ color: '#0369A1', fontWeight: 700 }} />
+            </Card>
+          </Col>
+          <Col xs={12} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 12 }}>
+              <Statistic title="В работе" value={stats.inProgress} valueStyle={{ color: '#D97706', fontWeight: 700 }} />
+              {stats.total > 0 && (
+                <div style={{ height: 3, background: '#E2E8F0', borderRadius: 2, marginTop: 8 }}>
+                  <div style={{ width: `${(stats.inProgress / stats.total) * 100}%`, height: '100%', background: '#D97706', borderRadius: 2 }} />
+                </div>
+              )}
+            </Card>
+          </Col>
+          <Col xs={12} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 12 }}>
+              <Statistic title="Завершено" value={stats.completed} valueStyle={{ color: '#059669', fontWeight: 700 }} />
+              {stats.total > 0 && (
+                <div style={{ height: 3, background: '#E2E8F0', borderRadius: 2, marginTop: 8 }}>
+                  <div style={{ width: `${(stats.completed / stats.total) * 100}%`, height: '100%', background: '#059669', borderRadius: 2 }} />
+                </div>
+              )}
+            </Card>
+          </Col>
         </Row>
       )}
 
@@ -275,7 +301,15 @@ export default function VisitListPage() {
         )}
       </div>
 
-      {loading ? <Spin /> : visits.length === 0 ? (
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[1, 2, 3].map(i => (
+            <Card key={i} style={{ borderRadius: 12 }}>
+              <Skeleton active paragraph={{ rows: 1 }} title={{ width: '60%' }} />
+            </Card>
+          ))}
+        </div>
+      ) : visits.length === 0 ? (
         <Empty description="Нет визитов" />
       ) : (
         <>

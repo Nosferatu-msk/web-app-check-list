@@ -1,29 +1,58 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Button, Drawer, App } from 'antd';
+import { Layout, Menu, Button, Drawer, App, Breadcrumb } from 'antd';
+import type { MenuProps } from 'antd';
 import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined, ExperimentOutlined, LinkOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 import NotificationBell from '../../components/NotificationBell';
 
 const { Content } = Layout;
 
-const menuItems = [
+const pageLabels: Record<string, string> = {
+  '/admin/addresses': 'Адреса',
+  '/admin/equipment': 'Оборудование',
+  '/admin/manufacturers': 'Производители',
+  '/admin/models': 'Модели',
+  '/admin/rooms': 'Помещения',
+  '/admin/recommendations': 'Рекомендации',
+  '/admin/users': 'Пользователи',
+  '/admin/tm-assignments': 'Привязки ТМ',
+  '/admin/import': 'Импорт CSV',
+  '/admin/object-equipment': 'Оборудование объектов',
+  '/admin/proposals': 'Модерация',
+  '/admin/mtr-work-types': 'МТР: Виды работ',
+  '/admin/mtr-assignments': 'МТР: Привязки',
+  '/admin/system-notifications': 'Уведомления',
+  '/admin/audit': 'Аудит',
+};
+
+const menuItems: MenuProps['items'] = [
   { key: '/', icon: <ArrowLeftOutlined />, label: 'Визиты' },
-  { key: '/admin/addresses', icon: <EnvironmentOutlined />, label: 'Адреса' },
-  { key: '/admin/equipment', icon: <ToolOutlined />, label: 'Оборудование' },
-  { key: '/admin/manufacturers', icon: <ShopOutlined />, label: 'Производители' },
-  { key: '/admin/models', icon: <AppstoreOutlined />, label: 'Модели' },
-  { key: '/admin/rooms', icon: <HomeOutlined />, label: 'Помещения' },
-  { key: '/admin/recommendations', icon: <FileTextOutlined />, label: 'Рекомендации' },
-  { key: '/admin/users', icon: <UserOutlined />, label: 'Пользователи' },
-  { key: '/admin/tm-assignments', icon: <TeamOutlined />, label: 'Привязки ТМ' },
-  { key: '/admin/import', icon: <ImportOutlined />, label: 'Импорт CSV' },
-  { key: '/admin/object-equipment', icon: <ToolOutlined />, label: 'Оборудование объектов' },
-  { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Модерация оборудования' },
-  { key: '/admin/mtr-work-types', icon: <ExperimentOutlined />, label: 'МТР: Виды работ' },
-  { key: '/admin/mtr-assignments', icon: <LinkOutlined />, label: 'МТР: Привязки' },
-  { key: '/admin/system-notifications', icon: <RocketOutlined />, label: 'Системные уведомления' },
-  { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
+  { type: 'group', label: 'Объекты', children: [
+    { key: '/admin/addresses', icon: <EnvironmentOutlined />, label: 'Адреса' },
+    { key: '/admin/object-equipment', icon: <ToolOutlined />, label: 'Оборудование объектов' },
+    { key: '/admin/rooms', icon: <HomeOutlined />, label: 'Помещения' },
+  ]},
+  { type: 'group', label: 'Справочники', children: [
+    { key: '/admin/equipment', icon: <ToolOutlined />, label: 'Оборудование' },
+    { key: '/admin/manufacturers', icon: <ShopOutlined />, label: 'Производители' },
+    { key: '/admin/models', icon: <AppstoreOutlined />, label: 'Модели' },
+    { key: '/admin/recommendations', icon: <FileTextOutlined />, label: 'Рекомендации' },
+  ]},
+  { type: 'group', label: 'Пользователи', children: [
+    { key: '/admin/users', icon: <UserOutlined />, label: 'Пользователи' },
+    { key: '/admin/tm-assignments', icon: <TeamOutlined />, label: 'Привязки ТМ' },
+  ]},
+  { type: 'group', label: 'МТР', children: [
+    { key: '/admin/mtr-work-types', icon: <ExperimentOutlined />, label: 'Виды работ' },
+    { key: '/admin/mtr-assignments', icon: <LinkOutlined />, label: 'Привязки' },
+  ]},
+  { type: 'group', label: 'Система', children: [
+    { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Модерация' },
+    { key: '/admin/import', icon: <ImportOutlined />, label: 'Импорт CSV' },
+    { key: '/admin/system-notifications', icon: <RocketOutlined />, label: 'Уведомления' },
+    { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
+  ]},
 ];
 
 export default function AdminLayout() {
@@ -119,6 +148,12 @@ export default function AdminLayout() {
             maxWidth: 1400,
           }}
         >
+          {location.pathname !== '/' && pageLabels[location.pathname] && (
+            <Breadcrumb style={{ marginBottom: 16 }} items={[
+              { title: <a onClick={() => navigate('/')}>Главная</a> },
+              { title: pageLabels[location.pathname] },
+            ]} />
+          )}
           <Outlet />
         </Content>
       </Layout>

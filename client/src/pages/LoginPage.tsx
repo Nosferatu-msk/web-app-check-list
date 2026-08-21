@@ -25,17 +25,20 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-title"><ToolOutlined style={{ marginRight: 8, color: '#0F766E' }} />Чек-лист инженера</div>
+        <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #0F766E, #14B8A6)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <ToolOutlined style={{ fontSize: 24, color: 'white' }} />
+        </div>
+        <div className="login-title" style={{ textAlign: 'center' }}>Чек-лист инженера</div>
         <div className="login-subtitle">Цифровой чек-лист ТО оборудования</div>
         <Form onFinish={onFinish} layout="vertical" size="large">
-          <Form.Item name="email" rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный email' }]}>
-            <Input placeholder="Email" autoComplete="email" />
+          <Form.Item name="email" label="Email" rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный email' }]}>
+            <Input placeholder="name@company.ru" autoComplete="email" />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: 'Введите пароль' }]}>
-            <Input.Password placeholder="Пароль" autoComplete="current-password" />
+          <Form.Item name="password" label="Пароль" rules={[{ required: true, message: 'Введите пароль' }]}>
+            <Input.Password placeholder="Введите пароль" autoComplete="current-password" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading}>Войти</Button>
+            <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 44, fontWeight: 600, boxShadow: '0 4px 12px rgba(15,118,110,0.3)' }}>Войти</Button>
           </Form.Item>
           <div style={{ textAlign: 'center' }}>
             <Link to="/forgot-password">Забыли пароль?</Link>
