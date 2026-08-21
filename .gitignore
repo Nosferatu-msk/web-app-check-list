@@ -42,6 +42,11 @@ check_server*.py
 # Зависимости
 node_modules/
 
+# Тесты — результаты и отчёты
+test-results/
+test-reports/
+playwright-report/
+
 # Сборка
 dist/
 build/
