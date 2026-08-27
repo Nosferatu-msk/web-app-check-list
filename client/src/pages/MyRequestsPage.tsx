@@ -170,9 +170,50 @@ export default function MyRequestsPage() {
       key: 'visitStatus',
       width: 150,
       render: (_: any, record: any) => {
+        const isISZHObject = record.equipmentType?.code === 'iszh_object';
+        
+        // Для ИСЖ объекта — агрегированный статус из всех связанных визитов
+        if (isISZHObject && record.visitRequests?.length > 0) {
+          const visits = record.visitRequests.map((vr: any) => vr.visit).filter(Boolean);
+          const engineers = new Set<string>();
+          visits.forEach((v: any) => {
+            v.visitEngineers?.forEach((ve: any) => {
+              if (ve.engineer?.fullName) engineers.add(ve.engineer.fullName);
+            });
+          });
+          
+          // Определяем агрегированный статус
+          const statuses = visits.map((v: any) => v.status);
+          const completedStatuses = ['completed', 'sent', 'corrected_by_tm'];
+          const allCompleted = statuses.every((s: string) => completedStatuses.includes(s));
+          const hasInProgress = statuses.includes('in_progress');
+          
+          let statusKey = 'awaiting_assignment';
+          if (allCompleted) statusKey = 'completed';
+          else if (hasInProgress) statusKey = 'in_progress';
+          else if (statuses.some((s: string) => ['planned', 'not_started'].includes(s))) statusKey = 'planned';
+          
+          const label = VISIT_STATUS_LABELS[statusKey as keyof typeof VISIT_STATUS_LABELS] || statusKey;
+          const engineerList = Array.from(engineers).join(', ') || 'Инженер не назначен';
+          
+          return (
+            <div>
+              <Tag color={STATUS_COLORS[statusKey] || 'default'}>{label}</Tag>
+              <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{engineerList}</div>
+            </div>
+          );
+        }
+        
+        // Для обычных заявок — один визит
         if (!record.visit) return <Tag>Без визита</Tag>;
         const label = VISIT_STATUS_LABELS[record.visit.status as keyof typeof VISIT_STATUS_LABELS] || record.visit.status;
-        return <Tag color={STATUS_COLORS[record.visit.status] || 'default'}>{label}</Tag>;
+        const engineers = record.visit.visitEngineers?.map((ve: any) => ve.engineer?.fullName).filter(Boolean).join(', ');
+        return (
+          <div>
+            <Tag color={STATUS_COLORS[record.visit.status] || 'default'}>{label}</Tag>
+            {engineers && <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{engineers}</div>}
+          </div>
+        );
       },
     },
     {
@@ -185,18 +226,51 @@ export default function MyRequestsPage() {
 
   // ─── Мобильный: карточки ────────────────────────────
   const renderMobileCard = (record: any) => {
-    const visitStatus = record.visit?.status;
+    const isISZHObject = record.equipmentType?.code === 'iszh_object';
+    let visitStatus: string | undefined;
+    let engineerList = '';
+    
+    // Для ИСЖ объекта — агрегированный статус
+    if (isISZHObject && record.visitRequests?.length > 0) {
+      const visits = record.visitRequests.map((vr: any) => vr.visit).filter(Boolean);
+      const engineers = new Set<string>();
+      visits.forEach((v: any) => {
+        v.visitEngineers?.forEach((ve: any) => {
+          if (ve.engineer?.fullName) engineers.add(ve.engineer.fullName);
+        });
+      });
+      engineerList = Array.from(engineers).join(', ');
+      
+      const statuses = visits.map((v: any) => v.status);
+      const completedStatuses = ['completed', 'sent', 'corrected_by_tm'];
+      const allCompleted = statuses.every((s: string) => completedStatuses.includes(s));
+      const hasInProgress = statuses.includes('in_progress');
+      
+      if (allCompleted) visitStatus = 'completed';
+      else if (hasInProgress) visitStatus = 'in_progress';
+      else if (statuses.some((s: string) => ['planned', 'not_started'].includes(s))) visitStatus = 'planned';
+      else visitStatus = 'awaiting_assignment';
+    } else {
+      visitStatus = record.visit?.status;
+      engineerList = record.visit?.visitEngineers?.map((ve: any) => ve.engineer?.fullName).filter(Boolean).join(', ') || '';
+    }
+    
     const statusLabel = visitStatus
       ? (VISIT_STATUS_LABELS[visitStatus as keyof typeof VISIT_STATUS_LABELS] || visitStatus)
       : 'Без визита';
-    const statusColor = STATUS_COLORS[visitStatus] || 'default';
-    const statusIcon = STATUS_ICONS[visitStatus] || null;
+    const statusColor = STATUS_COLORS[visitStatus || ''] || 'default';
+    const statusIcon = STATUS_ICONS[visitStatus || ''] || null;
     const address = record.matchedAddress?.fullAddress || record.addressRaw || '—';
+    
+    // Для навигации — используем первый связанный визит
+    const primaryVisitId = isISZHObject 
+      ? record.visitRequests?.[0]?.visit?.id 
+      : record.visit?.id;
 
     return (
       <div
         className="request-card"
-        onClick={() => record.visit && navigate(`/visit/${record.visit.id}`)}
+        onClick={() => primaryVisitId && navigate(`/visit/${primaryVisitId}`)}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -215,6 +289,11 @@ export default function MyRequestsPage() {
             <div style={{ color: '#888', fontSize: 13, marginTop: 2 }}>
               {record.equipmentType?.name || '—'}
             </div>
+            {engineerList && (
+              <div style={{ color: '#666', fontSize: 12, marginTop: 2 }}>
+                {engineerList}
+              </div>
+            )}
           </div>
           <Tag color={statusColor} style={{ margin: 0, flexShrink: 0 }}>{statusLabel}</Tag>
         </div>

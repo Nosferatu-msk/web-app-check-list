@@ -270,6 +270,39 @@ export default function RequestsPage() {
       key: 'engineers',
       width: 160,
       render: (_: any, record: any) => {
+        const isISZHObject = record.equipmentType?.code === 'iszh_object';
+        
+        // Для ИСЖ объекта — инженеры из всех связанных визитов
+        if (isISZHObject && record.visitRequests?.length > 0) {
+          const allEngineers = new Map<string, { name: string; isPrimary: boolean }>();
+          record.visitRequests.forEach((vr: any) => {
+            vr.visit?.visitEngineers?.forEach((ve: any) => {
+              if (ve.engineer?.fullName) {
+                allEngineers.set(ve.engineerId, { 
+                  name: ve.engineer.fullName, 
+                  isPrimary: ve.isPrimary 
+                });
+              }
+            });
+          });
+          
+          if (allEngineers.size === 0) {
+            return <Tag color="orange">Не назначен</Tag>;
+          }
+          
+          return (
+            <Space direction="vertical" size={2}>
+              {Array.from(allEngineers.values()).map((eng, idx) => (
+                <Space key={idx} size={4}>
+                  <span style={{ fontSize: 13 }}>{eng.name}</span>
+                  {eng.isPrimary && <Badge status="success" text={<span style={{ fontSize: 11 }}>осн.</span>} />}
+                </Space>
+              ))}
+            </Space>
+          );
+        }
+        
+        // Для обычных заявок — инженеры из одного визита
         if (!record.visit?.visitEngineers || record.visit.visitEngineers.length === 0) {
           return <Tag color="orange">Не назначен</Tag>;
         }
