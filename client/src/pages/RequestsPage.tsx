@@ -271,15 +271,6 @@ export default function RequestsPage() {
       width: 160,
       render: (_: any, record: any) => {
         const isISZHObject = record.equipmentType?.code === 'iszh_object';
-        
-        // DEBUG: логирование для отладки
-        if (isISZHObject) {
-          console.log('DEBUG ISZH:', {
-            externalRequestId: record.externalRequestId,
-            visitRequests: record.visitRequests,
-            visitRequestsLength: record.visitRequests?.length,
-          });
-        }
 
         // Для ИСЖ объекта — инженеры из всех связанных визитов
         if (isISZHObject && record.visitRequests?.length > 0) {
