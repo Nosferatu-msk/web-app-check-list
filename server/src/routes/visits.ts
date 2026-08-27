@@ -489,9 +489,40 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
-  const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
+  const existing = await prisma.visit.findUnique({ 
+    where: { id: req.params.id as string },
+    include: {
+      tasks: {
+        include: {
+          equipmentType: { select: { photosRequired: true, name: true } },
+          photos: { select: { id: true } },
+        },
+      },
+    },
+  });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+
+  // Проверка обязательных фото
+  const tasksMissingPhotos = existing.tasks.filter(task => {
+    const required = task.equipmentType?.photosRequired || 0;
+    const actual = task.photos?.length || 0;
+    return required > 0 && actual < required;
+  });
+
+  if (tasksMissingPhotos.length > 0) {
+    const taskNames = tasksMissingPhotos.map(t => t.equipmentType?.name || 'оборудование').join(', ');
+    res.status(400).json({ 
+      error: `Нельзя завершить визит: для оборудования (${taskNames}) не загружены обязательные фото`,
+      tasksMissingPhotos: tasksMissingPhotos.map(t => ({
+        taskId: t.id,
+        equipmentName: t.equipmentType?.name,
+        required: t.equipmentType?.photosRequired,
+        actual: t.photos?.length || 0,
+      })),
+    });
+    return;
+  }
 
   const now = new Date();
   const msk = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
