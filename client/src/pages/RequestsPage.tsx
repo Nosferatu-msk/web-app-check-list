@@ -32,14 +32,6 @@ const EXECUTION_STATUS_COLORS: Record<string, string> = {
   completed: 'success',
 };
 
-function getExecutionStatus(record: any): string {
-  if (!record.visit || record.visit.status === 'awaiting_assignment') return 'not_assigned';
-  if (record.visit.status === 'planned') return 'assigned';
-  if (record.visit.status === 'in_progress') return 'in_progress';
-  if (['completed', 'sent', 'corrected_by_tm'].includes(record.visit.status)) return 'completed';
-  return 'not_assigned';
-}
-
 export default function RequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,7 +220,7 @@ export default function RequestsPage() {
       width: 120,
       sorter: true,
       render: (_: any, record: any) => {
-        const status = getExecutionStatus(record);
+        const status = record.executionStatus || 'not_assigned';
         return (
           <Tag color={EXECUTION_STATUS_COLORS[status]}>
             {EXECUTION_STATUS_LABELS[status] || status}

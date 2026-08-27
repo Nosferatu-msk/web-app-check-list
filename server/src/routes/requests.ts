@@ -9,6 +9,55 @@ import { parseRequestsExcel, importRequests, validateRequestsFile } from '../ser
 const router = Router();
 router.use(authMiddleware);
 
+// ─── ВЫЧИСЛЕНИЕ СТАТУСА ЗАЯВКИ ──────────────────────────────
+// Для обычных заявок (не ИСЖ объекта)
+function computeExecutionStatus(visit: any, isISZH: boolean): string {
+  if (!visit || visit.status === 'awaiting_assignment') return 'not_assigned';
+  if (visit.status === 'planned') return 'assigned';
+  if (visit.status === 'in_progress') return 'in_progress';
+  if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) return 'completed';
+  return 'not_assigned';
+}
+
+// Для заявок ИСЖ объекта — агрегированный статус по всем связанным визитам
+function computeISZHExecutionStatus(visits: any[]): string {
+  if (!visits || visits.length === 0) {
+    return 'not_assigned';
+  }
+  
+  const statuses = visits.map(v => v.status);
+  const completedStatuses = ['completed', 'sent', 'corrected_by_tm'];
+  
+  // Проверка: все визиты завершены?
+  const allCompleted = statuses.every(s => completedStatuses.includes(s));
+  if (allCompleted) {
+    return 'completed';
+  }
+  
+  // Проверка: есть ли хотя бы один визит в работе или назначенный?
+  const hasInProgress = statuses.includes('in_progress');
+  const hasAssigned = statuses.includes('planned');
+  const hasNotStarted = statuses.includes('not_started');
+  
+  // Если есть визит в работе — заявка в работе
+  if (hasInProgress) {
+    return 'in_progress';
+  }
+  
+  // Если есть назначенные визиты (planned) или не начатые — заявка назначена
+  if (hasAssigned || hasNotStarted) {
+    return 'assigned';
+  }
+  
+  // Если есть завершённые, но не все — заявка в работе (частичное покрытие)
+  const hasCompleted = statuses.some(s => completedStatuses.includes(s));
+  if (hasCompleted) {
+    return 'in_progress';
+  }
+  
+  return 'assigned';
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -167,24 +216,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       where.visit = { visitEngineers: { some: { engineerId: engineerFilter } } };
     }
 
-    // Фильтр по статусу исполнения
-    if (executionStatus) {
-      switch (executionStatus) {
-        case 'not_assigned':
-          where.OR = [{ visitId: null }, { visit: { status: 'awaiting_assignment' } }];
-          break;
-        case 'assigned':
-          where.visit = { ...(where.visit || {}), status: 'planned' };
-          break;
-        case 'in_progress':
-          where.visit = { ...(where.visit || {}), status: 'in_progress' };
-          break;
-        case 'completed':
-          where.visit = { ...(where.visit || {}), status: { in: ['completed', 'sent', 'corrected_by_tm'] } };
-          break;
-      }
-    }
-
     // Фильтрация по территории ТМ
     if (req.userRole === 'tm') {
       const tmObjects = await prisma.tmObject.findMany({
@@ -241,7 +272,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const [data, total] = await Promise.all([
+    // Для фильтрации по executionStatus нужна пост-обработка (для ИСЖ объекта с множественными визитами)
+    const needsPostFilter = !!executionStatus;
+    
+    const [rawData, total] = await Promise.all([
       prisma.importedRequest.findMany({
         where,
         include: {
@@ -258,15 +292,58 @@ router.get('/', async (req: AuthRequest, res: Response) => {
               },
             },
           },
+          // Для ИСЖ объекта — все связанные визиты через visit_requests
+          visitRequests: {
+            select: {
+              visit: {
+                select: {
+                  id: true, status: true,
+                  visitEngineers: {
+                    select: {
+                      id: true, engineerId: true, isPrimary: true,
+                      engineer: { select: { id: true, fullName: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        // Если нужна пост-фильтрация — загружаем все, иначе — с пагинацией
+        skip: needsPostFilter ? 0 : (page - 1) * pageSize,
+        take: needsPostFilter ? 10000 : pageSize,
       }),
       prisma.importedRequest.count({ where }),
     ]);
 
-    res.json({ data, total, page, pageSize });
+    // Вычисление executionStatus для всех заявок
+    const enrichedData = rawData.map(req => {
+      const isISZHObject = req.equipmentType?.code === 'iszh_object';
+
+      if (!isISZHObject) {
+        // Для обычных заявок — старая логика через один visit
+        return { ...req, executionStatus: computeExecutionStatus(req.visit, false) };
+      }
+
+      // Для ИСЖ объекта — агрегированный статус по всем связанным визитам
+      const allVisits = req.visitRequests?.map(vr => vr.visit).filter(Boolean) || [];
+      return { ...req, executionStatus: computeISZHExecutionStatus(allVisits) };
+    });
+
+    // Пост-фильтрация по executionStatus
+    let filteredData = enrichedData;
+    if (executionStatus) {
+      filteredData = enrichedData.filter(req => req.executionStatus === executionStatus);
+    }
+
+    // Применяем пагинацию к отфильтрованным данным
+    const finalData = needsPostFilter
+      ? filteredData.slice((page - 1) * pageSize, page * pageSize)
+      : filteredData;
+    const finalTotal = needsPostFilter ? filteredData.length : total;
+
+    res.json({ data: finalData, total: finalTotal, page, pageSize });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

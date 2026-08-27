@@ -58,11 +58,6 @@ export default function VisitPage() {
   const [addingEquipment, setAddingEquipment] = useState(false);
   const [proposeEquipment, setProposeEquipment] = useState(true);
   const [newTaskForm] = Form.useForm();
-  // Автоназначение заявок
-  const [foundRequests, setFoundRequests] = useState<any[]>([]);
-  const [requestsModalOpen, setRequestsModalOpen] = useState(false);
-  const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
-  const [autoAssignConfirmed, setAutoAssignConfirmed] = useState(false);
   const [mfrOptions, setMfrOptions] = useState<{ value: string; label: string }[]>([]);
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
   const [otherRoomsEquipment, setOtherRoomsEquipment] = useState<any[]>([]);
@@ -169,43 +164,9 @@ export default function VisitPage() {
     }
   };
 
-  // Проверка наличия заявок по адресу для автоназначения
-  const checkRequestsByAddress = async (addressId: string) => {
-    if (!isNew || !user || user.role !== 'engineer') return;
-    
-    try {
-      const result = await api.checkRequestsByAddress(addressId);
-      if (result.canAutoAssign && result.requests?.length > 0) {
-        setFoundRequests(result.requests);
-        setPendingAddressId(addressId);
-        setRequestsModalOpen(true);
-      } else {
-        // Нет заявок — просто устанавливаем адрес
-        form.setFieldValue('addressId', addressId);
-      }
-    } catch (err) {
-      // При ошибке — просто устанавливаем адрес
-      form.setFieldValue('addressId', addressId);
-    }
-  };
-
-  // Подтверждение автоназначения
-  const handleConfirmAutoAssign = () => {
-    if (pendingAddressId) {
-      form.setFieldValue('addressId', pendingAddressId);
-      setAutoAssignConfirmed(true);
-    }
-    setRequestsModalOpen(false);
-  };
-
-  // Отмена автоназначения
-  const handleCancelAutoAssign = () => {
-    if (pendingAddressId) {
-      form.setFieldValue('addressId', pendingAddressId);
-      setAutoAssignConfirmed(false);
-    }
-    setRequestsModalOpen(false);
-    setFoundRequests([]);
+  // Установка адреса (автопривязка происходит автоматически при создании визита)
+  const handleAddressSelect = (addressId: string) => {
+    form.setFieldValue('addressId', addressId);
   };
 
   const handleDateChange = (date: dayjs.Dayjs | null) => {
@@ -225,29 +186,25 @@ export default function VisitPage() {
         timeStart: values.timeStart ? values.timeStart.format('HH:mm') : dayjs().format('HH:mm'),
         season: values.season,
       };
-      
-      // Добавляем флаг автоназначения, если подтверждено
-      if (isNew && autoAssignConfirmed) {
+
+      // Автопривязка заявок для нового визита инженера
+      if (isNew && user?.role === 'engineer') {
         data.autoAssignRequests = true;
       }
-      
+
       localStorage.setItem('lastEngineerName', values.engineerName);
 
       if (isNew) {
         const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
         setVisit(v);
-        
+
         // Показываем уведомление о назначенных заявках
         if (v.autoAssignedRequests?.length > 0) {
-          message.success(`Визит создан. Назначено заявок: ${v.autoAssignedRequests.length}`);
+          message.success(`Визит создан. Привязано заявок: ${v.autoAssignedRequests.length}`);
         } else {
           message.success(isOffline() ? 'Визит сохранён локально' : 'Визит создан');
         }
-        
-        // Сбрасываем флаг автоназначения
-        setAutoAssignConfirmed(false);
-        setFoundRequests([]);
-        
+
         navigate(`/visit/${v.id}`, { replace: true });
       } else {
         const v = await api.updateVisit(id!, data);
@@ -794,11 +751,7 @@ export default function VisitPage() {
               onSearch={searchAddresses}
               placeholder="Начните вводить адрес..."
               onChange={(v: string) => {
-                if (isNew && user?.role === 'engineer') {
-                  checkRequestsByAddress(v);
-                } else {
-                  form.setFieldValue('addressId', v);
-                }
+                handleAddressSelect(v);
               }}
               options={addressOptions.map((a: any) => ({ label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress, value: a.id, dataId: a.id }))}
               notFoundContent="Адрес не найден"
@@ -1310,33 +1263,6 @@ export default function VisitPage() {
             ),
           },
         ]} />
-      </Modal>
-
-      {/* Модальное окно подтверждения автоназначения заявок */}
-      <Modal
-        title="Найдены заявки по адресу"
-        open={requestsModalOpen}
-        onOk={handleConfirmAutoAssign}
-        onCancel={handleCancelAutoAssign}
-        okText="Назначить меня"
-        cancelText="Не назначать"
-        width={500}
-      >
-        <p>По выбранному адресу найдено заявок: <strong>{foundRequests.length}</strong></p>
-        <p>Назначить вас на эти заявки автоматически?</p>
-        <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 12, border: '1px solid #f0f0f0', borderRadius: 6, padding: 8 }}>
-          {foundRequests.map((r: any) => (
-            <div key={r.id} style={{ padding: '6px 0', borderBottom: '1px solid #f5f5f5' }}>
-              <div style={{ fontWeight: 500 }}>
-                {r.externalRequestId} — {r.equipmentType?.name || r.equipmentType?.code}
-              </div>
-              <div style={{ fontSize: 12, color: '#888' }}>
-                Статус: {r.visitStatus === 'awaiting_assignment' ? 'Ожидает назначения' : 'Запланирован'}
-                {r.assignedEngineers?.length > 0 && ` · Инженеров: ${r.assignedEngineers.length}`}
-              </div>
-            </div>
-          ))}
-        </div>
       </Modal>
     </div>
   );

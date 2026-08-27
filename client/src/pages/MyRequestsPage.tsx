@@ -43,16 +43,17 @@ const TAB_OPTIONS: { value: TabKey; label: string }[] = [
   { value: 'done', label: 'Завершённые' },
 ];
 
-const NEW_STATUSES = ['planned', 'awaiting_assignment', 'not_started'];
-const ACTIVE_STATUSES = ['in_progress'];
-const DONE_STATUSES = ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'];
+// Статусы исполнения для фильтрации по вкладкам
+const NEW_EXECUTION_STATUSES = ['not_assigned', 'assigned'];
+const ACTIVE_EXECUTION_STATUSES = ['in_progress'];
+const DONE_EXECUTION_STATUSES = ['completed'];
 
 function filterByTab(requests: any[], tab: TabKey) {
   if (tab === 'all') return requests;
-  const statuses = tab === 'new' ? NEW_STATUSES : tab === 'active' ? ACTIVE_STATUSES : DONE_STATUSES;
+  const statuses = tab === 'new' ? NEW_EXECUTION_STATUSES : tab === 'active' ? ACTIVE_EXECUTION_STATUSES : DONE_EXECUTION_STATUSES;
   return requests.filter(r => {
-    if (!r.visit) return tab === 'new';
-    return statuses.includes(r.visit.status);
+    const execStatus = r.executionStatus || 'not_assigned';
+    return statuses.includes(execStatus);
   });
 }
 
@@ -98,9 +99,9 @@ export default function MyRequestsPage() {
 
   const getActionButtons = (record: any, compact = false) => {
     if (!record.visit) return null;
-    const status = record.visit.status;
+    const execStatus = record.executionStatus || 'not_assigned';
 
-    if (NEW_STATUSES.includes(status)) {
+    if (NEW_EXECUTION_STATUSES.includes(execStatus)) {
       return (
         <Space size={compact ? 4 : 8}>
           <Button
@@ -123,7 +124,7 @@ export default function MyRequestsPage() {
       );
     }
 
-    if (ACTIVE_STATUSES.includes(status)) {
+    if (ACTIVE_EXECUTION_STATUSES.includes(execStatus)) {
       return (
         <Button
           type="primary"
