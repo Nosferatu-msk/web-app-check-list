@@ -20,41 +20,52 @@ function computeExecutionStatus(visit: any, isISZH: boolean): string {
 }
 
 // Для заявок ИСЖ объекта — агрегированный статус по всем связанным визитам
+// Игнорируем «виртуальные» визиты без задач и инженеров (только для связи с заявкой)
 function computeISZHExecutionStatus(visits: any[]): string {
   if (!visits || visits.length === 0) {
     return 'not_assigned';
   }
-  
-  const statuses = visits.map(v => v.status);
+
+  // Фильтруем только «реальные» визиты — с задачами или инженерами
+  const realVisits = visits.filter(v =>
+    (v._count?.tasks > 0) || (v.visitEngineers && v.visitEngineers.length > 0) || v.userId
+  );
+
+  // Если нет реальных визитов — заявка не назначена
+  if (realVisits.length === 0) {
+    return 'not_assigned';
+  }
+
+  const statuses = realVisits.map(v => v.status);
   const completedStatuses = ['completed', 'sent', 'corrected_by_tm'];
-  
-  // Проверка: все визиты завершены?
+
+  // Проверка: все реальные визиты завершены?
   const allCompleted = statuses.every(s => completedStatuses.includes(s));
   if (allCompleted) {
     return 'completed';
   }
-  
+
   // Проверка: есть ли хотя бы один визит в работе или назначенный?
   const hasInProgress = statuses.includes('in_progress');
   const hasAssigned = statuses.includes('planned');
   const hasNotStarted = statuses.includes('not_started');
-  
+
   // Если есть визит в работе — заявка в работе
   if (hasInProgress) {
     return 'in_progress';
   }
-  
+
   // Если есть назначенные визиты (planned) или не начатые — заявка назначена
   if (hasAssigned || hasNotStarted) {
     return 'assigned';
   }
-  
+
   // Если есть завершённые, но не все — заявка в работе (частичное покрытие)
   const hasCompleted = statuses.some(s => completedStatuses.includes(s));
   if (hasCompleted) {
     return 'in_progress';
   }
-  
+
   return 'assigned';
 }
 
@@ -324,13 +335,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             select: {
               visit: {
                 select: {
-                  id: true, status: true,
+                  id: true, status: true, userId: true,
                   visitEngineers: {
                     select: {
                       id: true, engineerId: true, isPrimary: true,
                       engineer: { select: { id: true, fullName: true } },
                     },
                   },
+                  _count: { select: { tasks: true } },
                 },
               },
             },
