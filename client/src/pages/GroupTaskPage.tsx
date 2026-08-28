@@ -30,6 +30,7 @@ const GROUP_CLIMATE_PARAMS = [
 // Параметры для групповой задачи наружных блоков
 const GROUP_OUTDOOR_PARAMS = [
   { key: 'operability', label: 'Работоспособность', type: 'select' as const, options: [{ label: 'Удовлетворительно', value: 'satisfactory' }, { label: 'Неудовлетворительно', value: 'unsatisfactory' }], required: true },
+  { key: 'outdoor_temperature', label: 'Температура наружного воздуха, °C', type: 'number' as const, required: true },
   { key: 'line_leaks', label: 'Наличие утечек на трассах', type: 'select' as const, options: [{ label: 'Да', value: true }, { label: 'Нет', value: false }] },
   { key: 'extraneous_noise', label: 'Наличие посторонних шумов', type: 'select' as const, options: [{ label: 'Да', value: true }, { label: 'Нет', value: false }] },
 ];

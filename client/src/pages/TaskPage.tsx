@@ -106,6 +106,7 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
   ],
   splitnar: [
     { key: 'operability', label: 'Работоспособность', type: 'select', options: SATISFACTORY_OPTIONS, defaultValue: 'satisfactory' },
+    { key: 'outdoor_temperature', label: 'Температура наружного воздуха, °C', type: 'number', required: true },
     { key: 'line_leaks', label: 'Наличие утечек на трассах', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'extraneous_noise', label: 'Наличие посторонних шумов кондиционеров', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'unit_flush_needed', label: 'Необходимость внеплановой промывки наружного блока', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
@@ -121,6 +122,7 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
   ],
   mssnar: [
     { key: 'operability', label: 'Работоспособность', type: 'select', options: SATISFACTORY_OPTIONS, defaultValue: 'satisfactory' },
+    { key: 'outdoor_temperature', label: 'Температура наружного воздуха, °C', type: 'number', required: true },
     { key: 'line_leaks', label: 'Наличие утечек на трассах', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'extraneous_noise', label: 'Наличие посторонних шумов', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'unit_flush_needed', label: 'Необходимость внеплановой промывки наружного блока', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
@@ -136,6 +138,7 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
   ],
   vrv_nar: [
     { key: 'operability', label: 'Работоспособность', type: 'select', options: SATISFACTORY_OPTIONS, defaultValue: 'satisfactory' },
+    { key: 'outdoor_temperature', label: 'Температура наружного воздуха, °C', type: 'number', required: true },
     { key: 'line_leaks', label: 'Наличие утечек на трассах', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'extraneous_noise', label: 'Наличие посторонних шумов', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'unit_flush_needed', label: 'Необходимость внеплановой промывки наружного блока', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
