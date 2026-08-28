@@ -431,9 +431,15 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     where: { id: req.params.id as string },
     include: {
       address: true,
+      contract: { select: { id: true, number: true } },
       user: { select: { id: true, fullName: true, email: true } },
       assignedBy: { select: { id: true, fullName: true, email: true } },
       importedRequests: { select: { externalRequestId: true } },
+      visitRequests: {
+        select: {
+          importedRequest: { select: { externalRequestId: true } },
+        },
+      },
       visitEngineers: { include: { engineer: { select: { id: true, fullName: true, email: true } } } },
       tasks: {
         orderBy: { sortOrder: 'asc' },
@@ -443,6 +449,12 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   });
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+
+  // Объединяем заявки из importedRequests и visitRequests
+  const directRequests = visit.importedRequests.map(r => r.externalRequestId);
+  const linkedRequests = visit.visitRequests.map(vr => vr.importedRequest.externalRequestId);
+  const allRequestIds = [...new Set([...directRequests, ...linkedRequests])];
+  const visitResult = { ...visit, importedRequests: allRequestIds.map(id => ({ externalRequestId: id })), visitRequests: undefined };
 
   // Filter tasks by engineer's specialization
   if (req.userRole === 'engineer') {
@@ -465,7 +477,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     }
   }
 
-  res.json(visit);
+  res.json(visitResult);
 });
 
 const updateVisitSchema = z.object({

@@ -632,7 +632,8 @@ export const api = {
     page?: number; pageSize?: number;
     importStatus?: string; executionStatus?: string;
     objectCode?: string; sortField?: string; sortOrder?: string;
-    engineerId?: string;
+    engineerId?: string; contractId?: string;
+    search?: string; periodMonth?: string; periodYear?: string;
   }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
@@ -643,6 +644,10 @@ export const api = {
     if (params?.sortField) qs.set('sortField', params.sortField);
     if (params?.sortOrder) qs.set('sortOrder', params.sortOrder);
     if (params?.engineerId) qs.set('engineerId', params.engineerId);
+    if (params?.contractId) qs.set('contractId', params.contractId);
+    if (params?.search) qs.set('search', params.search);
+    if (params?.periodMonth) qs.set('periodMonth', params.periodMonth);
+    if (params?.periodYear) qs.set('periodYear', params.periodYear);
     return request<any>(`/requests?${qs}`);
   },
 
