@@ -155,12 +155,12 @@ SELECT gen_random_uuid()::text, '050001234567', '955f520b-41f4-4236-9ecf-e11365c
 WHERE NOT EXISTS (SELECT 1 FROM "contracts" WHERE "number" = '050001234567' AND "tm_id" = '955f520b-41f4-4236-9ecf-e11365c81824');
 
 INSERT INTO "contracts" ("id", "number", "tm_id", "module", "is_active", "created_at")
-SELECT gen_random_uuid()::text, '050007654321', '8d0d86bc-ff3c-4c89-9383-530ed8e044f0', 'to', true, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM "contracts" WHERE "number" = '050007654321' AND "tm_id" = '8d0d86bc-ff3c-4c89-9383-530ed8e044f0');
+SELECT gen_random_uuid()::text, '050000987654', '8d0d86bc-ff3c-4c89-9383-530ed8e044f0', 'to', true, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM "contracts" WHERE "number" = '050000987654' AND "tm_id" = '8d0d86bc-ff3c-4c89-9383-530ed8e044f0');
 
 INSERT INTO "contracts" ("id", "number", "tm_id", "module", "is_active", "created_at")
-SELECT gen_random_uuid()::text, '050001234567', '7b203951-263f-442d-8d0a-2bc73ea17745', 'mtr', true, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM "contracts" WHERE "number" = '050001234567' AND "tm_id" = '7b203951-263f-442d-8d0a-2bc73ea17745' AND "module" = 'mtr');
+SELECT gen_random_uuid()::text, '050009876540', '7b203951-263f-442d-8d0a-2bc73ea17745', 'mtr', true, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM "contracts" WHERE "number" = '050009876540' AND "tm_id" = '7b203951-263f-442d-8d0a-2bc73ea17745' AND "module" = 'mtr');
 
 -- Привязка существующих объектов к договорам
 UPDATE "tm_objects" SET "contract_id" = (

@@ -546,7 +546,7 @@ async function main() {
 
   // Договоры для существующих ТМ (только если ещё нет)
   const contractNumbers: Record<string, string> = {
-    'tm@example.com': '050005596590',
+    'tm@example.com': '050006543217',
   };
   for (const tmUser of tmUsers) {
     // Проверяем, есть ли уже договор у этого ТМ
