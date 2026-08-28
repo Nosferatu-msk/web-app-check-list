@@ -225,6 +225,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const periodMonth = req.query.periodMonth as string | undefined;
     const periodYear = req.query.periodYear as string | undefined;
     const searchQuery = req.query.search as string | undefined;
+    const isOverdueFilter = req.query.isOverdue as string | undefined;
 
     const where: any = {};
     if (importStatus) where.importStatus = importStatus;
@@ -312,7 +313,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     }
 
     // Для фильтрации по executionStatus нужна пост-обработка (для ИСЖ объекта с множественными визитами)
-    const needsPostFilter = !!executionStatus;
+    const needsPostFilter = !!executionStatus || isOverdueFilter === 'true';
     
     const [rawData, total] = await Promise.all([
       prisma.importedRequest.findMany({
@@ -384,7 +385,12 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     // Пост-фильтрация по executionStatus
     let filteredData = enrichedData;
     if (executionStatus) {
-      filteredData = enrichedData.filter(req => req.executionStatus === executionStatus);
+      filteredData = filteredData.filter(req => req.executionStatus === executionStatus);
+    }
+
+    // Пост-фильтрация по просрочке
+    if (isOverdueFilter === 'true') {
+      filteredData = filteredData.filter(req => req.isOverdue);
     }
 
     // Применяем пагинацию к отфильтрованным данным
@@ -844,6 +850,178 @@ function getCurrentSeason(): 'summer' | 'winter' {
   }
   return 'winter';
 }
+
+// ─── МАССОВОЕ НАЗНАЧЕНИЕ ИНЖЕНЕРОВ ───────────────────────────
+const bulkAssignSchema = z.object({
+  requestIds: z.array(z.string().uuid()).min(1),
+  engineerIds: z.array(z.string().uuid()).min(1),
+});
+
+router.post('/bulk-assign', async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.userRole !== 'tm' && req.userRole !== 'admin') {
+      res.status(403).json({ error: 'Доступ запрещён' });
+      return;
+    }
+
+    const parsed = bulkAssignSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.errors });
+      return;
+    }
+
+    const { requestIds, engineerIds } = parsed.data;
+
+    // Загружаем данные инженеров (специализации)
+    const engineers = await prisma.user.findMany({
+      where: { id: { in: engineerIds }, role: 'engineer', isActive: true },
+      select: {
+        id: true, fullName: true,
+        specializationVik: true, specializationIszh: true,
+        specializationGpm: true, specializationDgu: true, specializationIbp: true,
+      },
+    });
+
+    if (engineers.length !== engineerIds.length) {
+      res.status(400).json({ error: 'Некоторые инженеры не найдены или не активны' });
+      return;
+    }
+
+    const engineerMap = new Map(engineers.map(e => [e.id, e]));
+
+    // Загружаем заявки с визитами и типами оборудования
+    const requests = await prisma.importedRequest.findMany({
+      where: { id: { in: requestIds } },
+      include: {
+        equipmentType: { select: { id: true, name: true, code: true, specializationReq: true } },
+        matchedAddress: { select: { id: true, fullAddress: true } },
+        visit: {
+          include: {
+            visitEngineers: { select: { id: true, engineerId: true, isPrimary: true } },
+          },
+        },
+      },
+    });
+
+    const results: { requestId: string; assigned: string[]; skipped: string[]; error?: string }[] = [];
+
+    for (const request of requests) {
+      const result: { requestId: string; assigned: string[]; skipped: string[]; error?: string } = {
+        requestId: request.id,
+        assigned: [],
+        skipped: [],
+      };
+
+      if (!request.visitId || !request.visit) {
+        result.error = 'Визит не создан';
+        results.push(result);
+        continue;
+      }
+
+      const visit = request.visit;
+      const requiredSpec = request.equipmentType.specializationReq;
+
+      for (const engineerId of engineerIds) {
+        const engineer = engineerMap.get(engineerId)!;
+
+        // Проверка: уже назначен?
+        const alreadyAssigned = visit.visitEngineers.some(ve => ve.engineerId === engineerId);
+        if (alreadyAssigned) {
+          result.skipped.push(engineerId);
+          continue;
+        }
+
+        // Проверка специализации
+        if (requiredSpec) {
+          const specMap: Record<string, keyof typeof engineer> = {
+            vik: 'specializationVik',
+            iszh: 'specializationIszh',
+            gpm: 'specializationGpm',
+            dgu: 'specializationDgu',
+            ibp: 'specializationIbp',
+          };
+          const specField = specMap[requiredSpec];
+          if (specField && !engineer[specField]) {
+            result.skipped.push(engineerId);
+            continue;
+          }
+        }
+
+        // Создаём VisitEngineer
+        const isPrimary = visit.visitEngineers.length === 0 && result.assigned.length === 0;
+        await prisma.visitEngineer.create({
+          data: {
+            visitId: visit.id,
+            engineerId,
+            isPrimary,
+            assignedBy: req.userId!,
+          },
+        });
+
+        result.assigned.push(engineerId);
+
+        // Обновляем визит при первом назначении
+        if (isPrimary) {
+          await prisma.visit.update({
+            where: { id: visit.id },
+            data: {
+              userId: engineerId,
+              engineerName: engineer.fullName,
+              status: 'planned',
+            },
+          });
+        }
+
+        // Запись в лог назначений
+        await prisma.requestAssignmentLog.create({
+          data: {
+            importedRequestId: request.id,
+            action: 'assigned',
+            engineerId,
+            performedBy: req.userId!,
+          },
+        });
+
+        // Уведомление инженеру
+        await prisma.notification.create({
+          data: {
+            userId: engineerId,
+            type: 'request_assigned',
+            title: 'Новая заявка',
+            message: `Заявка № ${request.externalRequestId}. Объект: ${request.matchedAddress?.fullAddress || request.addressRaw}. Оборудование: ${request.equipmentType.name}.`,
+            entityType: 'visit',
+            entityId: visit.id,
+          },
+        });
+      }
+
+      results.push(result);
+    }
+
+    await logAudit({
+      userId: req.userId,
+      action: 'bulk_assign_engineers',
+      entityType: 'imported_request',
+      newValue: { requestIds, engineerIds, results },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    const totalAssigned = results.reduce((sum, r) => sum + r.assigned.length, 0);
+    const totalSkipped = results.reduce((sum, r) => sum + r.skipped.length, 0);
+
+    res.json({
+      results,
+      summary: {
+        totalRequests: requestIds.length,
+        totalAssigned,
+        totalSkipped,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─── ПОИСК ЗАЯВОК ПО НОМЕРАМ (для отчёта) ────────────────────
 router.post('/search-by-numbers', async (req: AuthRequest, res: Response) => {

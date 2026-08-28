@@ -666,6 +666,9 @@ export const api = {
   declineRequest: async (requestId: string, reason: string) =>
     request<any>('/requests/decline', { method: 'POST', body: JSON.stringify({ requestId, reason }) }),
 
+  bulkAssignEngineers: async (requestIds: string[], engineerIds: string[]) =>
+    request<any>('/requests/bulk-assign', { method: 'POST', body: JSON.stringify({ requestIds, engineerIds }) }),
+
   searchRequestsByNumbers: async (externalRequestIds: string[]) =>
     request<any[]>('/requests/search-by-numbers', { method: 'POST', body: JSON.stringify({ externalRequestIds }) }),
 
