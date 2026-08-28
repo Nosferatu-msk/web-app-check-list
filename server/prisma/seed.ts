@@ -544,16 +544,20 @@ async function main() {
   });
   console.log('Deadline settings created');
 
-  // Договоры для существующих ТМ
+  // Договоры для существующих ТМ (только если ещё нет)
   const contractNumbers: Record<string, string> = {
     'tm@example.com': '050005596590',
   };
   for (const tmUser of tmUsers) {
+    // Проверяем, есть ли уже договор у этого ТМ
+    const existingContract = await prisma.contract.findFirst({
+      where: { tmId: tmUser.id, module: 'to' },
+    });
+    if (existingContract) continue;
+
     const number = contractNumbers[tmUser.email] || `05000${String(Date.now()).slice(-7)}`;
-    await prisma.contract.upsert({
-      where: { number_tmId_module: { number, tmId: tmUser.id, module: 'to' } },
-      update: {},
-      create: { number, tmId: tmUser.id, module: 'to' },
+    await prisma.contract.create({
+      data: { number, tmId: tmUser.id, module: 'to' },
     });
   }
   console.log(`Contracts created: ${tmUsers.length}`);
