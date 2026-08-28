@@ -516,6 +516,57 @@ async function main() {
   }
   console.log(`Addresses created: ${addresses.length}`);
 
+  // ─── CONTRACTS & DEADLINE SETTINGS ────────────────────────
+  const adminUser = await prisma.user.findFirst({ where: { role: 'admin' } });
+  const tmUsers = await prisma.user.findMany({ where: { role: 'tm' } });
+
+  // Настройки сроков по умолчанию
+  await prisma.requestDeadlineSetting.upsert({
+    where: { requestType: 'planned' },
+    update: {},
+    create: {
+      requestType: 'planned',
+      deadlineDays: null,
+      notificationDaysBefore: 5,
+      updatedBy: adminUser?.id || '',
+    },
+  });
+  await prisma.requestDeadlineSetting.upsert({
+    where: { requestType: 'unplanned' },
+    update: {},
+    create: {
+      requestType: 'unplanned',
+      deadlineDays: 14,
+      notificationDaysBefore: 5,
+      updatedBy: adminUser?.id || '',
+    },
+  });
+  console.log('Deadline settings created');
+
+  // Договоры для существующих ТМ
+  const contractNumbers: Record<string, string> = {
+    'tm@example.com': '050005596590',
+  };
+  for (const tmUser of tmUsers) {
+    const number = contractNumbers[tmUser.email] || `05000${String(Date.now()).slice(-7)}`;
+    await prisma.contract.upsert({
+      where: { number_tmId_module: { number, tmId: tmUser.id, module: 'to' } },
+      update: {},
+      create: { number, tmId: tmUser.id, module: 'to' },
+    });
+  }
+  console.log(`Contracts created: ${tmUsers.length}`);
+
+  // Привязка существующих объектов к договорам
+  const allContracts = await prisma.contract.findMany({ where: { module: 'to' } });
+  for (const contract of allContracts) {
+    await prisma.tmObject.updateMany({
+      where: { tmId: contract.tmId, contractId: null },
+      data: { contractId: contract.id },
+    });
+  }
+  console.log('TM objects bound to contracts');
+
   console.log('Seed completed!');
 }
 

@@ -284,9 +284,22 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   const dateFrom = req.query.date_from as string;
   const dateTo = req.query.date_to as string;
   const includeDeleted = req.query.include_deleted === 'true';
+  const contractIdFilter = req.query.contractId as string;
+  const periodMonth = req.query.periodMonth as string;
+  const periodYear = req.query.periodYear as string;
 
   const where: any = {};
   if (!includeDeleted) where.isDeleted = false;
+  if (contractIdFilter) where.contractId = contractIdFilter;
+
+  // Фильтр по периоду (месяц/год)
+  if (periodMonth && periodYear) {
+    const monthNum = parseInt(periodMonth);
+    const yearNum = parseInt(periodYear);
+    const startDate = new Date(yearNum, monthNum - 1, 1);
+    const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59);
+    where.dateStart = { ...where.dateStart, gte: startDate, lte: endDate };
+  }
 
   if (req.userRole === 'engineer') {
     // Инженер видит визиты, где он основной (userId) или назначен через visitEngineers
@@ -298,12 +311,27 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       ]}
     ];
   } else if (req.userRole === 'tm') {
+    // ТМ видит визиты по своим договорам
+    const tmContracts = await prisma.contract.findMany({
+      where: { tmId: req.userId!, module: 'to' },
+      select: { id: true },
+    });
+    const contractIds = tmContracts.map(c => c.id);
+
     const engineerIds = await getTmEngineerIds(req.userId!);
     if (req.query.user_id && engineerIds.includes(req.query.user_id as string)) {
       where.userId = req.query.user_id;
     } else {
       where.userId = { in: engineerIds };
     }
+    // ТМ видит визиты по своим договорам ИЛИ визиты своих инженеров
+    where.AND = [
+      ...(where.AND || []),
+      { OR: [
+        { contractId: { in: contractIds } },
+        { userId: { in: engineerIds } },
+      ]},
+    ];
   } else if (req.userRole === 'admin') {
     if (req.query.user_id) where.userId = req.query.user_id;
   }
@@ -335,6 +363,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       orderBy: { dateStart: 'desc' },
       include: {
         address: true,
+        contract: { select: { id: true, number: true } },
         user: { select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } },
         assignedBy: { select: { id: true, fullName: true, email: true } },
         deletedBy: { select: { id: true, fullName: true, email: true } },

@@ -763,4 +763,26 @@ export const api = {
     deleteTmEngineer: (id: string) =>
       request<any>(`/mtr/admin/tm-engineers/${id}`, { method: 'DELETE' }),
   },
+
+  // Contracts
+  getContracts: (params?: { module?: string; isActive?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.module) qs.set('module', params.module);
+    if (params?.isActive !== undefined) qs.set('isActive', params.isActive);
+    const query = qs.toString();
+    return request<any[]>(`/contracts${query ? '?' + query : ''}`);
+  },
+  createContract: (data: { number: string; tmId: string; module: string }) =>
+    request<any>('/contracts', { method: 'POST', body: JSON.stringify(data) }),
+  updateContract: (id: string, data: { number?: string; isActive?: boolean }) =>
+    request<any>(`/contracts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deactivateContract: (id: string) =>
+    request<any>(`/contracts/${id}`, { method: 'DELETE' }),
+  getDeadlineSettings: () =>
+    request<any>('/contracts/deadline-settings'),
+  updateDeadlineSettings: (data: {
+    planned: { deadlineDays: number | null; notificationDaysBefore: number };
+    unplanned: { deadlineDays: number | null; notificationDaysBefore: number };
+  }) =>
+    request<any>('/contracts/deadline-settings', { method: 'PUT', body: JSON.stringify(data) }),
 };

@@ -58,6 +58,16 @@ enum MtrVisitStatus {
   accepted
 }
 
+enum RequestType {
+  planned
+  unplanned
+}
+
+enum ContractModule {
+  to
+  mtr
+}
+
 model User {
   id                 String   @id @default(uuid())
   fullName           String   @map("full_name")
@@ -79,6 +89,7 @@ model User {
   auditLogs                AuditLog[]
   resetTokens              PasswordResetToken[]
   tmObjects                TmObject[]             @relation("TmObjectRelation")
+  contracts                Contract[]
   tmEngineers              TmEngineer[]           @relation("TmEngineerTmRelation")
   engineersAsTm            TmEngineer[]           @relation("TmEngineerEngineerRelation")
   deletedVisits            Visit[]                @relation("DeletedBy")
@@ -177,6 +188,7 @@ model Visit {
   id                String      @id @default(uuid())
   userId            String?     @map("user_id")
   addressId         String      @map("address_id")
+  contractId        String?     @map("contract_id")
   engineerName      String      @default("") @map("engineer_name")
   dateStart         DateTime    @map("date_start")
   timeStart         String      @map("time_start")
@@ -199,6 +211,7 @@ model Visit {
   assignedBy       User?             @relation("AssignedVisits", fields: [assignedById], references: [id])
   deletedBy        User?             @relation("DeletedBy", fields: [deletedById], references: [id])
   address          Address           @relation(fields: [addressId], references: [id])
+  contract         Contract?         @relation(fields: [contractId], references: [id], onDelete: SetNull)
   tasks            Task[]
   visitEngineers   VisitEngineer[]
   importedRequests ImportedRequest[]
@@ -208,6 +221,7 @@ model Visit {
   @@index([status])
   @@index([assignedById])
   @@index([isDeleted])
+  @@index([contractId])
   @@map("visits")
 }
 
@@ -320,17 +334,20 @@ model AuditLog {
 }
 
 model TmObject {
-  id        String   @id @default(uuid())
-  tmId      String   @map("tm_id")
-  addressId String   @map("address_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  tmId       String   @map("tm_id")
+  addressId  String   @map("address_id")
+  contractId String?  @map("contract_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  tm      User    @relation("TmObjectRelation", fields: [tmId], references: [id], onDelete: Cascade)
-  address Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  tm       User      @relation("TmObjectRelation", fields: [tmId], references: [id], onDelete: Cascade)
+  address  Address   @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  contract Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
 
-  @@unique([tmId, addressId])
+  @@unique([tmId, addressId, contractId])
   @@index([tmId])
   @@index([addressId])
+  @@index([contractId])
   @@map("tm_objects")
 }
 
@@ -347,6 +364,39 @@ model TmEngineer {
   @@index([tmId])
   @@index([engineerId])
   @@map("tm_engineers")
+}
+
+model Contract {
+  id        String         @id @default(uuid())
+  number    String
+  tmId      String         @map("tm_id")
+  module    ContractModule @default(to)
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  tm              User                @relation(fields: [tmId], references: [id], onDelete: Cascade)
+  tmObjects       TmObject[]
+  mtrTmObjects    MtrTmObject[]
+  importedRequests ImportedRequest[]
+  visits          Visit[]
+  mtrVisits       MtrVisit[]
+
+  @@unique([number, tmId, module])
+  @@index([tmId])
+  @@index([number])
+  @@map("contracts")
+}
+
+model RequestDeadlineSetting {
+  id                    String      @id @default(uuid())
+  requestType           RequestType @map("request_type")
+  deadlineDays          Int?        @map("deadline_days")
+  notificationDaysBefore Int        @default(5) @map("notification_days_before")
+  updatedBy             String      @map("updated_by")
+  updatedAt             DateTime    @default(now()) @map("updated_at")
+
+  @@unique([requestType])
+  @@map("request_deadline_settings")
 }
 
 model ImportLog {
@@ -561,24 +611,29 @@ model SystemRelease {
 }
 
 model ImportedRequest {
-  id                String   @id @default(uuid())
-  externalRequestId String   @unique @map("external_request_id")
-  externalStatus    String?  @map("external_status")
-  equipmentTypeId   String   @map("equipment_type_id")
-  equipmentTypeCode String?  @map("equipment_type_code")
-  objectCode        String   @map("object_code")
-  addressRaw        String?  @map("address_raw")
-  matchedAddressId  String?  @map("matched_address_id")
-  visitId           String?  @map("visit_id")
-  importStatus      String   @default("new") @map("import_status")
-  errorMessage      String?  @map("error_message")
-  importedBy        String?  @map("imported_by")
-  importedAt        DateTime @default(now()) @map("imported_at")
-  createdAt         DateTime @default(now()) @map("created_at")
+  id                String       @id @default(uuid())
+  externalRequestId String       @unique @map("external_request_id")
+  externalStatus    String?      @map("external_status")
+  equipmentTypeId   String       @map("equipment_type_id")
+  equipmentTypeCode String?      @map("equipment_type_code")
+  objectCode        String       @map("object_code")
+  addressRaw        String?      @map("address_raw")
+  matchedAddressId  String?      @map("matched_address_id")
+  visitId           String?      @map("visit_id")
+  contractId        String?      @map("contract_id")
+  requestType       RequestType? @map("request_type")
+  startDate         DateTime?    @map("start_date")
+  deadline          DateTime?    @map("deadline")
+  importStatus      String       @default("new") @map("import_status")
+  errorMessage      String?      @map("error_message")
+  importedBy        String?      @map("imported_by")
+  importedAt        DateTime     @default(now()) @map("imported_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
 
   equipmentType  EquipmentType          @relation(fields: [equipmentTypeId], references: [id])
   matchedAddress Address?               @relation("matchedAddress", fields: [matchedAddressId], references: [id])
   visit          Visit?                 @relation(fields: [visitId], references: [id])
+  contract       Contract?              @relation(fields: [contractId], references: [id], onDelete: SetNull)
   importedByUser User?                  @relation("ImportedBy", fields: [importedBy], references: [id])
   assignmentLogs RequestAssignmentLog[]
   visitRequests  VisitRequest[]
@@ -658,6 +713,7 @@ model MtrVisit {
   id              String         @id @default(uuid())
   engineerId      String         @map("engineer_id")
   addressId       String         @map("address_id")
+  contractId      String?        @map("contract_id")
   requestNumber   String         @unique @map("request_number")
   dateStart       DateTime       @map("date_start")
   timeStart       String         @map("time_start")
@@ -676,6 +732,7 @@ model MtrVisit {
 
   engineer   User           @relation("MtrVisitEngineer", fields: [engineerId], references: [id])
   address    Address        @relation(fields: [addressId], references: [id])
+  contract   Contract?      @relation(fields: [contractId], references: [id], onDelete: SetNull)
   assignedBy User?          @relation("MtrVisitAssignedBy", fields: [assignedById], references: [id])
   deletedBy  User?          @relation("MtrVisitDeletedBy", fields: [deletedById], references: [id])
   works      MtrVisitWork[]
@@ -685,6 +742,7 @@ model MtrVisit {
   @@index([addressId])
   @@index([status])
   @@index([requestNumber])
+  @@index([contractId])
   @@map("mtr_visits")
 }
 
@@ -705,17 +763,20 @@ model MtrVisitWork {
 }
 
 model MtrTmObject {
-  id        String   @id @default(uuid())
-  tmId      String   @map("tm_id")
-  addressId String   @map("address_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  tmId       String   @map("tm_id")
+  addressId  String   @map("address_id")
+  contractId String?  @map("contract_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  tm      User    @relation("MtrTmObjectRelation", fields: [tmId], references: [id], onDelete: Cascade)
-  address Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  tm       User      @relation("MtrTmObjectRelation", fields: [tmId], references: [id], onDelete: Cascade)
+  address  Address   @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  contract Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
 
-  @@unique([tmId, addressId])
+  @@unique([tmId, addressId, contractId])
   @@index([tmId])
   @@index([addressId])
+  @@index([contractId])
   @@map("mtr_tm_objects")
 }
 

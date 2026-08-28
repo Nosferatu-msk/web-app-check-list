@@ -1,13 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Table, Tag, Space, Select, Card, Modal, Upload, App, Tabs, Input, Badge } from 'antd';
-import { UploadOutlined, UserAddOutlined, UserDeleteOutlined, LinkOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { Button, Table, Tag, Space, Select, Card, Modal, Upload, App, Tabs, Input, Badge, DatePicker, Tooltip } from 'antd';
+import { UploadOutlined, UserAddOutlined, UserDeleteOutlined, LinkOutlined, ArrowLeftOutlined, SearchOutlined, ClockCircleOutlined, ExclamationCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { IMPORT_STATUS_LABELS, VISIT_STATUS_LABELS } from '../../../shared/types/index';
 import NotificationBell from '../components/NotificationBell';
 import MobileHeader from '../components/MobileHeader';
+import ContractBadge from '../components/ContractBadge';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const IMPORT_STATUS_COLORS: Record<string, string> = {
@@ -51,6 +53,11 @@ export default function RequestsPage() {
   const [importing, setImporting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{ row: number; externalRequestId: string; message: string }[]>([]);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [contractFilter, setContractFilter] = useState('');
+  const [contracts, setContracts] = useState<{ id: string; number: string }[]>([]);
+  const [period, setPeriod] = useState<dayjs.Dayjs | null>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { message, modal } = App.useApp();
@@ -59,6 +66,17 @@ export default function RequestsPage() {
   const isAdmin = user?.role === 'admin';
   const isMobile = useIsMobile();
 
+  // Загрузка списка договоров для фильтра
+  useEffect(() => {
+    api.getContracts({ module: 'to' }).then(setContracts).catch(() => {});
+  }, []);
+
+  // Debounce для поиска
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -66,6 +84,12 @@ export default function RequestsPage() {
       if (executionStatusFilter) params.executionStatus = executionStatusFilter;
       if (sortField) { params.sortField = sortField; params.sortOrder = sortOrder; }
       if (engineerFilter) params.engineerId = engineerFilter;
+      if (contractFilter) params.contractId = contractFilter;
+      if (searchQuery) params.search = searchQuery;
+      if (period) {
+        params.periodMonth = String(period.month() + 1);
+        params.periodYear = String(period.year());
+      }
       const res = await api.getRequests(params);
       setRequests(res.data || []);
       setTotal(res.total || 0);
@@ -78,7 +102,7 @@ export default function RequestsPage() {
       message.error('Ошибка загрузки заявок');
     }
     setLoading(false);
-  }, [page, pageSize, executionStatusFilter, sortField, sortOrder, engineerFilter, isTm, isAdmin]);
+  }, [page, pageSize, executionStatusFilter, sortField, sortOrder, engineerFilter, contractFilter, searchQuery, period, isTm, isAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -319,6 +343,51 @@ export default function RequestsPage() {
       },
     },
     {
+      title: 'Договор',
+      key: 'contract',
+      width: 140,
+      render: (_: any, record: any) => <ContractBadge contractNumber={record.contract?.number} />,
+    },
+    {
+      title: 'Срок',
+      key: 'deadline',
+      width: 150,
+      render: (_: any, record: any) => {
+        if (!record.deadline) return '—';
+        const dl = dayjs(record.deadline);
+        const now = dayjs();
+        const daysLeft = dl.diff(now, 'day');
+        const isCompleted = ['completed', 'sent'].includes(record.executionStatus);
+
+        if (isCompleted) {
+          return (
+            <Tooltip title="Завершена в срок">
+              <Tag color="success" icon={<ClockCircleOutlined />}>{dl.format('DD.MM.YYYY')}</Tag>
+            </Tooltip>
+          );
+        }
+        if (daysLeft < 0) {
+          return (
+            <Tooltip title={`Просрочена на ${Math.abs(daysLeft)} дн.`}>
+              <Tag color="error" icon={<WarningOutlined />}>{dl.format('DD.MM.YYYY')}</Tag>
+            </Tooltip>
+          );
+        }
+        if (daysLeft <= 5) {
+          return (
+            <Tooltip title={`Осталось ${daysLeft} дн.`}>
+              <Tag color="warning" icon={<ExclamationCircleOutlined />}>{dl.format('DD.MM.YYYY')}</Tag>
+            </Tooltip>
+          );
+        }
+        return (
+          <Tooltip title={`До окончания: ${daysLeft} дн.`}>
+            <Tag color="success" icon={<ClockCircleOutlined />}>{dl.format('DD.MM.YYYY')}</Tag>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: 'Действия',
       key: 'actions',
       width: 150,
@@ -398,6 +467,32 @@ export default function RequestsPage() {
 
       <Card>
         <Space style={{ marginBottom: 16 }} wrap>
+          <Input
+            placeholder="Поиск: код, номер, адрес..."
+            prefix={<SearchOutlined />}
+            allowClear
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{ width: isMobile ? '100%' : 250 }}
+          />
+          <Select
+            placeholder="Договор"
+            style={{ width: 160 }}
+            allowClear
+            value={contractFilter || undefined}
+            onChange={(v) => { setContractFilter(v || ''); setPage(1); }}
+          >
+            {contracts.map(c => (
+              <Select.Option key={c.id} value={c.id}>{c.number}</Select.Option>
+            ))}
+          </Select>
+          <DatePicker
+            picker="month"
+            placeholder="Период"
+            value={period}
+            onChange={(v) => { setPeriod(v); setPage(1); }}
+            allowClear
+          />
           <Select
             placeholder="Статус исполнения"
             style={{ width: 200 }}

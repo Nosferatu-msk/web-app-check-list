@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton } from 'antd';
+import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton, DatePicker } from 'antd';
 import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { VISIT_STATUS_LABELS, ROLE_LABELS } from '../../../shared/types/index';
 import NotificationBell from '../components/NotificationBell';
+import ContractBadge from '../components/ContractBadge';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
 
@@ -70,6 +71,9 @@ export default function VisitListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [globalStats, setGlobalStats] = useState({ total: 0, planned: 0, inProgress: 0, completed: 0 });
+  const [contractFilter, setContractFilter] = useState('');
+  const [contracts, setContracts] = useState<{ id: string; number: string }[]>([]);
+  const [period, setPeriod] = useState<dayjs.Dayjs | null>(null);
   const pageSize = 20;
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -80,6 +84,11 @@ export default function VisitListPage() {
   const isAdmin = user?.role === 'admin';
   const isManager = isTm || isAdmin;
 
+  // Загрузка списка договоров для фильтра
+  useEffect(() => {
+    api.getContracts({ module: 'to' }).then(setContracts).catch(() => {});
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const params: Record<string, string> = { page: String(currentPage), pageSize: String(pageSize) };
@@ -87,6 +96,11 @@ export default function VisitListPage() {
       if (showDeleted) params.include_deleted = 'true';
       if (selectedStatuses.length > 0) params.statuses = selectedStatuses.join(',');
       if (searchQuery) params.search = searchQuery;
+      if (contractFilter) params.contractId = contractFilter;
+      if (period) {
+        params.periodMonth = String(period.month() + 1);
+        params.periodYear = String(period.year());
+      }
       const res = await api.getVisits(params);
       setVisits(res.data || []);
       setTotal(res.total || 0);
@@ -97,7 +111,7 @@ export default function VisitListPage() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [selectedEngineer, isManager, showDeleted, currentPage, selectedStatuses, searchQuery]);
+  }, [selectedEngineer, isManager, showDeleted, currentPage, selectedStatuses, searchQuery, contractFilter, period]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -285,6 +299,24 @@ export default function VisitListPage() {
             style={{ minWidth: 160, flex: 1 }}
             options={Object.entries(VISIT_STATUS_LABELS).map(([key, label]) => ({ value: key, label }))}
           />
+          <Select
+            placeholder="Договор"
+            allowClear
+            value={contractFilter || undefined}
+            onChange={(v) => setContractFilter(v || '')}
+            style={{ width: 160 }}
+          >
+            {contracts.map(c => (
+              <Select.Option key={c.id} value={c.id}>{c.number}</Select.Option>
+            ))}
+          </Select>
+          <DatePicker
+            picker="month"
+            placeholder="Период"
+            value={period}
+            onChange={(v) => setPeriod(v)}
+            allowClear
+          />
         </div>
         {isManager && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -408,6 +440,7 @@ export default function VisitListPage() {
                         <Tag key={r.externalRequestId} color="green" style={{ marginRight: 4 }}>{r.externalRequestId}</Tag>
                       ))}
                       {v.importedRequests?.length > 2 && <Tag color="green" style={{ marginRight: 4 }}>+{v.importedRequests.length - 2}</Tag>}
+                      <ContractBadge contractNumber={v.contract?.number} compact />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.address?.fullAddress || 'Адрес'}</span>
                     </div>
                     <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>

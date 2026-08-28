@@ -208,22 +208,48 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const sortField = req.query.sortField as string | undefined;
     const sortOrder = (req.query.sortOrder as string) === 'ascend' ? 'asc' : 'desc';
     const engineerFilter = req.query.engineerId as string | undefined;
+    const contractIdFilter = req.query.contractId as string | undefined;
+    const periodMonth = req.query.periodMonth as string | undefined;
+    const periodYear = req.query.periodYear as string | undefined;
+    const searchQuery = req.query.search as string | undefined;
 
     const where: any = {};
     if (importStatus) where.importStatus = importStatus;
     if (objectCode) where.objectCode = objectCode;
+    if (contractIdFilter) where.contractId = contractIdFilter;
     if (engineerFilter) {
       where.visit = { visitEngineers: { some: { engineerId: engineerFilter } } };
     }
 
-    // Фильтрация по территории ТМ
+    // Фильтр по периоду (месяц/год) — по дате начала заявки
+    if (periodMonth && periodYear) {
+      const monthNum = parseInt(periodMonth);
+      const yearNum = parseInt(periodYear);
+      const startDate = new Date(yearNum, monthNum - 1, 1);
+      const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59);
+      where.startDate = { gte: startDate, lte: endDate };
+    }
+
+    // Текстовый поиск по коду объекта, номеру заявки, адресу
+    if (searchQuery) {
+      where.AND = [
+        ...(where.AND || []),
+        { OR: [
+          { objectCode: { contains: searchQuery, mode: 'insensitive' } },
+          { externalRequestId: { contains: searchQuery, mode: 'insensitive' } },
+          { matchedAddress: { fullAddress: { contains: searchQuery, mode: 'insensitive' } } },
+        ]},
+      ];
+    }
+
+    // Фильтрация по территории ТМ — через договоры
     if (req.userRole === 'tm') {
-      const tmObjects = await prisma.tmObject.findMany({
-        where: { tmId: req.userId! },
-        select: { addressId: true },
+      const tmContracts = await prisma.contract.findMany({
+        where: { tmId: req.userId!, module: 'to' },
+        select: { id: true },
       });
-      const addressIds = tmObjects.map(t => t.addressId);
-      where.matchedAddressId = { in: addressIds };
+      const contractIds = tmContracts.map(c => c.id);
+      where.contractId = { in: contractIds };
 
       // ТМ видит только заявки, назначенные на своих инженеров (или неназначенные)
       const tmEngineers = await prisma.tmEngineer.findMany({
@@ -281,6 +307,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         include: {
           equipmentType: { select: { id: true, name: true, code: true, specializationReq: true } },
           matchedAddress: { select: { id: true, fullAddress: true, objectCode: true } },
+          contract: { select: { id: true, number: true } },
           visit: {
             select: {
               id: true, status: true, isMultiSpecialist: true,
@@ -317,18 +344,27 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       prisma.importedRequest.count({ where }),
     ]);
 
-    // Вычисление executionStatus для всех заявок
+    const now = new Date();
+
+    // Вычисление executionStatus и isOverdue для всех заявок
     const enrichedData = rawData.map(req => {
       const isISZHObject = req.equipmentType?.code === 'iszh_object';
 
+      let executionStatus: string;
       if (!isISZHObject) {
-        // Для обычных заявок — старая логика через один visit
-        return { ...req, executionStatus: computeExecutionStatus(req.visit, false) };
+        executionStatus = computeExecutionStatus(req.visit, false);
+      } else {
+        const allVisits = req.visitRequests?.map(vr => vr.visit).filter(Boolean) || [];
+        executionStatus = computeISZHExecutionStatus(allVisits);
       }
 
-      // Для ИСЖ объекта — агрегированный статус по всем связанным визитам
-      const allVisits = req.visitRequests?.map(vr => vr.visit).filter(Boolean) || [];
-      return { ...req, executionStatus: computeISZHExecutionStatus(allVisits) };
+      // Просрочена ли заявка
+      let isOverdue = false;
+      if (req.deadline && !['completed', 'sent'].includes(executionStatus)) {
+        isOverdue = new Date(req.deadline) < now;
+      }
+
+      return { ...req, executionStatus, isOverdue };
     });
 
     // Пост-фильтрация по executionStatus

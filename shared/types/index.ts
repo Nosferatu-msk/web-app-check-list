@@ -102,6 +102,7 @@ export interface Visit {
   id: string;
   userId: string | null;
   addressId: string;
+  contractId?: string;
   engineerName: string;
   dateStart: string;
   timeStart: string;
@@ -118,6 +119,7 @@ export interface Visit {
   deletedById?: string;
   deletedAt?: string;
   address?: Address;
+  contract?: Contract;
   tasks?: Task[];
   user?: { id: string; fullName: string; email: string } | null;
   assignedBy?: { id: string; fullName: string; email: string };
@@ -401,6 +403,10 @@ export interface ImportedRequest {
   addressRaw?: string;
   matchedAddressId?: string;
   visitId?: string;
+  contractId?: string;
+  requestType?: 'planned' | 'unplanned';
+  startDate?: string;
+  deadline?: string;
   importStatus: ImportStatus;
   errorMessage?: string;
   importedBy?: string;
@@ -409,6 +415,24 @@ export interface ImportedRequest {
   equipmentType?: EquipmentType;
   matchedAddress?: Address;
   visit?: Visit;
+  contract?: Contract;
+  executionStatus?: string;
+  visitRequests?: { visit: Visit }[];
+}
+
+export interface Contract {
+  id: string;
+  number: string;
+  tmId: string;
+  module: 'to' | 'mtr';
+  isActive: boolean;
+  createdAt: string;
+  tm?: { id: string; fullName: string; email: string };
+}
+
+export interface RequestDeadlineSettings {
+  planned: { deadlineDays: number | null; notificationDaysBefore: number };
+  unplanned: { deadlineDays: number | null; notificationDaysBefore: number };
 }
 
 export interface VisitEngineer {

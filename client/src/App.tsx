@@ -35,6 +35,8 @@ import AdminObjectEquipment from './pages/admin/AdminObjectEquipment';
 import AdminProposals from './pages/admin/AdminProposals';
 import AdminSystemNotifications from './pages/admin/AdminSystemNotifications';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
+import ContractsPage from './pages/admin/ContractsPage';
+import DeadlineSettingsPage from './pages/admin/DeadlineSettingsPage';
 import MtrVisitListPage from './pages/mtr/MtrVisitListPage';
 import MtrVisitPage from './pages/mtr/MtrVisitPage';
 import MtrReportPage from './pages/mtr/MtrReportPage';
@@ -150,6 +152,8 @@ export default function App() {
         <Route path="audit" element={<AdminAuditLog />} />
         <Route path="mtr-work-types" element={<MtrAdminWorkTypes />} />
         <Route path="mtr-assignments" element={<MtrAdminAssignments />} />
+        <Route path="contracts" element={<ContractsPage />} />
+        <Route path="deadline-settings" element={<DeadlineSettingsPage />} />
       </Route>
       {/* MTR routes */}
       <Route path="/mtr/visits" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitListPage /></EngineerMtrRoute></ProtectedRoute>} />

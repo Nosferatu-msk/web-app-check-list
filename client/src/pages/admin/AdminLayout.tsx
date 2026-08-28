@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App, Breadcrumb } from 'antd';
 import type { MenuProps } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined, ExperimentOutlined, LinkOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined, ExperimentOutlined, LinkOutlined, FileProtectOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -23,6 +23,8 @@ const pageLabels: Record<string, string> = {
   '/admin/mtr-work-types': 'МТР: Виды работ',
   '/admin/mtr-assignments': 'МТР: Привязки',
   '/admin/system-notifications': 'Уведомления',
+  '/admin/contracts': 'Договоры',
+  '/admin/deadline-settings': 'Настройки сроков',
   '/admin/audit': 'Аудит',
 };
 
@@ -46,6 +48,10 @@ const menuItems: MenuProps['items'] = [
   { type: 'group', label: 'МТР', children: [
     { key: '/admin/mtr-work-types', icon: <ExperimentOutlined />, label: 'Виды работ' },
     { key: '/admin/mtr-assignments', icon: <LinkOutlined />, label: 'Привязки' },
+  ]},
+  { type: 'group', label: 'Договоры', children: [
+    { key: '/admin/contracts', icon: <FileProtectOutlined />, label: 'Договоры' },
+    { key: '/admin/deadline-settings', icon: <ClockCircleOutlined />, label: 'Настройки сроков' },
   ]},
   { type: 'group', label: 'Система', children: [
     { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Модерация' },

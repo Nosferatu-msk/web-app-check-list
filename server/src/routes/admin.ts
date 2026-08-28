@@ -297,15 +297,25 @@ router.get('/tm-objects', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/tm-objects', validate(tmObjectSchema), async (req: AuthRequest, res: Response) => {
-  const item = await prisma.tmObject.upsert({
-    where: { tmId_addressId: { tmId: req.body.tmId, addressId: req.body.addressId } },
-    update: {},
-    create: req.body,
-    include: {
-      tm: { select: { id: true, fullName: true, email: true } },
-      address: true,
-    },
+  const existing = await prisma.tmObject.findFirst({
+    where: { tmId: req.body.tmId, addressId: req.body.addressId, contractId: req.body.contractId || null },
   });
+  const item = existing
+    ? await prisma.tmObject.update({
+        where: { id: existing.id },
+        data: req.body,
+        include: {
+          tm: { select: { id: true, fullName: true, email: true } },
+          address: true,
+        },
+      })
+    : await prisma.tmObject.create({
+        data: req.body,
+        include: {
+          tm: { select: { id: true, fullName: true, email: true } },
+          address: true,
+        },
+      });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'tm_object', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json(item);
 });

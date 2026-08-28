@@ -16,6 +16,7 @@ import profileRoutes from './routes/profile.js';
 import requestRoutes from './routes/requests.js';
 import systemWebhookRoutes from './routes/system-webhook.js';
 import mtrRoutes from './routes/mtr.js';
+import contractRoutes from './routes/contracts.js';
 import { startCronJobs } from './services/cron.js';
 
 const app = express();
@@ -44,6 +45,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/system/webhook', systemWebhookRoutes);
 app.use('/api/mtr', mtrRoutes);
+app.use('/api/contracts', contractRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
