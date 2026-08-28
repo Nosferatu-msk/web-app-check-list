@@ -31,11 +31,12 @@ async function main() {
   // ─── TM ASSIGNMENTS ──────────────────────────────────────
   const allAddresses = await prisma.address.findMany();
   for (const addr of allAddresses) {
-    await prisma.tmObject.upsert({
-      where: { tmId_addressId: { tmId: tm.id, addressId: addr.id } },
-      update: {},
-      create: { tmId: tm.id, addressId: addr.id },
+    const existing = await prisma.tmObject.findFirst({
+      where: { tmId: tm.id, addressId: addr.id },
     });
+    if (!existing) {
+      await prisma.tmObject.create({ data: { tmId: tm.id, addressId: addr.id } });
+    }
   }
   await prisma.tmEngineer.upsert({
     where: { engineerId: engineer.id },
