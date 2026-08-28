@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Спецификация — Модуль договоров и сроки заявок</title>
+<style>
+  :root {
+    --primary: #0F766E;
+    --primary-light: #14B8A6;
+    --accent: #0369A1;
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --text: #0F172A;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --success: #059669;
+    --warning: #D97706;
+    --danger: #DC2626;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  
+  /* Header */
+  .header { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 40px 32px; border-radius: 16px; margin-bottom: 32px; }
+  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .header .subtitle { font-size: 16px; opacity: 0.9; }
+  .header .meta { display: flex; gap: 24px; margin-top: 16px; font-size: 13px; opacity: 0.8; }
+  
+  /* Sections */
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+  .section h2 { font-size: 20px; font-weight: 600; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  .section h3 { font-size: 16px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
+  .section p { margin-bottom: 12px; color: var(--text-muted); }
+  
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th { background: #F1F5F9; padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #F8FAFC; }
+  
+  /* Code */
+  code { background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+  pre { background: #1E293B; color: #E2E8F0; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; margin: 12px 0; }
+  pre code { background: none; color: inherit; padding: 0; }
+  
+  /* Tags */
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .tag-p0 { background: #FEF2F2; color: var(--danger); border: 1px solid #FECACA; }
+  .tag-p1 { background: #FFFBEB; color: var(--warning); border: 1px solid #FDE68A; }
+  .tag-p2 { background: #F0FDF4; color: var(--success); border: 1px solid #BBF7D0; }
+  .tag-new { background: #EFF6FF; color: var(--accent); border: 1px solid #BFDBFE; }
+  .tag-change { background: #FDF4FF; color: #7C3AED; border: 1px solid #E9D5FF; }
+  
+  /* Color swatches */
+  .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin: 12px 0; }
+  .color-swatch { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .color-swatch .preview { height: 48px; }
+  .color-swatch .info { padding: 8px; font-size: 12px; }
+  .color-swatch .info .name { font-weight: 600; }
+  .color-swatch .info .hex { color: var(--text-muted); }
+  
+  /* Status indicators */
+  .status-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+  .status-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  
+  /* Diagram */
+  .diagram { background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; white-space: pre; overflow-x: auto; }
+  
+  /* Alert */
+  .alert { padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; }
+  .alert-info { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; }
+  .alert-warning { background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; }
+  .alert-success { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
+  
+  /* Timeline */
+  .timeline { position: relative; padding-left: 24px; margin: 16px 0; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .timeline-item { position: relative; padding: 8px 0 16px; }
+  .timeline-item::before { content: ''; position: absolute; left: -20px; top: 12px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--primary); background: white; }
+  .timeline-item.done::before { background: var(--success); border-color: var(--success); }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 12px; }
+    .header { padding: 24px 16px; }
+    .header h1 { font-size: 22px; }
+    .color-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  
+  /* Print */
+  @media print {
+    body { background: white; }
+    .section { break-inside: avoid; border: 1px solid #ccc; }
+    .header { background: var(--primary) !important; -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- HEADER -->
+<div class="header">
+  <h1>Спецификация: Модуль договоров и сроки заявок</h1>
+  <div class="subtitle">Привязка ТМ к договорам, изоляция данных, управление сроками, уведомления о просрочке</div>
+  <div class="meta">
+    <span>Версия: 1.1</span>
+    <span>Дата: 28.08.2026</span>
+    <span>Статус: На согласовании</span>
+    <span>Модули: ТО + МТР</span>
+    <span>Договора: 050005596590, 050001234567, 050007654321</span>
+  </div>
+</div>
+
+<!-- 1. ОБЗОР -->
+<div class="section">
+  <h2>1. Обзор и цели</h2>
+  <p>На одном объекте могут работать разные подрядные организации (ТМ) с разными договорами. Необходимо обеспечить полную изоляцию данных: ТМ видит только свои заявки и визиты. Админ видит всё.</p>
+  
+  <h3>Бизнес-требования</h3>
+  <table>
+    <tr><th>ID</th><th>Требование</th><th>Приоритет</th></tr>
+    <tr><td>BR-1</td><td>Привязка объекта к ТМ через договор (один объект — несколько ТМ с разными договорами)</td><td><span class="tag tag-p0">P0</span></td></tr>
+    <tr><td>BR-2</td><td>Изоляция данных: ТМ видит только заявки/визиты по своим договорам</td><td><span class="tag tag-p0">P0</span></td></tr>
+    <tr><td>BR-3</td><td>Импорт заявок с указанием номера договора, типа (плановая/внеплановая), даты начала</td><td><span class="tag tag-p0">P0</span></td></tr>
+    <tr><td>BR-4</td><td>Автоматический расчёт сроков: плановая = календарный месяц, внеплановая = 14 дней (настраиваемо)</td><td><span class="tag tag-p0">P0</span></td></tr>
+    <tr><td>BR-5</td><td>Уведомления за 5 дней до окончания срока (ТМ + инженеры)</td><td><span class="tag tag-p1">P1</span></td></tr>
+    <tr><td>BR-6</td><td>Фильтр по периоду (месяц) в визитах и заявках + отображение просроченных</td><td><span class="tag tag-p1">P1</span></td></tr>
+    <tr><td>BR-7</td><td>Поиск по коду объекта, номеру заявки, адресу + фильтр по договору</td><td><span class="tag tag-p1">P1</span></td></tr>
+    <tr><td>BR-8</td><td>Бейдж договора в интерфейсе визитов и заявок (для всех ролей)</td><td><span class="tag tag-p1">P1</span></td></tr>
+    <tr><td>BR-9</td><td>Расширение на модуль МТР (аналогичная логика)</td><td><span class="tag tag-p2">P2</span></td></tr>
+  </table>
+  
+  <h3>Ограничения и допущения</h3>
+  <div class="alert alert-info">
+    <strong>Инженер = один ТМ.</strong> Инженер привязан к одному ТМ и работает только по его договорам. Модель <code>TmEngineer</code> не меняется.
+  </div>
+  <div class="alert alert-info">
+    <strong>Договор — простая сущность.</strong> Номер + ТМ-владелец. Без дат, сумм, контрагентов.
+  </div>
+</div>
+
+<!-- 2. ДИЗАЙН-СИСТЕМА -->
+<div class="section">
+  <h2>2. Дизайн-система (UI/UX Pro Max)</h2>
+  
+  <h3>2.1. Цветовая палитра</h3>
+  <p>Используется утверждённая палитра <strong>trust teal</strong> (P0 редизайна). Дополнительные цвета для модуля договоров:</p>
+  
+  <div class="color-grid">
+    <div class="color-swatch"><div class="preview" style="background:#0F766E"></div><div class="info"><div class="name">Primary</div><div class="hex">#0F766E</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#14B8A6"></div><div class="info"><div class="name">Secondary</div><div class="hex">#14B8A6</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#0369A1"></div><div class="info"><div class="name">Accent</div><div class="hex">#0369A1</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#059669"></div><div class="info"><div class="name">Success / Срок OK</div><div class="hex">#059669</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#D97706"></div><div class="info"><div class="name">Warning / ≤5 дней</div><div class="hex">#D97706</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#DC2626"></div><div class="info"><div class="name">Danger / Просрочена</div><div class="hex">#DC2626</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#7C3AED"></div><div class="info"><div class="name">Договор (бейдж)</div><div class="hex">#7C3AED</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#F8FAFC"></div><div class="info"><div class="name">Background</div><div class="hex">#F8FAFC</div></div></div>
+  </div>
+  
+  <h3>2.2. Индикаторы сроков (UX-паттерн)</h3>
+  <table>
+    <tr><th>Состояние</th><th>Цвет</th><th>Иконка</th><th>Текст</th></tr>
+    <tr>
+      <td>Срок &gt; 5 дней</td>
+      <td><span class="status-dot" style="background:#059669;display:inline-block"></span> Зелёный</td>
+      <td><code>ClockCircleOutlined</code></td>
+      <td>«До окончания: N дней»</td>
+    </tr>
+    <tr>
+      <td>Срок ≤ 5 дней</td>
+      <td><span class="status-dot" style="background:#D97706;display:inline-block"></span> Жёлтый</td>
+      <td><code>ExclamationCircleOutlined</code></td>
+      <td>«Осталось N дней»</td>
+    </tr>
+    <tr>
+      <td>Просрочена</td>
+      <td><span class="status-dot" style="background:#DC2626;display:inline-block"></span> Красный</td>
+      <td><code>WarningOutlined</code> (мигающий)</td>
+      <td>«Просрочена на N дней»</td>
+    </tr>
+    <tr>
+      <td>Завершена в срок</td>
+      <td><span class="status-dot" style="background:#059669;display:inline-block"></span> Зелёный</td>
+      <td><code>CheckCircleOutlined</code></td>
+      <td>«Завершена»</td>
+    </tr>
+  </table>
+  
+  <h3>2.3. Бейдж договора</h3>
+  <div class="alert alert-info">
+    <strong>Визуальный паттерн:</strong> Компактный тег <code>&lt;Tag color="purple"&gt;</code> с иконкой <code>FileTextOutlined</code> и номером договора. Например: <span class="tag" style="background:#F3E8FF;color:#7C3AED;border:1px solid #E9D5FF">📄 ДОГ-2026-001</span>. Бейдж не переносится на вторую строку (<code>white-space: nowrap</code>).
+  </div>
+  
+  <h3>2.4. UX-рекомендации (UI/UX Pro Max)</h3>
+  <table>
+    <tr><th>Категория</th><th>Рекомендация</th><th>Применение</th></tr>
+    <tr><td>Бейджи</td><td>Контекстное обновление через <code>aria-atomic</code></td><td>Счётчик просроченных заявок в фильтре</td></tr>
+    <tr><td>Бейджи</td><td><code>nowrap</code> + tooltip для полного значения</td><td>Длинные номера договоров</td></tr>
+    <tr><td>Поиск</td><td>Debounce через <code>useDeferredValue</code></td><td>Поиск по заявкам (код/номер/адрес)</td></tr>
+    <tr><td>Таблицы</td><td>Горизонтальный скролл на мобильных</td><td>Таблица заявок с доп. колонками</td></tr>
+    <tr><td>Фильтры</td><td>Chip collection с <code>flex-wrap</code></td><td>Активные фильтры (договор, период, статус)</td></tr>
+    <tr><td>Формы</td><td>Loading → Success/Error feedback</td><td>Импорт заявок, создание договора</td></tr>
+    <tr><td>Даты</td><td>Locale-aware формат (DD.MM.YYYY)</td><td>Отображение сроков</td></tr>
+  </table>
+</div>
+
+<!-- 3. МОДЕЛЬ ДАННЫХ -->
+<div class="section">
+  <h2>3. Модель данных</h2>
+  
+  <h3>3.1. Новая таблица: <code>contracts</code></h3>
+  <table>
+    <tr><th>Поле</th><th>Тип</th><th>Nullable</th><th>Описание</th></tr>
+    <tr><td><code>id</code></td><td>UUID</td><td>Нет</td><td>Первичный ключ</td></tr>
+    <tr><td><code>number</code></td><td>TEXT</td><td>Нет</td><td>Номер договора (12 символов, начинается с 05000)</td></tr>
+    <tr><td><code>tm_id</code></td><td>UUID</td><td>Нет</td><td>FK → users.id (ТМ-владелец)</td></tr>
+    <tr><td><code>module</code></td><td>TEXT</td><td>Нет</td><td>Модуль: 'to' или 'mtr'</td></tr>
+    <tr><td><code>is_active</code></td><td>BOOLEAN</td><td>Нет</td><td>Активен ли договор (default: true)</td></tr>
+    <tr><td><code>created_at</code></td><td>TIMESTAMP</td><td>Нет</td><td>Дата создания</td></tr>
+  </table>
+  <pre><code>@@unique([number, tm_id, module])  -- один номер у одного ТМ в одном модуле
+@@index([tm_id])
+@@index([number])
+
+-- Валидация номера договора (CHECK constraint):
+-- LENGTH(number) = 12 AND number LIKE '05000%'</code></pre>
+  
+  <div class="alert alert-info">
+    <strong>Формат номера договора:</strong> Ровно 12 символов, начинается с <code>05000</code>. Пример: <code>050005596590</code>. Валидация на уровне БД (CHECK) и UI (mask input).
+  </div>
+  
+  <h3>3.2. Изменения: <code>tm_objects</code> / <code>mtr_tm_objects</code></h3>
+  <table>
+    <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+    <tr><td><code>contract_id</code> <span class="tag tag-new">NEW</span></td><td>UUID</td><td>FK → contracts.id. Привязка объекта к договору</td></tr>
+  </table>
+  <div class="alert alert-warning">Уникальный индекс <code>[tmId, addressId]</code> заменяется на <code>[tmId, addressId, contractId]</code> — один ТМ может привязать один объект по разным договорам.</div>
+  
+  <h3>3.3. Изменения: <code>imported_requests</code></h3>
+  <table>
+    <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+    <tr><td><code>contract_id</code> <span class="tag tag-new">NEW</span></td><td>UUID?</td><td>FK → contracts.id. Договор, к которому относится заявка</td></tr>
+    <tr><td><code>request_type</code> <span class="tag tag-new">NEW</span></td><td>TEXT</td><td>enum: 'planned' / 'unplanned' (плановая/внеплановая)</td></tr>
+    <tr><td><code>start_date</code> <span class="tag tag-new">NEW</span></td><td>DATE?</td><td>Дата начала действия заявки</td></tr>
+    <tr><td><code>deadline</code> <span class="tag tag-new">NEW</span></td><td>DATE?</td><td>Срок исполнения (вычисляется при импорте)</td></tr>
+  </table>
+  
+  <h3>3.4. Изменения: <code>visits</code> / <code>mtr_visits</code></h3>
+  <table>
+    <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+    <tr><td><code>contract_id</code> <span class="tag tag-new">NEW</span></td><td>UUID?</td><td>FK → contracts.id. Договор визита (наследуется от заявки)</td></tr>
+  </table>
+  
+  <h3>3.5. Новая таблица: <code>request_deadline_settings</code></h3>
+  <table>
+    <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+    <tr><td><code>id</code></td><td>UUID</td><td>Первичный ключ</td></tr>
+    <tr><td><code>request_type</code></td><td>TEXT</td><td>'planned' / 'unplanned'</td></tr>
+    <tr><td><code>deadline_days</code></td><td>INTEGER</td><td>Срок исполнения в днях (null = календарный месяц)</td></tr>
+    <tr><td><code>notification_days_before</code></td><td>INTEGER</td><td>За сколько дней уведомлять (default: 5)</td></tr>
+    <tr><td><code>updated_by</code></td><td>UUID</td><td>FK → users.id (кто изменил)</td></tr>
+    <tr><td><code>updated_at</code></td><td>TIMESTAMP</td><td>Дата изменения</td></tr>
+  </table>
+  
+  <h3>3.6. Схема связей</h3>
+  <div class="diagram">User (tm)
+ ├── Contract[] ──────── (свои договоры)
+ │    ├── TmObject[] ──── Address[] (объекты по договору)
+ │    ├── ImportedRequest[] (заявки по договору)
+ │    └── Visit[] ──────── (визиты по договору)
+ ├── TmEngineer[] ────── User (engineer)[] (подчинённые инженеры)
+ └── (импорт) ────────── ImportedRequest[] (с привязкой к договору)
+
+User (engineer)
+ ├── TmEngineer ──────── User (tm) (один ТМ)
+ ├── Visit[] ──────────── Contract? (договор через визит)
+ └── VisitEngineer[] ──── Visit[] ── Contract?
+
+ImportedRequest
+ ├── contract ─────────── Contract (договор)
+ ├── matchedAddress ──── Address
+ ├── request_type ────── 'planned' | 'unplanned'
+ ├── start_date ──────── дата начала
+ ├── deadline ────────── срок исполнения
+ └── visitRequests ───── VisitRequest[] ── Visit[]</div>
+</div>
+
+<!-- 4. ЛОГИКА СРОКОВ -->
+<div class="section">
+  <h2>4. Логика сроков</h2>
+  
+  <h3>4.1. Расчёт deadline при импорте</h3>
+  <table>
+    <tr><th>Тип заявки</th><th>Дата в файле</th><th>start_date</th><th>deadline</th><th>Пример</th></tr>
+    <tr>
+      <td><strong>Плановая</strong></td>
+      <td>10.07.2026</td>
+      <td>01.07.2026 (1-е число месяца)</td>
+      <td>31.07.2026 (последний день месяца)</td>
+      <td>Срок: весь июль</td>
+    </tr>
+    <tr>
+      <td><strong>Внеплановая</strong></td>
+      <td>11.07.2026</td>
+      <td>11.07.2026 (как в файле)</td>
+      <td>25.07.2026 (start + 14 дней)</td>
+      <td>Срок: 14 дней</td>
+    </tr>
+  </table>
+  
+  <div class="alert alert-info">
+    <strong>Настраиваемые сроки:</strong> Значения по умолчанию (месяц / 14 дней) задаются в таблице <code>request_deadline_settings</code>. Админ может изменить через админ-панель.
+  </div>
+  
+  <h3>4.2. Уведомления о просрочке</h3>
+  <p>Cron-задача (ежедневно, 08:00 МСК):</p>
+  <ol style="padding-left: 20px; color: var(--text-muted);">
+    <li>Найти все заявки, где <code>deadline - 5 дней ≤ today</code> И <code>status ≠ 'completed'</code></li>
+    <li>Для каждой заявки: отправить уведомление ТМ (владельцу договора)</li>
+    <li>Для каждой заявки: найти все связанные визиты через <code>visit_requests</code> и <code>visit_engineers</code></li>
+    <li>Отправить уведомление каждому назначенному инженеру</li>
+  </ol>
+  
+  <h3>4.3. Просроченные заявки</h3>
+  <p>Заявка считается просроченной, если <code>deadline &lt; today</code> И статус не входит в <code>['completed', 'sent']</code>.</p>
+</div>
+
+<!-- 5. API -->
+<div class="section">
+  <h2>5. Изменения API</h2>
+  
+  <h3>5.1. Новые эндпоинты</h3>
+  <table>
+    <tr><th>Метод</th><th>Путь</th><th>Описание</th><th>Роли</th></tr>
+    <tr><td>GET</td><td><code>/api/contracts</code></td><td>Список договоров (фильтр по ТМ для ТМ, все для админа)</td><td>tm, admin</td></tr>
+    <tr><td>POST</td><td><code>/api/contracts</code></td><td>Создать договор</td><td>admin</td></tr>
+    <tr><td>PUT</td><td><code>/api/contracts/:id</code></td><td>Обновить договор</td><td>admin</td></tr>
+    <tr><td>DELETE</td><td><code>/api/contracts/:id</code></td><td>Деактивировать договор</td><td>admin</td></tr>
+    <tr><td>GET</td><td><code>/api/admin/deadline-settings</code></td><td>Настройки сроков</td><td>admin</td></tr>
+    <tr><td>PUT</td><td><code>/api/admin/deadline-settings</code></td><td>Обновить настройки сроков</td><td>admin</td></tr>
+  </table>
+  
+  <h3>5.1.1. Валидация номера договора (Zod)</h3>
+  <pre><code>const contractSchema = z.object({
+  number: z.string()
+    .length(12, 'Номер договора должен содержать ровно 12 символов')
+    .regex(/^05000/, 'Номер договора должен начинаться с 05000'),
+  tmId: z.string().uuid(),
+  module: z.enum(['to', 'mtr']),
+});</code></pre>
+  
+  <h3>5.2. Изменения существующих эндпоинтов</h3>
+  <table>
+    <tr><th>Эндпоинт</th><th>Изменение</th></tr>
+    <tr><td><code>GET /api/requests</code></td><td>
+      + Фильтр <code>contractId</code><br>
+      + Фильтр <code>period</code> (месяц/год)<br>
+      + Поиск <code>search</code> (код объекта, номер заявки, адрес)<br>
+      + Возвращает <code>contract</code>, <code>deadline</code>, <code>isOverdue</code><br>
+      + ТМ видит только заявки по своим договорам
+    </td></tr>
+    <tr><td><code>GET /api/visits</code></td><td>
+      + Фильтр <code>contractId</code><br>
+      + Фильтр <code>period</code> (месяц/год)<br>
+      + Возвращает <code>contract.number</code><br>
+      + ТМ видит только визиты по своим договорам
+    </td></tr>
+    <tr><td><code>POST /api/requests/import</code></td><td>
+      + Новые колонки: «Тип заявки», «Номер договора», «Дата начала»<br>
+      + Валидация: договор должен существовать и принадлежать ТМ<br>
+      + Автоматический расчёт <code>deadline</code>
+    </td></tr>
+  </table>
+  
+  <h3>5.3. Фильтрация ТМ (безопасность)</h3>
+  <pre><code>// Middleware: ТМ видит только свои договоры
+if (req.userRole === 'tm') {
+  const contractIds = await prisma.contract.findMany({
+    where: { tmId: req.userId },
+    select: { id: true },
+  });
+  where.contractId = { in: contractIds.map(c => c.id) };
+}</code></pre>
+</div>
+
+<!-- 6. UI -->
+<div class="section">
+  <h2>6. Изменения UI</h2>
+  
+  <h3>6.1. Страница «Заявки» (RequestsPage)</h3>
+  <table>
+    <tr><th>Элемент</th><th>Изменение</th><th>Компонент Ant Design</th></tr>
+    <tr><td>Поиск</td><td>Поле поиска по коду объекта, номеру заявки, адресу (серверный, debounce 300мс)</td><td><code>Input.Search</code></td></tr>
+    <tr><td>Фильтр: Договор</td><td>Select с номерами договоров текущего ТМ</td><td><code>Select</code> с тегом</td></tr>
+    <tr><td>Фильтр: Период</td><td>Выбор месяца/года (по умолчанию текущий)</td><td><code>DatePicker picker="month"</code></td></tr>
+    <tr><td>Колонка: Договор</td><td>Бейдж <code>&lt;Tag color="purple"&gt;</code> с номером</td><td><code>Tag</code> + <code>FileTextOutlined</code></td></tr>
+    <tr><td>Колонка: Срок</td><td>Дата deadline + индикатор (зелёный/жёлтый/красный)</td><td><code>Tag</code> + иконка</td></tr>
+    <tr><td>Колонка: Просрочена</td><td>Иконка <code>WarningOutlined</code> для просроченных</td><td><code>Tooltip</code> + иконка</td></tr>
+  </table>
+  
+  <h3>6.2. Страница «Визиты» (VisitListPage)</h3>
+  <table>
+    <tr><th>Элемент</th><th>Изменение</th></tr>
+    <tr><td>Фильтр: Период</td><td>Выбор месяца/года (по умолчанию текущий)</td></tr>
+    <tr><td>Фильтр: Договор</td><td>Select с номерами договоров</td></tr>
+    <tr><td>Бейдж договора</td><td>Рядом с адресом в карточке/строке</td></tr>
+    <tr><td>Просроченные визиты</td><td>Красная иконка, если дедлайн заявки прошёл</td></tr>
+  </table>
+  
+  <h3>6.3. Админ-панель: Управление договорами</h3>
+  <p>Новая страница <code>/admin/contracts</code>:</p>
+  <ul style="padding-left: 20px; color: var(--text-muted);">
+    <li>Таблица договоров с фильтрацией по ТМ</li>
+    <li>Кнопка «Создать договор» → модалка с полями: номер, ТМ (Select), модуль (ТО/МТР)</li>
+    <li>Редактирование номера, деактивация</li>
+    <li>Привязка объектов к договорам (drag-n-drop или select)</li>
+  </ul>
+  
+  <h3>6.4. Админ-панель: Настройки сроков</h3>
+  <p>Новая страница <code>/admin/deadline-settings</code>:</p>
+  <ul style="padding-left: 20px; color: var(--text-muted);">
+    <li>Таблица: тип заявки | срок (дни) | уведомление за (дни)</li>
+    <li>Редактирование inline (InputNumber)</li>
+  </ul>
+  
+  <h3>6.5. Мобильная адаптация (≤393px)</h3>
+  <ul style="padding-left: 20px; color: var(--text-muted);">
+    <li>Фильтры сворачиваются в <code>Dropdown</code> с кнопкой «Фильтры»</li>
+    <li>Бейдж договора — компактный тег под адресом</li>
+    <li>Индикатор срока — иконка + текст в одну строку</li>
+    <li>Поиск — в шапке страницы, <code>Input.Search</code> на всю ширину</li>
+  </ul>
+</div>
+
+<!-- 7. ИМПОРТ -->
+<div class="section">
+  <h2>7. Формат импорта заявок (Excel)</h2>
+  
+  <h3>7.1. Новые колонки</h3>
+  <table>
+    <tr><th>Колонка</th><th>Обязательная</th><th>Формат</th><th>Пример</th></tr>
+    <tr><td>№ заявки</td><td>Да</td><td>Текст</td><td>IS0133418159</td></tr>
+    <tr><td>Код объекта</td><td>Да</td><td>Текст</td><td>RU/77/606</td></tr>
+    <tr><td>Вид оборудования</td><td>Да</td><td>Текст</td><td>ИСЖ объекта</td></tr>
+    <tr><td>Адрес</td><td>Нет</td><td>Текст</td><td>г Москва, ул Расплетина, 10к1</td></tr>
+    <tr><td>Статус</td><td>Нет</td><td>Текст</td><td>Новая</td></tr>
+    <tr><td><strong>Тип заявки</strong> <span class="tag tag-new">NEW</span></td><td><strong>Да</strong></td><td>«плановая» / «внеплановая»</td><td>плановая</td></tr>
+    <tr><td><strong>Номер договора</strong> <span class="tag tag-new">NEW</span></td><td><strong>Да</strong></td><td>Текст</td><td>ДОГ-2026-001</td></tr>
+    <tr><td><strong>Дата начала</strong> <span class="tag tag-new">NEW</span></td><td><strong>Да</strong></td><td>DD.MM.YYYY</td><td>10.07.2026</td></tr>
+  </table>
+  
+  <h3>7.2. Валидация при импорте</h3>
+  <ol style="padding-left: 20px; color: var(--text-muted);">
+    <li>Номер договора: ровно 12 символов, начинается с <code>05000</code></li>
+    <li>Номер договора должен существовать в таблице <code>contracts</code></li>
+    <li>Если импортирует ТМ — договор должен принадлежать этому ТМ</li>
+    <li>Если импортирует админ — договор может быть любым</li>
+    <li>Тип заявки: нормализация («плановая» → 'planned', «внеплановая» → 'unplanned')</li>
+    <li>Дата начала: парсинг из DD.MM.YYYY</li>
+    <li>Автоматический расчёт <code>deadline</code> на основе типа и настроек</li>
+  </ol>
+</div>
+
+<!-- 8. ПЛАН РАБОТ -->
+<div class="section">
+  <h2>8. План работ</h2>
+  
+  <div class="timeline">
+    <div class="timeline-item">
+      <strong>Этап 1: Модель данных</strong> <span class="tag tag-p0">P0</span> <span class="tag tag-change">~2 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Миграция: создание таблицы <code>contracts</code></li>
+        <li>Миграция: добавление <code>contract_id</code> в <code>tm_objects</code>, <code>mtr_tm_objects</code>, <code>imported_requests</code>, <code>visits</code>, <code>mtr_visits</code></li>
+        <li>Миграция: добавление <code>request_type</code>, <code>start_date</code>, <code>deadline</code> в <code>imported_requests</code></li>
+        <li>Миграция: создание таблицы <code>request_deadline_settings</code> + seed значений по умолчанию</li>
+        <li>Обновление Prisma schema + generate</li>
+        <li>Обновление shared/types</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 2: API договоров</strong> <span class="tag tag-p0">P0</span> <span class="tag tag-change">~2 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>CRUD: <code>/api/contracts</code> (GET, POST, PUT, DELETE)</li>
+        <li>Фильтрация по ТМ для роли tm</li>
+        <li>Валидация Zod-схемы</li>
+        <li>Audit log для операций с договорами</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 3: Админ-панель — договоры</strong> <span class="tag tag-p0">P0</span> <span class="tag tag-change">~2 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Страница <code>/admin/contracts</code>: таблица, создание, редактирование</li>
+        <li>Привязка объектов к договорам</li>
+        <li>Страница <code>/admin/deadline-settings</code>: настройки сроков</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 4: Импорт заявок</strong> <span class="tag tag-p0">P0</span> <span class="tag tag-change">~2 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Обновление парсера Excel: новые колонки</li>
+        <li>Валидация номера договора</li>
+        <li>Расчёт deadline</li>
+        <li>Привязка заявки и визита к договору</li>
+        <li>Обновление шаблона Excel</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 5: Изоляция данных ТМ</strong> <span class="tag tag-p0">P0</span> <span class="tag tag-change">~2 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Обновление <code>GET /api/requests</code>: фильтр по договорам ТМ</li>
+        <li>Обновление <code>GET /api/visits</code>: фильтр по договорам ТМ</li>
+        <li>Обновление <code>canAccessVisit</code>: проверка через договор</li>
+        <li>Миграция существующих данных (создание default-договоров)</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 6: UI Заявки</strong> <span class="tag tag-p1">P1</span> <span class="tag tag-change">~3 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Поиск (код/номер/адрес) с debounce</li>
+        <li>Фильтр по договору (Select)</li>
+        <li>Фильтр по периоду (DatePicker month)</li>
+        <li>Колонка «Договор» (бейдж)</li>
+        <li>Колонка «Срок» (дата + индикатор)</li>
+        <li>Просроченные (иконка + tooltip)</li>
+        <li>Мобильная адаптация фильтров</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 7: UI Визиты</strong> <span class="tag tag-p1">P1</span> <span class="tag tag-change">~2 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Фильтр по периоду (месяц)</li>
+        <li>Фильтр по договору</li>
+        <li>Бейдж договора в карточке/строке</li>
+        <li>Просроченные визиты (иконка)</li>
+        <li>Паритет с модулем МТР</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 8: Уведомления</strong> <span class="tag tag-p1">P1</span> <span class="tag tag-change">~1 день</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Cron-задача: проверка дедлайнов</li>
+        <li>Создание уведомлений для ТМ и инженеров</li>
+        <li>Отображение в NotificationBell</li>
+      </ul>
+    </div>
+    
+    <div class="timeline-item">
+      <strong>Этап 9: Модуль МТР</strong> <span class="tag tag-p2">P2</span> <span class="tag tag-change">~3 дня</span>
+      <ul style="padding-left: 20px; color: var(--text-muted); margin-top: 4px;">
+        <li>Аналогичные изменения для mtr_visits, mtr_tm_objects</li>
+        <li>UI-паритет с модулем ТО</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="alert alert-warning">
+    <strong>Итого: ~19 рабочих дней</strong> (P0: ~10 дней, P1: ~6 дней, P2: ~3 дня). Рекомендуется начинать с P0, деплоить поэтапно.
+  </div>
+</div>
+
+<!-- 9. МИГРАЦИЯ ДАННЫХ -->
+<div class="section">
+  <h2>9. Миграция существующих данных</h2>
+  
+  <h3>9.1. Создание договоров для существующих ТМ</h3>
+  <table>
+    <tr><th>ТМ</th><th>Роль</th><th>Номер договора</th><th>Модуль</th></tr>
+    <tr><td>ТМ_МБ</td><td>tm</td><td><code>050005596590</code></td><td>to</td></tr>
+    <tr><td>ТМ СРБ</td><td>tm</td><td><code>050001234567</code></td><td>to</td></tr>
+    <tr><td>Тестовый ТМ ЦА</td><td>tm</td><td><code>050007654321</code></td><td>to</td></tr>
+    <tr><td>ТМ_МТР</td><td>tm_mtr</td><td><code>050001234567</code></td><td>mtr</td></tr>
+  </table>
+  <pre><code>INSERT INTO contracts (id, number, tm_id, module, is_active, created_at) VALUES
+  (gen_random_uuid()::text, '050005596590', 'b9758bf8-cf33-4d13-a741-edbb4d55748f', 'to', true, NOW()),  -- ТМ_МБ
+  (gen_random_uuid()::text, '050001234567', '955f520b-41f4-4236-9ecf-e11365c81824', 'to', true, NOW()),  -- ТМ СРБ
+  (gen_random_uuid()::text, '050007654321', '8d0d86bc-ff3c-4c89-9383-530ed8e044f0', 'to', true, NOW()),  -- Тестовый ТМ ЦА
+  (gen_random_uuid()::text, '050001234567', '7b203951-263f-442d-8d0a-2bc73ea17745', 'mtr', true, NOW()); -- ТМ_МТР</code></pre>
+  
+  <div class="alert alert-info">
+    <strong>Примечание:</strong> ТМ СРБ и ТМ_МТР имеют одинаковый номер <code>050001234567</code>, но в разных модулях (to/mtr) — это допустимо благодаря уникальному индексу <code>[number, tm_id, module]</code>.
+  </div>
+  
+  <h3>9.2. Привязка существующих объектов</h3>
+  <pre><code>UPDATE tm_objects SET contract_id = (
+  SELECT c.id FROM contracts c 
+  WHERE c.tm_id = tm_objects.tm_id AND c.module = 'to' 
+  LIMIT 1
+);</code></pre>
+  
+  <h3>9.3. Привязка существующих заявок</h3>
+  <div class="alert alert-info">
+    <strong>Контекст:</strong> Все существующие заявки в системе — <strong>плановые за август 2026</strong>. Следовательно: <code>request_type = 'planned'</code>, <code>start_date = '2026-08-01'</code>, <code>deadline = '2026-08-31'</code>.
+  </div>
+  <pre><code>UPDATE imported_requests SET 
+  contract_id = (
+    SELECT c.id FROM contracts c
+    JOIN tm_objects tmo ON tmo.address_id = imported_requests.matched_address_id
+    WHERE c.tm_id = tmo.tm_id AND c.module = 'to'
+    LIMIT 1
+  ),
+  request_type = 'planned',
+  start_date = '2026-08-01'::date,
+  deadline = '2026-08-31'::date
+WHERE contract_id IS NULL;</code></pre>
+  
+  <h3>9.4. Привязка существующих визитов</h3>
+  <pre><code>UPDATE visits v SET contract_id = (
+  SELECT ir.contract_id FROM imported_requests ir
+  JOIN visit_requests vr ON vr.imported_request_id = ir.id
+  WHERE vr.visit_id = v.id
+  LIMIT 1
+)
+WHERE v.contract_id IS NULL
+  AND v.is_deleted = false;</code></pre>
+  
+  <div class="alert alert-warning">
+    <strong>Важно:</strong> Миграция выполняется в рамках деплоя. Существующие заявки без договора получают default-договор своего ТМ.
+  </div>
+</div>
+
+<!-- 10. ВЕРИФИКАЦИЯ -->
+<div class="section">
+  <h2>10. План верификации</h2>
+  
+  <table>
+    <tr><th>Тест</th><th>Ожидаемый результат</th><th>Роль</th></tr>
+    <tr><td>Создать 2 договора для разных ТМ на один объект</td><td>Оба договора созданы, объект привязан к обоим</td><td>Админ</td></tr>
+    <tr><td>ТМ-1 импортирует заявку с договором 1</td><td>Заявка привязана к договору 1, ТМ-2 её не видит</td><td>ТМ-1</td></tr>
+    <tr><td>ТМ-2 создаёт визит на тот же объект</td><td>Визит не привязывается к заявке ТМ-1 (другой договор)</td><td>ТМ-2</td></tr>
+    <tr><td>Импорт внеплановой заявки с датой 11.07</td><td>deadline = 25.07 (14 дней)</td><td>ТМ</td></tr>
+    <tr><td>Импорт плановой заявки с датой 10.07</td><td>start_date = 01.07, deadline = 31.07</td><td>ТМ</td></tr>
+    <tr><td>Заявка с deadline вчера, статус != completed</td><td>Отображается красная иконка «Просрочена»</td><td>ТМ</td></tr>
+    <tr><td>Фильтр по периоду — июль 2026</td><td>Отображаются заявки июля + просроченные</td><td>ТМ</td></tr>
+    <tr><td>Поиск по коду объекта RU/77/606</td><td>Найдены все заявки этого объекта (в рамках договоров ТМ)</td><td>ТМ</td></tr>
+    <tr><td>Мобильный (393px): фильтры</td><td>Фильтры сворачиваются в dropdown</td><td>ТМ</td></tr>
+    <tr><td>Админ видит все заявки</td><td>Бейджи договоров отображаются для всех</td><td>Админ</td></tr>
+  </table>
+</div>
+
+</div>
+</body>
+</html>
