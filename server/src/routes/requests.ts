@@ -26,14 +26,16 @@ function computeISZHExecutionStatus(visits: any[]): string {
     return 'not_assigned';
   }
 
-  // Фильтруем только «реальные» визиты — с задачами или инженерами
-  const realVisits = visits.filter(v =>
-    (v._count?.tasks > 0) || (v.visitEngineers && v.visitEngineers.length > 0) || v.userId
-  );
+  // Фильтруем только «реальные» визиты — с задачами
+  // Визиты без задач считаются виртуальными (созданы при импорте/привязке заявки)
+  const realVisits = visits.filter(v => v._count?.tasks > 0);
 
-  // Если нет реальных визитов — заявка не назначена
+  // Если нет визитов с задачами — проверяем есть ли назначенные визиты
   if (realVisits.length === 0) {
-    return 'not_assigned';
+    const hasAnyVisit = visits.length > 0;
+    const hasAssigned = visits.some(v => v.status === 'planned' || v.status === 'in_progress');
+    if (hasAssigned) return 'assigned';
+    return hasAnyVisit ? 'not_assigned' : 'not_assigned';
   }
 
   const statuses = realVisits.map(v => v.status);

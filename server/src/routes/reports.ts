@@ -267,17 +267,23 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       where.addressId = { in: addressIds };
     }
     if (type === 'requests') {
-      // Находим визиты через imported_requests
+      // Находим визиты через imported_requests.visitId И через visit_requests
       const importedRequests = await prisma.importedRequest.findMany({
-        where: { id: { in: requestIds }, visitId: { not: null } },
-        select: { visitId: true },
+        where: { id: { in: requestIds } },
+        select: { visitId: true, visitRequests: { select: { visitId: true } } },
       });
-      const visitIds = [...new Set(importedRequests.map(r => r.visitId!).filter(Boolean))];
-      if (visitIds.length === 0) {
+      const visitIds = new Set<string>();
+      for (const ir of importedRequests) {
+        if (ir.visitId) visitIds.add(ir.visitId);
+        for (const vr of ir.visitRequests) {
+          visitIds.add(vr.visitId);
+        }
+      }
+      if (visitIds.size === 0) {
         res.status(400).json({ error: 'По указанным заявкам не найдено визитов' });
         return;
       }
-      where.id = { in: visitIds };
+      where.id = { in: [...visitIds] };
     }
     if (req.userRole === 'tm') {
       const engineerIds = await getTmEngineerIds(req.userId!);
