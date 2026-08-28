@@ -553,13 +553,27 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
 
   if (tasksMissingPhotos.length > 0) {
     const taskNames = tasksMissingPhotos.map(t => t.equipmentType?.name || 'оборудование').join(', ');
-    res.status(400).json({ 
+    res.status(400).json({
       error: `Нельзя завершить визит: для оборудования (${taskNames}) не загружены обязательные фото`,
       tasksMissingPhotos: tasksMissingPhotos.map(t => ({
         taskId: t.id,
         equipmentName: t.equipmentType?.name,
         required: t.equipmentType?.photosRequired,
         actual: t.photos?.length || 0,
+      })),
+    });
+    return;
+  }
+
+  // Проверка: все задачи должны быть выполнены (не в статусе not_started)
+  const notStartedTasks = existing.tasks.filter(t => t.status === 'not_started');
+  if (notStartedTasks.length > 0) {
+    const taskNames = notStartedTasks.map(t => t.equipmentType?.name || 'оборудование').join(', ');
+    res.status(400).json({
+      error: `Нельзя завершить визит: ${notStartedTasks.length} задач(а) не начаты (${taskNames}). Выполните или удалите их.`,
+      notStartedTasks: notStartedTasks.map(t => ({
+        taskId: t.id,
+        equipmentName: t.equipmentType?.name,
       })),
     });
     return;
