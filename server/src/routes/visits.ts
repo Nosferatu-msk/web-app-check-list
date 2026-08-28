@@ -155,6 +155,23 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     if (!tmObject) { res.status(403).json({ error: 'Адрес не закреплён за вами' }); return; }
   }
 
+  // Проверка дубликатов: если инженер уже имеет активный визит по этому адресу — вернуть его
+  if (req.userRole === 'engineer') {
+    const existingVisit = await prisma.visit.findFirst({
+      where: {
+        addressId: rest.addressId,
+        userId: req.userId,
+        isDeleted: false,
+        status: { in: ['not_started', 'planned', 'in_progress'] },
+      },
+      include: { address: true, tasks: { include: taskInclude } },
+    });
+    if (existingVisit) {
+      res.status(200).json({ ...existingVisit, existingVisit: true });
+      return;
+    }
+  }
+
   const visit = await prisma.visit.create({
     data: {
       ...rest,

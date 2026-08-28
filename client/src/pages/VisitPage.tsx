@@ -196,6 +196,14 @@ export default function VisitPage() {
 
       if (isNew) {
         const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
+
+        // Сервер вернул существующий визит (дубликат по адресу)
+        if (v.existingVisit) {
+          message.info('У вас уже есть активный визит по этому адресу. Перенаправляем...');
+          navigate(`/visit/${v.id}`, { replace: true });
+          return;
+        }
+
         setVisit(v);
 
         // Показываем уведомление о назначенных заявках
@@ -347,6 +355,15 @@ export default function VisitPage() {
         };
         localStorage.setItem('lastEngineerName', values.engineerName);
         const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
+
+        // Сервер вернул существующий визит (дубликат по адресу)
+        if (v.existingVisit) {
+          message.info('У вас уже есть активный визит по этому адресу. Перенаправляем...');
+          navigate(`/visit/${v.id}`, { replace: true });
+          setSaving(false);
+          return;
+        }
+
         setVisit(v);
         navigate(`/visit/${v.id}`, { replace: true });
         currentVisit = v;
