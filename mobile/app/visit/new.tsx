@@ -67,9 +67,16 @@ export default function NewVisitScreen() {
     })();
   }, []);
 
-  const handleSelectAddress = (address: Address) => {
-    setSelectedAddress(address);
-    setSearchQuery(address.full_address);
+  const handleSelectAddress = (address: any) => {
+    setSelectedAddress({
+      id: address.id,
+      full_address: address.fullAddress || address.full_address || '',
+      city: address.city || '',
+      street: address.street || '',
+      house: address.house || '',
+      building: address.building || '',
+    });
+    setSearchQuery(address.fullAddress || address.full_address || '');
     setAddresses([]);
   };
 
@@ -114,7 +121,7 @@ export default function NewVisitScreen() {
       
       {addresses.length > 0 && (
         <View style={styles.addressList}>
-          {addresses.map((addr) => (
+          {addresses.map((addr: any) => (
             <Button
               key={addr.id}
               mode="text"
@@ -122,7 +129,7 @@ export default function NewVisitScreen() {
               style={styles.addressItem}
               contentStyle={styles.addressItemContent}
             >
-              {addr.full_address}
+              {addr.fullAddress || addr.full_address || ''}
             </Button>
           ))}
         </View>

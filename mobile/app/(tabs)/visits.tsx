@@ -57,10 +57,11 @@ export default function VisitsScreen() {
         value={tab}
         onValueChange={(value) => setTab(value as 'active' | 'completed')}
         buttons={[
-          { value: 'active', label: 'Активные' },
-          { value: 'completed', label: 'Завершённые' },
+          { value: 'active', label: 'Активные', icon: 'clipboard-clock-outline' },
+          { value: 'completed', label: 'Завершённые', icon: 'clipboard-check-outline' },
         ]}
         style={styles.tabs}
+        theme={{ colors: { secondaryContainer: '#E0F2F1' } }}
       />
 
       {isLoading ? (

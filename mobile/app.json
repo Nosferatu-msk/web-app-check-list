@@ -12,6 +12,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#0F766E"
     },
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#0D655E"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ru.checkonout.mobile"

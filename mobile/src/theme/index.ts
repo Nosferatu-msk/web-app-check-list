@@ -31,7 +31,13 @@ export const theme = {
       level5: '#CBD5E1',
     },
   },
-  roundness: 10,
+  roundness: 12,
+  fonts: {
+    ...MD3LightTheme.fonts,
+    headlineLarge: { ...MD3LightTheme.fonts.headlineLarge, fontWeight: '700' as const },
+    titleLarge: { ...MD3LightTheme.fonts.titleLarge, fontWeight: '600' as const },
+    titleMedium: { ...MD3LightTheme.fonts.titleMedium, fontWeight: '600' as const },
+  },
 };
 
 export const darkTheme = {
