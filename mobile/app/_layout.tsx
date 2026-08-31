@@ -4,6 +4,7 @@ import { PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '../src/theme';
 import { useAuthStore } from '../src/stores/authStore';
+import { useAutoSync } from '../src/sync/useAutoSync';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,6 +18,10 @@ const queryClient = new QueryClient({
 export default function RootLayout() {
   const initialize = useAuthStore((state) => state.initialize);
   const isLoading = useAuthStore((state) => state.isLoading);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  // Автоматическая синхронизация для авторизованных пользователей
+  useAutoSync();
 
   useEffect(() => {
     initialize();

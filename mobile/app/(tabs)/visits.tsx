@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useVisits } from '../../src/api/queries';
 import VisitCard from '../../src/components/VisitCard';
 import VisitCardSkeleton from '../../src/components/VisitCardSkeleton';
+import SyncIndicator from '../../src/components/SyncIndicator';
 import { Visit } from '../../src/types';
 
 export default function VisitsScreen() {
@@ -48,6 +49,7 @@ export default function VisitsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text variant="headlineMedium" style={styles.title}>Мои визиты</Text>
+        <SyncIndicator />
         <Button
           mode="contained"
           onPress={() => router.push('/visit/new')}
@@ -108,6 +110,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
+    gap: 8,
   },
   title: {
     fontWeight: '700',

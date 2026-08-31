@@ -32,11 +32,13 @@
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.0.0",
     "react-native-vector-icons": "^10.2.0",
+    "uuid": "^14.0.2",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@types/react": "~18.3.0",
+    "@types/uuid": "^10.0.0",
     "typescript": "~5.3.3"
   },
   "private": true
