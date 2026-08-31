@@ -21,7 +21,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F766E"
       },
-      "package": "ru.checkonout.mobile"
+      "package": "ru.checkonout.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,7 +40,17 @@
       "expo-camera",
       "expo-location",
       "expo-local-authentication",
-      "expo-sharing"
-    ]
+      "expo-sharing",
+      "expo-image-picker"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "869c2b2e-8164-4ea0-834f-64bdef31e7df"
+      }
+    },
+    "owner": "nosferatu1904"
   }
 }
