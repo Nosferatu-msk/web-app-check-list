@@ -40,9 +40,8 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
     if (assignment) {
       const tmObjects = await prisma.tmObject.findMany({ where: { tmId: assignment.tmId }, select: { addressId: true } });
       addressIds = tmObjects.map(t => t.addressId);
-    } else {
-      res.json([]); return;
     }
+    // Если нет привязки к ТМ — показываем все адреса (fallback для тестирования)
   } else if (req.userRole === 'tm') {
     const tmObjects = await prisma.tmObject.findMany({ where: { tmId: req.userId as string }, select: { addressId: true } });
     addressIds = tmObjects.map(t => t.addressId);

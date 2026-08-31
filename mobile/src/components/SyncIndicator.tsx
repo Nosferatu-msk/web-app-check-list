@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
 import { useSyncStore } from '../sync/engine';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function SyncIndicator() {
   const status = useSyncStore((state) => state.status);
@@ -12,7 +12,7 @@ export default function SyncIndicator() {
   if (pendingCount === 0 && status === 'idle') {
     return (
       <View style={styles.container}>
-        <Icon name="check-circle" size={16} color="#059669" />
+        <MaterialCommunityIcons name="check-circle" size={16} color="#059669" />
         <Text style={styles.synced}>Синхронизировано</Text>
       </View>
     );
@@ -21,7 +21,7 @@ export default function SyncIndicator() {
   if (status === 'syncing') {
     return (
       <View style={styles.container}>
-        <Icon name="sync" size={16} color="#0369A1" />
+        <MaterialCommunityIcons name="sync" size={16} color="#0369A1" />
         <Text style={styles.syncing}>Синхронизация...</Text>
       </View>
     );
@@ -30,7 +30,7 @@ export default function SyncIndicator() {
   if (error) {
     return (
       <View style={[styles.container, styles.error]}>
-        <Icon name="alert-circle" size={16} color="#DC2626" />
+        <MaterialCommunityIcons name="alert-circle" size={16} color="#DC2626" />
         <Text style={styles.errorText}>Ошибка синхронизации</Text>
         <IconButton icon="refresh" size={16} onPress={sync} />
       </View>
@@ -39,7 +39,7 @@ export default function SyncIndicator() {
 
   return (
     <View style={[styles.container, styles.pending]}>
-      <Icon name="cloud-upload" size={16} color="#D97706" />
+      <MaterialCommunityIcons name="cloud-upload" size={16} color="#D97706" />
       <Text style={styles.pendingText}>
         {pendingCount} {pendingCount === 1 ? 'изменение' : 'изменений'}
       </Text>

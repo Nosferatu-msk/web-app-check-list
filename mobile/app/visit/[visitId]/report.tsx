@@ -6,7 +6,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useVisit } from '../../../src/api/queries';
 import api from '../../../src/api/client';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function VisitReportScreen() {
   const { visitId } = useLocalSearchParams<{ visitId: string }>();
@@ -99,7 +99,7 @@ export default function VisitReportScreen() {
 
       {error && (
         <View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={24} color="#DC2626" />
+          <MaterialCommunityIcons name="alert-circle" size={24} color="#DC2626" />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
@@ -126,7 +126,7 @@ export default function VisitReportScreen() {
       {reportPath && (
         <View style={styles.reportActions}>
           <Surface style={styles.successCard} elevation={1}>
-            <Icon name="check-circle" size={48} color="#059669" />
+            <MaterialCommunityIcons name="check-circle" size={48} color="#059669" />
             <Text variant="titleMedium" style={styles.successText}>
               Отчёт сформирован
             </Text>

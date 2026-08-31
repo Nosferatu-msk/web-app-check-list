@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { CameraView as ExpoCameraView, CameraType, FlashMode, useCameraPermissions } from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface CameraScreenProps {
   onPhotoTaken: (uri: string) => void;
@@ -93,7 +93,7 @@ export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProp
     return (
       <View style={styles.consentContainer}>
         <View style={styles.consentCard}>
-          <Icon name="shield-alert" size={48} color="#D97706" />
+          <MaterialCommunityIcons name="shield-alert" size={48} color="#D97706" />
           <Text style={styles.consentTitle}>ВНИМАНИЕ!</Text>
           <Text style={styles.consentText}>
             Убедитесь, что в кадр не попали:{'\n'}
@@ -123,11 +123,11 @@ export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProp
         {/* Верхняя панель */}
         <View style={styles.topBar}>
           <TouchableOpacity style={styles.controlButton} onPress={onClose}>
-            <Icon name="close" size={28} color="#FFFFFF" />
+            <MaterialCommunityIcons name="close" size={28} color="#FFFFFF" />
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.controlButton} onPress={toggleFlash}>
-            <Icon 
+            <MaterialCommunityIcons 
               name={flash === 'off' ? 'flash-off' : 'flash'} 
               size={28} 
               color={flash === 'off' ? '#FFFFFF' : '#FFD700'} 
@@ -138,7 +138,7 @@ export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProp
         {/* Нижняя панель */}
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.controlButton} onPress={toggleFacing}>
-            <Icon name="camera-switch" size={32} color="#FFFFFF" />
+            <MaterialCommunityIcons name="camera-switch" size={32} color="#FFFFFF" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>

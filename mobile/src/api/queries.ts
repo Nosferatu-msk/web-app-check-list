@@ -2,15 +2,23 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from './client';
 import { Visit, VisitStatus } from '../types';
 
-export function useVisits(status?: 'active' | 'completed') {
+export function useVisits(tab?: 'active' | 'completed') {
   return useQuery({
-    queryKey: ['visits', status],
+    queryKey: ['visits', tab],
     queryFn: async () => {
-      const params = status ? { status } : {};
+      // Преобразуем табы в массивы статусов
+      let statuses: string | undefined;
+      if (tab === 'active') {
+        statuses = 'not_started,in_progress,planned';
+      } else if (tab === 'completed') {
+        statuses = 'completed,sent,sent_by_engineer,sent_by_tm,corrected_by_tm';
+      }
+      const params: any = {};
+      if (statuses) params.statuses = statuses;
       const response = await api.get('/visits', { params });
       return response.data as Visit[];
     },
-    staleTime: 30 * 1000, // 30 секунд
+    staleTime: 30 * 1000,
   });
 }
 

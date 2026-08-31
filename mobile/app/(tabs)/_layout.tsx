@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabsLayout() {
   return (
@@ -15,7 +15,7 @@ export default function TabsLayout() {
         options={{
           title: 'Визиты',
           tabBarIcon: ({ color, size }) => (
-            <Icon name="clipboard-check" size={size} color={color} />
+            <MaterialCommunityIcons name="clipboard-check" size={size} color={color} />
           ),
         }}
       />
@@ -24,7 +24,7 @@ export default function TabsLayout() {
         options={{
           title: 'Профиль',
           tabBarIcon: ({ color, size }) => (
-            <Icon name="account" size={size} color={color} />
+            <MaterialCommunityIcons name="account" size={size} color={color} />
           ),
         }}
       />

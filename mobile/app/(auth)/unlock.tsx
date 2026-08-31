@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, TextInput } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   isBiometricAvailable,
   authenticateWithBiometric,
@@ -104,7 +104,7 @@ export default function UnlockScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Icon name="lock" size={64} color="#0F766E" />
+        <MaterialCommunityIcons name="lock" size={64} color="#0F766E" />
         <Text variant="headlineMedium" style={styles.title}>
           Чек-лист инженера
         </Text>
