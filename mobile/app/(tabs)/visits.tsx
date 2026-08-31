@@ -1,13 +1,97 @@
-import { View, StyleSheet } from 'react-native';
-import { Text } from 'react-native-paper';
+import { useState, useCallback } from 'react';
+import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { Text, Button, SegmentedButtons } from 'react-native-paper';
+import { useRouter } from 'expo-router';
+import { useVisits } from '../../src/api/queries';
+import VisitCard from '../../src/components/VisitCard';
+import VisitCardSkeleton from '../../src/components/VisitCardSkeleton';
+import { Visit } from '../../src/types';
 
 export default function VisitsScreen() {
+  const [tab, setTab] = useState<'active' | 'completed'>('active');
+  const router = useRouter();
+
+  const { data: visits, isLoading, refetch, isRefetching } = useVisits(tab);
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  const renderVisit = ({ item }: { item: Visit }) => <VisitCard visit={item} />;
+
+  const renderSkeleton = () => <VisitCardSkeleton />;
+
+  const renderEmpty = () => (
+    <View style={styles.empty}>
+      <Text variant="titleLarge" style={styles.emptyTitle}>
+        Нет визитов
+      </Text>
+      <Text variant="bodyMedium" style={styles.emptyText}>
+        {tab === 'active' 
+          ? 'Создайте первый визит для начала работы'
+          : 'Завершённые визиты появятся здесь'}
+      </Text>
+      {tab === 'active' && (
+        <Button
+          mode="contained"
+          onPress={() => router.push('/visit/new')}
+          style={styles.emptyButton}
+          icon="plus"
+        >
+          Создать визит
+        </Button>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Text variant="headlineMedium">Мои визиты</Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        Список визитов будет здесь
-      </Text>
+      <View style={styles.header}>
+        <Text variant="headlineMedium" style={styles.title}>Мои визиты</Text>
+        <Button
+          mode="contained"
+          onPress={() => router.push('/visit/new')}
+          icon="plus"
+          style={styles.addButton}
+        >
+          Новый
+        </Button>
+      </View>
+
+      <SegmentedButtons
+        value={tab}
+        onValueChange={(value) => setTab(value as 'active' | 'completed')}
+        buttons={[
+          { value: 'active', label: 'Активные' },
+          { value: 'completed', label: 'Завершённые' },
+        ]}
+        style={styles.tabs}
+      />
+
+      {isLoading ? (
+        <FlatList
+          data={[1, 2, 3]}
+          renderItem={renderSkeleton}
+          keyExtractor={(item) => item.toString()}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <FlatList
+          data={visits}
+          renderItem={renderVisit}
+          keyExtractor={(item) => item.id}
+          ListEmptyComponent={renderEmpty}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              tintColor="#0F766E"
+            />
+          }
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -15,12 +99,48 @@ export default function VisitsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  title: {
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  addButton: {
+    backgroundColor: '#0F766E',
+  },
+  tabs: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  list: {
+    paddingBottom: 16,
+  },
+  empty: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: 32,
+    minHeight: 300,
   },
-  subtitle: {
-    marginTop: 8,
+  emptyTitle: {
+    textAlign: 'center',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  emptyText: {
+    textAlign: 'center',
     color: '#64748B',
+    marginBottom: 24,
+  },
+  emptyButton: {
+    backgroundColor: '#0F766E',
   },
 });
