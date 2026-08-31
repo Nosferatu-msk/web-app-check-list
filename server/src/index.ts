@@ -17,7 +17,9 @@ import requestRoutes from './routes/requests.js';
 import systemWebhookRoutes from './routes/system-webhook.js';
 import mtrRoutes from './routes/mtr.js';
 import contractRoutes from './routes/contracts.js';
+import syncRoutes from './routes/sync.js';
 import { startCronJobs } from './services/cron.js';
+import { apiVersionMiddleware, getApiVersion } from './middleware/apiVersion.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -26,6 +28,9 @@ app.set('trust proxy', 1);
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// API versioning middleware
+app.use(apiVersionMiddleware);
 
 // Static files for uploads
 app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_DIR || './uploads')));
@@ -46,10 +51,16 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/system/webhook', systemWebhookRoutes);
 app.use('/api/mtr', mtrRoutes);
 app.use('/api/contracts', contractRoutes);
+app.use('/api/sync', syncRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// API version info
+app.get('/api/version', (_req, res) => {
+  res.json(getApiVersion());
 });
 
 // Error handler

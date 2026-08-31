@@ -794,3 +794,21 @@ model MtrTmEngineer {
   @@index([engineerId])
   @@map("mtr_tm_engineers")
 }
+
+// Таблица для идемпотентности batch-sync (мобильное приложение)
+model SyncMutation {
+  id              String   @id @default(uuid())
+  clientMutationId String  @unique @map("client_mutation_id") // UUID от клиента
+  userId          String   @map("user_id")
+  entityType      String   @map("entity_type") // visit, task, photo
+  entityId        String   @map("entity_id")
+  action          String   // create, update, delete
+  status          String   @default("completed") // completed, failed
+  resultId        String?  @map("result_id") // server_id созданной записи
+  error           String?  // текст ошибки если failed
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("sync_mutations")
+}
