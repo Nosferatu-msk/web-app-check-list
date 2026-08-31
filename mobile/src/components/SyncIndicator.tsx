@@ -1,9 +1,10 @@
 import { View, StyleSheet } from 'react-native';
-import { Text, IconButton } from 'react-native-paper';
+import { Text, IconButton, useTheme } from 'react-native-paper';
 import { useSyncStore } from '../sync/engine';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function SyncIndicator() {
+  const theme = useTheme();
   const status = useSyncStore((state) => state.status);
   const pendingCount = useSyncStore((state) => state.pendingCount);
   const error = useSyncStore((state) => state.error);
@@ -11,39 +12,39 @@ export default function SyncIndicator() {
 
   if (pendingCount === 0 && status === 'idle') {
     return (
-      <View style={styles.container}>
-        <MaterialCommunityIcons name="check-circle" size={16} color="#059669" />
-        <Text style={styles.synced}>Синхронизировано</Text>
+      <View style={[styles.container, { backgroundColor: theme.colors.surfaceVariant }]}>
+        <MaterialCommunityIcons name="check-circle" size={16} color={theme.colors.primary} />
+        <Text style={[styles.text, { color: theme.colors.primary }]}>Синхронизировано</Text>
       </View>
     );
   }
 
   if (status === 'syncing') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.surfaceVariant }]}>
         <MaterialCommunityIcons name="sync" size={16} color="#0369A1" />
-        <Text style={styles.syncing}>Синхронизация...</Text>
+        <Text style={[styles.text, { color: '#0369A1' }]}>Синхронизация...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={[styles.container, styles.error]}>
+      <View style={[styles.container, { backgroundColor: 'rgba(220,38,38,0.1)' }]}>
         <MaterialCommunityIcons name="alert-circle" size={16} color="#DC2626" />
-        <Text style={styles.errorText}>Ошибка синхронизации</Text>
-        <IconButton icon="refresh" size={16} onPress={sync} />
+        <Text style={[styles.text, { color: '#DC2626' }]}>Ошибка</Text>
+        <IconButton icon="refresh" size={16} onPress={sync} iconColor="#DC2626" />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, styles.pending]}>
+    <View style={[styles.container, { backgroundColor: 'rgba(217,119,6,0.1)' }]}>
       <MaterialCommunityIcons name="cloud-upload" size={16} color="#D97706" />
-      <Text style={styles.pendingText}>
-        {pendingCount} {pendingCount === 1 ? 'изменение' : 'изменений'}
+      <Text style={[styles.text, { color: '#D97706' }]}>
+        {pendingCount}
       </Text>
-      <IconButton icon="sync" size={16} onPress={sync} />
+      <IconButton icon="sync" size={16} onPress={sync} iconColor="#D97706" />
     </View>
   );
 }
@@ -52,32 +53,13 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    gap: 6,
+    gap: 4,
   },
-  synced: {
+  text: {
     fontSize: 12,
-    color: '#059669',
-  },
-  syncing: {
-    fontSize: 12,
-    color: '#0369A1',
-  },
-  pending: {
-    backgroundColor: '#FEF3C7',
-  },
-  pendingText: {
-    fontSize: 12,
-    color: '#D97706',
-  },
-  error: {
-    backgroundColor: '#FEE2E2',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#DC2626',
+    fontWeight: '500',
   },
 });

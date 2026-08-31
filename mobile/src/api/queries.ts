@@ -6,17 +6,17 @@ export function useVisits(tab?: 'active' | 'completed') {
   return useQuery({
     queryKey: ['visits', tab],
     queryFn: async () => {
-      // Преобразуем табы в массивы статусов
       let statuses: string | undefined;
       if (tab === 'active') {
-        statuses = 'not_started,in_progress,planned';
+        statuses = 'not_started,in_progress,planned,awaiting_assignment';
       } else if (tab === 'completed') {
         statuses = 'completed,sent,sent_by_engineer,sent_by_tm,corrected_by_tm';
       }
-      const params: any = {};
+      const params: any = { pageSize: 100 };
       if (statuses) params.statuses = statuses;
       const response = await api.get('/visits', { params });
-      return response.data as Visit[];
+      // Сервер возвращает { data: Visit[], total, page, pageSize, globalStats }
+      return response.data.data as Visit[];
     },
     staleTime: 30 * 1000,
   });

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
-import { Text, Button, SegmentedButtons } from 'react-native-paper';
+import { Text, Button, SegmentedButtons, FAB, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useVisits } from '../../src/api/queries';
 import VisitCard from '../../src/components/VisitCard';
@@ -11,6 +11,7 @@ import { Visit } from '../../src/types';
 export default function VisitsScreen() {
   const [tab, setTab] = useState<'active' | 'completed'>('active');
   const router = useRouter();
+  const theme = useTheme();
 
   const { data: visits, isLoading, refetch, isRefetching } = useVisits(tab);
 
@@ -28,7 +29,7 @@ export default function VisitsScreen() {
         Нет визитов
       </Text>
       <Text variant="bodyMedium" style={styles.emptyText}>
-        {tab === 'active' 
+        {tab === 'active'
           ? 'Создайте первый визит для начала работы'
           : 'Завершённые визиты появятся здесь'}
       </Text>
@@ -50,14 +51,6 @@ export default function VisitsScreen() {
       <View style={styles.header}>
         <Text variant="headlineMedium" style={styles.title}>Мои визиты</Text>
         <SyncIndicator />
-        <Button
-          mode="contained"
-          onPress={() => router.push('/visit/new')}
-          icon="plus"
-          style={styles.addButton}
-        >
-          Новый
-        </Button>
       </View>
 
       <SegmentedButtons
@@ -94,6 +87,14 @@ export default function VisitsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* FAB для создания визита */}
+      <FAB
+        icon="plus"
+        onPress={() => router.push('/visit/new')}
+        style={styles.fab}
+        color="#FFFFFF"
+      />
     </View>
   );
 }
@@ -110,21 +111,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
-    gap: 8,
   },
   title: {
     fontWeight: '700',
     color: '#0F172A',
-  },
-  addButton: {
-    backgroundColor: '#0F766E',
   },
   tabs: {
     marginHorizontal: 16,
     marginBottom: 8,
   },
   list: {
-    paddingBottom: 16,
+    paddingBottom: 80, // Место для FAB
   },
   empty: {
     flex: 1,
@@ -144,6 +141,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   emptyButton: {
+    backgroundColor: '#0F766E',
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
     backgroundColor: '#0F766E',
   },
 });

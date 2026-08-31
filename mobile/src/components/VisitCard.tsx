@@ -1,5 +1,5 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Surface, Text, ProgressBar } from 'react-native-paper';
+import { Surface, Text, ProgressBar, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { Visit } from '../types';
 
@@ -25,6 +25,7 @@ const statusColors: Record<string, string> = {
 
 export default function VisitCard({ visit }: VisitCardProps) {
   const router = useRouter();
+  const theme = useTheme();
 
   const progress = visit.tasks_count 
     ? (visit.completed_tasks_count || 0) / visit.tasks_count 
@@ -36,9 +37,9 @@ export default function VisitCard({ visit }: VisitCardProps) {
 
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
-      <Surface style={styles.card} elevation={1}>
+      <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
         <View style={styles.header}>
-          <Text variant="titleMedium" style={styles.address} numberOfLines={2}>
+          <Text variant="titleMedium" style={[styles.address, { color: theme.colors.text }]} numberOfLines={2}>
             {visit.address}
           </Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColors[visit.status] }]}>
@@ -47,7 +48,7 @@ export default function VisitCard({ visit }: VisitCardProps) {
         </View>
 
         <View style={styles.meta}>
-          <Text variant="bodySmall" style={styles.date}>
+          <Text variant="bodySmall" style={{ color: theme.colors.placeholder }}>
             {new Date(visit.date).toLocaleDateString('ru-RU')} • {visit.time_start}
           </Text>
         </View>
@@ -59,7 +60,7 @@ export default function VisitCard({ visit }: VisitCardProps) {
               color={statusColors[visit.status]}
               style={styles.progressBar}
             />
-            <Text variant="bodySmall" style={styles.progressText}>
+            <Text variant="bodySmall" style={{ color: theme.colors.placeholder }}>
               {visit.completed_tasks_count} / {visit.tasks_count} задач
             </Text>
           </View>
@@ -99,18 +100,11 @@ const styles = StyleSheet.create({
   meta: {
     marginTop: 8,
   },
-  date: {
-    color: '#64748B',
-  },
   progress: {
     marginTop: 12,
   },
   progressBar: {
     height: 6,
     borderRadius: 3,
-  },
-  progressText: {
-    marginTop: 4,
-    color: '#64748B',
   },
 });
