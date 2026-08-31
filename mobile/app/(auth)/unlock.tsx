@@ -14,7 +14,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 
 export default function UnlockScreen() {
   const router = useRouter();
-  const logout = useAuthStore((state) => state.logout);
+  const unlock = useAuthStore((state) => state.unlock);
 
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -43,6 +43,19 @@ export default function UnlockScreen() {
     })();
   }, []);
 
+  const handleUnlock = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await unlock();
+      router.replace('/(tabs)/visits');
+    } catch (err) {
+      setError('Сессия истекла. Войдите заново.');
+      setTimeout(() => router.replace('/(auth)/login'), 2000);
+    }
+    setLoading(false);
+  };
+
   const handleBiometricAuth = async () => {
     setLoading(true);
     setError('');
@@ -50,7 +63,7 @@ export default function UnlockScreen() {
     const success = await authenticateWithBiometric();
 
     if (success) {
-      router.replace('/(tabs)/visits');
+      await handleUnlock();
     } else {
       setError('Не удалось распознать. Попробуйте ещё раз или введите PIN.');
       if (pinSet) {
@@ -73,7 +86,7 @@ export default function UnlockScreen() {
     const valid = await verifyPinCode(pin);
 
     if (valid) {
-      router.replace('/(tabs)/visits');
+      await handleUnlock();
     } else {
       setError('Неверный PIN-код');
       setPin('');
@@ -83,6 +96,7 @@ export default function UnlockScreen() {
   };
 
   const handleLogout = async () => {
+    const logout = useAuthStore.getState().logout;
     await logout();
     router.replace('/(auth)/login');
   };

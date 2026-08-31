@@ -36,8 +36,8 @@ export default function NewVisitScreen() {
 
     const timer = setTimeout(async () => {
       try {
-        const response = await api.get('/refs/addresses', {
-          params: { search: searchQuery, limit: 10 },
+        const response = await api.get('/refs/addresses/search', {
+          params: { q: searchQuery, limit: 10 },
         });
         setAddresses(response.data);
       } catch (error) {

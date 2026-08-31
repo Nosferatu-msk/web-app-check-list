@@ -14,9 +14,11 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  needsUnlock: boolean; // true = показать экран разблокировки (PIN/биометрия)
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
+  unlock: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   isAuthenticated: false,
   isLoading: true,
+  needsUnlock: false,
 
   login: async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password });
@@ -37,6 +40,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken,
       isAuthenticated: true,
       isLoading: false,
+      needsUnlock: false,
     });
   },
 
@@ -49,33 +53,84 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken: null,
       isAuthenticated: false,
       isLoading: false,
+      needsUnlock: false,
     });
   },
 
   initialize: async () => {
     try {
       const accessToken = await SecureStore.getItemAsync('accessToken');
+      const refreshToken = await SecureStore.getItemAsync('refreshToken');
       
-      if (accessToken) {
+      // Если есть refresh token — пользователь ранее входил, нужен экран разблокировки
+      if (refreshToken && !accessToken) {
+        set({ isLoading: false, needsUnlock: true });
+        return;
+      }
+
+      if (refreshToken && accessToken) {
         // Проверяем валидность токена через API
-        const response = await api.get('/profile', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        
-        set({
-          user: response.data,
-          accessToken,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        try {
+          const response = await api.get('/profile', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          
+          set({
+            user: response.data,
+            accessToken,
+            isAuthenticated: true,
+            isLoading: false,
+            needsUnlock: false,
+          });
+        } catch (apiError) {
+          // Токен истёк, но refresh token есть — показать экран разблокировки
+          // Не очищаем refresh token — он нужен для получения нового access token
+          await SecureStore.deleteItemAsync('accessToken');
+          set({ isLoading: false, needsUnlock: true });
+        }
       } else {
-        set({ isLoading: false });
+        // Нет токенов — нужен вход
+        set({ isLoading: false, needsUnlock: false });
       }
     } catch (error) {
-      // Токен невалиден — очищаем
       await SecureStore.deleteItemAsync('refreshToken');
       await SecureStore.deleteItemAsync('accessToken');
-      set({ isLoading: false });
+      set({ isLoading: false, needsUnlock: false });
+    }
+  },
+
+  unlock: async () => {
+    // Получить новый access token через refresh token
+    try {
+      const refreshToken = await SecureStore.getItemAsync('refreshToken');
+      if (!refreshToken) {
+        throw new Error('No refresh token');
+      }
+
+      const response = await api.post('/auth/refresh', { refreshToken });
+      const { user, accessToken, refreshToken: newRefreshToken } = response.data;
+
+      await SecureStore.setItemAsync('accessToken', accessToken);
+      await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+
+      set({
+        user,
+        accessToken,
+        isAuthenticated: true,
+        isLoading: false,
+        needsUnlock: false,
+      });
+    } catch (error) {
+      // Refresh token истёк — нужен полный вход
+      await SecureStore.deleteItemAsync('refreshToken');
+      await SecureStore.deleteItemAsync('accessToken');
+      set({
+        user: null,
+        accessToken: null,
+        isAuthenticated: false,
+        isLoading: false,
+        needsUnlock: false,
+      });
     }
   },
 }));

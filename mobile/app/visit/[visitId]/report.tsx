@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, Linking, Platform, Alert } from 'react-na
 import { Text, Button, Surface, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useVisit } from '../../../src/api/queries';
 import api from '../../../src/api/client';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -35,7 +35,8 @@ export default function VisitReportScreen() {
       );
 
       const fileName = `report_${visitId}_${Date.now()}.pdf`;
-      const filePath = FileSystem.documentDirectory + fileName;
+      const baseDir = FileSystem.documentDirectory ?? '';
+      const filePath = baseDir + fileName;
 
       await FileSystem.writeAsStringAsync(filePath, base64, {
         encoding: FileSystem.EncodingType.Base64,

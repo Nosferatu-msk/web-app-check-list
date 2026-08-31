@@ -1,5 +1,5 @@
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export interface CompressedPhoto {
   uri: string;
@@ -69,7 +69,8 @@ export async function savePhotoToAppDir(
   sourceUri: string,
   fileName: string
 ): Promise<string> {
-  const appDir = FileSystem.documentDirectory + 'photos/';
+  const baseDir = FileSystem.documentDirectory ?? '';
+  const appDir = baseDir + 'photos/';
   
   // Создаём директорию если не существует
   const dirInfo = await FileSystem.getInfoAsync(appDir);
