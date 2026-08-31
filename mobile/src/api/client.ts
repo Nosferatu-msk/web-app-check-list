@@ -1,8 +1,8 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:3001/api'
+const API_BASE_URL = __DEV__
+  ? 'http://31.128.38.54/api'
   : 'https://checkonout.ru/api';
 
 const api = axios.create({

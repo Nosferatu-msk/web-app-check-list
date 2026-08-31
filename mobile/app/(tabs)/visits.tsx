@@ -13,7 +13,7 @@ export default function VisitsScreen() {
   const router = useRouter();
   const theme = useTheme();
 
-  const { data: visits, isLoading, refetch, isRefetching } = useVisits(tab);
+  const { data: visits, isLoading, error, refetch, isRefetching } = useVisits(tab);
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -70,9 +70,26 @@ export default function VisitsScreen() {
           keyExtractor={(item) => item.toString()}
           showsVerticalScrollIndicator={false}
         />
+      ) : error ? (
+        <View style={styles.empty}>
+          <Text variant="titleLarge" style={styles.emptyTitle}>
+            Ошибка загрузки
+          </Text>
+          <Text variant="bodyMedium" style={styles.emptyText}>
+            Не удалось загрузить визиты. Проверьте подключение к сети.
+          </Text>
+          <Button
+            mode="contained"
+            onPress={() => refetch()}
+            style={styles.emptyButton}
+            icon="refresh"
+          >
+            Повторить
+          </Button>
+        </View>
       ) : (
         <FlatList
-          data={visits}
+          data={visits || []}
           renderItem={renderVisit}
           keyExtractor={(item) => item.id}
           ListEmptyComponent={renderEmpty}

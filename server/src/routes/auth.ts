@@ -68,7 +68,16 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const jwt = await import('jsonwebtoken');
     const payload = jwt.verify(refreshToken, process.env.JWT_SECRET || 'dev-secret') as { userId: string; role: string };
     const accessToken = generateAccessToken(payload.userId, payload.role);
-    res.json({ accessToken });
+    const newRefreshToken = generateRefreshToken(payload.userId, payload.role);
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, fullName: true, email: true, role: true, isActive: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
+    });
+    if (!user || !user.isActive) {
+      res.status(401).json({ error: 'Пользователь не найден или заблокирован' });
+      return;
+    }
+    res.json({ accessToken, refreshToken: newRefreshToken, user });
   } catch {
     res.status(401).json({ error: 'Invalid refresh token' });
   }

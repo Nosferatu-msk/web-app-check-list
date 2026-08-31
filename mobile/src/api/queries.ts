@@ -2,6 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from './client';
 import { Visit, VisitStatus } from '../types';
 
+function getSeason(dateStr: string): 'summer' | 'winter' {
+  const month = new Date(dateStr).getMonth() + 1;
+  return month >= 4 && month <= 10 ? 'summer' : 'winter';
+}
+
+function mapServerVisit(v: any): Visit {
+  return {
+    id: v.id,
+    address_id: v.addressId || v.address?.id || '',
+    address: typeof v.address === 'string' ? v.address : v.address?.fullAddress || '',
+    date: v.dateStart || v.date || '',
+    time_start: v.timeStart || v.time_start || '',
+    season: v.season || getSeason(v.dateStart || v.date || ''),
+    status: v.status,
+    engineer_id: v.userId || v.engineer_id || '',
+    engineer_name: v.user?.fullName || v.engineer_name || '',
+    tasks_count: v._count?.tasks ?? v.tasks_count ?? 0,
+    completed_tasks_count: v.completed_tasks_count ?? 0,
+    created_at: v.createdAt || v.created_at,
+    updated_at: v.updatedAt || v.updated_at,
+  };
+}
+
 export function useVisits(tab?: 'active' | 'completed') {
   return useQuery({
     queryKey: ['visits', tab],
@@ -15,8 +38,8 @@ export function useVisits(tab?: 'active' | 'completed') {
       const params: any = { pageSize: 100 };
       if (statuses) params.statuses = statuses;
       const response = await api.get('/visits', { params });
-      // Сервер возвращает { data: Visit[], total, page, pageSize, globalStats }
-      return response.data.data as Visit[];
+      const raw = response.data.data || [];
+      return raw.map(mapServerVisit) as Visit[];
     },
     staleTime: 30 * 1000,
   });
@@ -27,7 +50,7 @@ export function useVisit(visitId: string) {
     queryKey: ['visit', visitId],
     queryFn: async () => {
       const response = await api.get(`/visits/${visitId}`);
-      return response.data as Visit;
+      return mapServerVisit(response.data) as Visit;
     },
     enabled: !!visitId,
   });
