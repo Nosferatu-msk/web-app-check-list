@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, TextInput, Button, SegmentedButtons } from 'react-native-paper';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTask, useUpdateTask } from '../../../../src/api/tasks';
 import { Conclusion } from '../../../../src/types';
 
 export default function TaskDetailScreen() {
   const { visitId, taskId } = useLocalSearchParams<{ visitId: string; taskId: string }>();
+  const router = useRouter();
   const { data: task, isLoading } = useTask(visitId, taskId);
   const updateTask = useUpdateTask();
 
@@ -172,6 +173,14 @@ export default function TaskDetailScreen() {
       {/* Кнопки */}
       <View style={styles.actions}>
         <Button
+          mode="outlined"
+          onPress={() => router.push(`/visit/${visitId}/task/${taskId}/photos`)}
+          icon="camera"
+          style={styles.photosButton}
+        >
+          Фото ДО/ПОСЛЕ
+        </Button>
+        <Button
           mode="contained"
           onPress={handleSave}
           loading={updateTask.isPending}
@@ -236,6 +245,10 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 16,
+    gap: 12,
+  },
+  photosButton: {
+    borderColor: '#0F766E',
   },
   saveButton: {
     backgroundColor: '#0F766E',
