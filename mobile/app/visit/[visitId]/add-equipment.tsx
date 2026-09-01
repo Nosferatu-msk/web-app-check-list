@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Text, Button, Surface, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   eqInfo: { flex: 1 },
   eqName: { fontSize: 14, fontWeight: '500', color: '#0F172A' },
   eqDetail: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 32, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
   addBtn: { backgroundColor: '#0F766E', borderRadius: 12, marginTop: 20 },
   manualItem: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#FFF', borderRadius: 10, borderWidth: 1.5, borderColor: '#E2E8F0', marginBottom: 6, gap: 10 },
   manualItemSelected: { borderColor: '#0F766E', backgroundColor: '#F0FDFA' },

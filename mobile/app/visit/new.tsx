@@ -5,12 +5,14 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCreateVisit } from '../../src/api/queries';
+import { useAuthStore } from '../../src/stores/authStore';
 import { Address } from '../../src/types';
 import api from '../../src/api/client';
 
 export default function NewVisitScreen() {
   const router = useRouter();
   const createVisit = useCreateVisit();
+  const user = useAuthStore((state) => state.user);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [addresses, setAddresses] = useState<any[]>([]);
@@ -69,7 +71,7 @@ export default function NewVisitScreen() {
         date,
         time_start: timeStart,
         season,
-        engineer_name: '',
+        engineer_name: user?.fullName || 'Инженер',
       });
       router.replace(`/visit/${visit.id}`);
     } catch (err: any) {

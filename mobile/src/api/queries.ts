@@ -1,10 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from './client';
-import { Visit, VisitStatus } from '../types';
+import { Visit, VisitStatus, Task } from '../types';
 
 function getSeason(dateStr: string): 'summer' | 'winter' {
   const month = new Date(dateStr).getMonth() + 1;
   return month >= 4 && month <= 10 ? 'summer' : 'winter';
+}
+
+function mapServerTask(t: any): Task {
+  return {
+    id: t.id,
+    visit_id: t.visitId || t.visit_id || '',
+    equipment_type_id: t.equipmentTypeId || t.equipment_type_id || t.equipmentType?.id || '',
+    equipment_type_name: t.equipmentType?.name || t.equipment_type_name || '',
+    equipment_type_code: t.equipmentType?.code || t.equipment_type_code || '',
+    room_type_id: t.roomTypeId || t.room_type_id || t.roomType?.id || '',
+    room_type_name: t.roomType?.name || t.room_type_name || '',
+    room_type_code: t.roomType?.code || t.roomTypeCode || t.room_type_code || '',
+    object_equipment_id: t.objectEquipmentId || t.object_equipment_id || t.objectEquipment?.id || '',
+    task_type: t.taskType || t.task_type || 'individual',
+    status: t.status,
+    parameters: t.parameters,
+    conclusion: t.conclusion,
+    additional_recommendations: t.additionalRecommendations || t.additional_recommendations,
+    selected_recommendation_ids: t.selectedRecommendationIds || t.selected_recommendation_ids,
+    photos_count: t._count?.photos ?? t.photos_count ?? t.photos?.length ?? 0,
+    created_at: t.createdAt || t.created_at,
+    updated_at: t.updatedAt || t.updated_at,
+  };
 }
 
 function mapServerVisit(v: any): Visit {
@@ -24,8 +47,9 @@ function mapServerVisit(v: any): Visit {
     engineer_name: v.user?.fullName || v.engineer_name || '',
     contract_number: v.contract?.number || undefined,
     request_number: requestNumber,
-    tasks_count: v._count?.tasks ?? v.tasks_count ?? 0,
-    completed_tasks_count: v.completed_tasks_count ?? 0,
+    tasks_count: v._count?.tasks ?? v.tasks_count ?? v.tasks?.length ?? 0,
+    completed_tasks_count: v.completed_tasks_count ?? v.tasks?.filter((t: any) => t.status === 'completed')?.length ?? 0,
+    tasks: v.tasks ? v.tasks.map(mapServerTask) : undefined,
     created_at: v.createdAt || v.created_at,
     updated_at: v.updatedAt || v.updated_at,
   };
