@@ -91,13 +91,16 @@ export function useCreateVisit() {
 
   return useMutation({
     mutationFn: async (data: Partial<Visit>) => {
-      const payload = {
+      const payload: Record<string, any> = {
         addressId: data.address_id,
         engineerName: data.engineer_name || '',
         dateStart: data.date,
         timeStart: data.time_start,
         season: data.season || 'summer',
       };
+      if (data.latitude != null) payload.latitude = data.latitude;
+      if (data.longitude != null) payload.longitude = data.longitude;
+      if (data.gps_accuracy != null) payload.gpsAccuracy = data.gps_accuracy;
       const response = await api.post('/visits', payload);
       return mapServerVisit(response.data) as Visit;
     },
@@ -118,6 +121,19 @@ export function useUpdateVisitStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visits'] });
       queryClient.invalidateQueries({ queryKey: ['visit'] });
+    },
+  });
+}
+
+export function useDeleteVisit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (visitId: string) => {
+      await api.delete(`/visits/${visitId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visits'] });
     },
   });
 }

@@ -8,6 +8,9 @@ export interface Visit {
   status: VisitStatus;
   engineer_id?: string;
   engineer_name?: string;
+  latitude?: number;
+  longitude?: number;
+  gps_accuracy?: number;
   contract_number?: string;
   request_number?: string;
   tasks?: Task[];
@@ -52,7 +55,7 @@ export interface Task {
 
 export type TaskStatus = 'not_started' | 'in_progress' | 'completed';
 
-export type Conclusion = 'ok' | 'ok_with_notes' | 'faulty';
+export type Conclusion = 'Исправно, замечаний нет' | 'Исправно, есть замечания' | 'Неисправно';
 
 export interface Photo {
   id: string;

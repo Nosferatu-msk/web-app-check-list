@@ -156,3 +156,22 @@ export function useUpdateTaskStatus() {
     },
   });
 }
+
+export interface Recommendation {
+  id: string;
+  text: string;
+  equipment_type_code?: string;
+}
+
+export function useRecommendations(equipmentTypeCode?: string) {
+  return useQuery({
+    queryKey: ['recommendations', equipmentTypeCode],
+    queryFn: async () => {
+      const params = equipmentTypeCode ? { equipment_type_code: equipmentTypeCode } : {};
+      const response = await api.get('/refs/recommendations', { params });
+      return response.data as Recommendation[];
+    },
+    enabled: !!equipmentTypeCode,
+    staleTime: 10 * 60 * 1000,
+  });
+}

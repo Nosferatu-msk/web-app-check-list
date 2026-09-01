@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import { Text, Button, Surface } from 'react-native-paper';
+import { useAppTheme } from '../../../../../src/hooks/useAppTheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import CameraView from '../../../../../src/components/CameraView';
 import { compressPhoto, generateFileName, savePhotoToAppDir, formatFileSize } from '../../../../../src/utils/photoCompressor';
 import { useTask } from '../../../../../src/api/tasks';
+import { useSyncMutation } from '../../../../../src/sync/mutations';
+import { getDatabase } from '../../../../../src/db';
+import CustomHeader from '../../../../../src/components/CustomHeader';
+import { BOTTOM_PADDING_NESTED_SCREEN } from '../../../../../src/constants/layout';
+
+const ONE_PHOTO_TYPES = new Set([
+  'rsch', 'schetchik_gvs', 'schetchik_hvs', 'schetchik_electroshc',
+  'seti_vodosnab', 'teplovye_seti', 'meter_gas',
+]);
 
 interface PhotoData {
   id: string;
@@ -20,6 +30,8 @@ export default function TaskPhotosScreen() {
   const { visitId, taskId } = useLocalSearchParams<{ visitId: string; taskId: string }>();
   const router = useRouter();
   const { data: task } = useTask(visitId, taskId);
+  const { savePhoto, deletePhoto } = useSyncMutation();
+  const theme = useAppTheme();
 
   const [showCamera, setShowCamera] = useState(false);
   const [currentMoment, setCurrentMoment] = useState<'before' | 'after'>('before');
@@ -27,37 +39,84 @@ export default function TaskPhotosScreen() {
     before: null,
     after: null,
   });
+  const [loading, setLoading] = useState(true);
+
+  // Загрузка сохранённых фото из SQLite
+  useEffect(() => {
+    (async () => {
+      if (!taskId) return;
+      try {
+        const db = await getDatabase();
+        const rows = await db.getAllAsync<any>(
+          `SELECT * FROM photos WHERE task_id = ? ORDER BY created_at ASC`,
+          [taskId]
+        );
+        const loaded: { before: PhotoData | null; after: PhotoData | null } = { before: null, after: null };
+        for (const row of rows) {
+          const moment = row.moment as 'before' | 'after';
+          loaded[moment] = {
+            id: row.id,
+            uri: row.file_path,
+            moment,
+            fileName: row.file_name,
+            size: 0,
+            uploaded: row.uploaded === 1,
+          };
+        }
+        setPhotos(loaded);
+      } catch (e) {
+        console.error('Error loading photos:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [taskId]);
 
   const handleTakePhoto = async (uri: string) => {
     try {
       // Сжатие фото
       const compressed = await compressPhoto(uri, 1280, 0.65);
-      
+
       // Генерация имени файла
       const fileName = generateFileName(
-        1, // TODO: получить номер задачи
-        task?.equipment_type_name || 'equip',
-        task?.room_type_name || 'room',
+        1,
+        task?.equipment_type_code || task?.equipment_type_name || 'equip',
+        task?.room_type_code || task?.room_type_name || 'room',
         currentMoment
       );
-      
+
       // Сохранение в директорию приложения
       const savedUri = await savePhotoToAppDir(compressed.uri, fileName);
-      
+
+      const photoId = `${taskId}_${currentMoment}_${Date.now()}`;
       const photoData: PhotoData = {
-        id: `${taskId}_${currentMoment}_${Date.now()}`,
+        id: photoId,
         uri: savedUri,
         moment: currentMoment,
         fileName,
         size: compressed.size,
         uploaded: false,
       };
-      
+
+      // Удаление старого фото этого момента (если есть)
+      if (photos[currentMoment]) {
+        await deletePhoto(photos[currentMoment]!.id);
+      }
+
+      // Сохранение в SQLite + sync queue
+      await savePhoto({
+        id: photoId,
+        task_id: taskId!,
+        moment: currentMoment,
+        file_path: savedUri,
+        file_name: fileName,
+      });
+
       setPhotos((prev) => ({
         ...prev,
         [currentMoment]: photoData,
       }));
-      
+
       setShowCamera(false);
     } catch (error) {
       console.error('Error processing photo:', error);
@@ -118,27 +177,30 @@ export default function TaskPhotosScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text variant="titleLarge" style={styles.title}>Фотофиксация</Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <CustomHeader title="Фотофиксация" />
+      <ScrollView contentContainerStyle={styles.content}>
+      <Text variant="titleLarge" style={[styles.title, { color: theme.colors.text }]}>Фотофиксация</Text>
+      <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.placeholder }]}>
         {task?.equipment_type_name}
       </Text>
 
       {/* Before */}
-      <Surface style={styles.photoCard} elevation={1}>
-        <Text variant="titleMedium" style={styles.momentTitle}>
+      <Surface style={[styles.photoCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+        <Text variant="titleMedium" style={[styles.momentTitle, { color: theme.colors.text }]}>
           📷 Фото ДО
         </Text>
         {photos.before ? (
           <View style={styles.photoPreview}>
-            <Image source={{ uri: photos.before.uri }} style={styles.image} />
-            <Text variant="bodySmall" style={styles.photoInfo}>
+            <Image source={{ uri: photos.before.uri }} style={[styles.image, { backgroundColor: theme.colors.border }]} />
+            <Text variant="bodySmall" style={[styles.photoInfo, { color: theme.colors.placeholder }]}>
               {formatFileSize(photos.before.size)}
             </Text>
             <Button
               mode="outlined"
               onPress={() => handleRetake('before')}
-              style={styles.retakeButton}
+              style={[styles.retakeButton, { borderColor: theme.colors.primary }]}
+              accessibilityLabel="Переснять фото ДО"
             >
               Переснять
             </Button>
@@ -152,7 +214,8 @@ export default function TaskPhotosScreen() {
                 setShowCamera(true);
               }}
               icon="camera"
-              style={styles.cameraButton}
+              style={[styles.cameraButton, { backgroundColor: theme.colors.primary }]}
+              accessibilityLabel="Сделать фото ДО"
             >
               Сделать фото
             </Button>
@@ -163,7 +226,8 @@ export default function TaskPhotosScreen() {
                 handlePickFromGallery();
               }}
               icon="image"
-              style={styles.galleryButton}
+              style={[styles.galleryButton, { borderColor: theme.colors.primary }]}
+              accessibilityLabel="Выбрать фото ДО из галереи"
             >
               Из галереи
             </Button>
@@ -171,21 +235,23 @@ export default function TaskPhotosScreen() {
         )}
       </Surface>
 
-      {/* After */}
-      <Surface style={styles.photoCard} elevation={1}>
-        <Text variant="titleMedium" style={styles.momentTitle}>
+      {/* After — только для типов с 2 фото */}
+      {!ONE_PHOTO_TYPES.has(task?.equipment_type_code || '') && (
+      <Surface style={[styles.photoCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+        <Text variant="titleMedium" style={[styles.momentTitle, { color: theme.colors.text }]}>
           📷 Фото ПОСЛЕ
         </Text>
         {photos.after ? (
           <View style={styles.photoPreview}>
-            <Image source={{ uri: photos.after.uri }} style={styles.image} />
-            <Text variant="bodySmall" style={styles.photoInfo}>
+            <Image source={{ uri: photos.after.uri }} style={[styles.image, { backgroundColor: theme.colors.border }]} />
+            <Text variant="bodySmall" style={[styles.photoInfo, { color: theme.colors.placeholder }]}>
               {formatFileSize(photos.after.size)}
             </Text>
             <Button
               mode="outlined"
               onPress={() => handleRetake('after')}
-              style={styles.retakeButton}
+              style={[styles.retakeButton, { borderColor: theme.colors.primary }]}
+              accessibilityLabel="Переснять фото ПОСЛЕ"
             >
               Переснять
             </Button>
@@ -199,7 +265,8 @@ export default function TaskPhotosScreen() {
                 setShowCamera(true);
               }}
               icon="camera"
-              style={styles.cameraButton}
+              style={[styles.cameraButton, { backgroundColor: theme.colors.primary }]}
+              accessibilityLabel="Сделать фото ПОСЛЕ"
             >
               Сделать фото
             </Button>
@@ -210,39 +277,40 @@ export default function TaskPhotosScreen() {
                 handlePickFromGallery();
               }}
               icon="image"
-              style={styles.galleryButton}
+              style={[styles.galleryButton, { borderColor: theme.colors.primary }]}
+              accessibilityLabel="Выбрать фото ПОСЛЕ из галереи"
             >
               Из галереи
             </Button>
           </View>
         )}
       </Surface>
+      )}
 
-      <View style={styles.info}>
-        <Text variant="bodySmall" style={styles.infoText}>
+      <View style={[styles.info, { backgroundColor: theme.colors.surfaceVariant }]}>
+        <Text variant="bodySmall" style={[styles.infoText, { color: theme.colors.placeholder }]}>
           Фото сжимается до ~150 КБ для быстрой загрузки.{'\n'}
           Разрешение: 1280px, JPEG quality 0.65
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   content: {
     padding: 16,
+    paddingBottom: BOTTOM_PADDING_NESTED_SCREEN,
   },
   title: {
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 4,
   },
   subtitle: {
-    color: '#64748B',
     marginBottom: 24,
   },
   photoCard: {
@@ -252,7 +320,6 @@ const styles = StyleSheet.create({
   },
   momentTitle: {
     fontWeight: '600',
-    color: '#0F172A',
     marginBottom: 12,
   },
   photoPreview: {
@@ -262,37 +329,30 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 240,
     borderRadius: 8,
-    backgroundColor: '#E2E8F0',
   },
   photoInfo: {
-    color: '#64748B',
     marginTop: 8,
   },
   retakeButton: {
     marginTop: 12,
-    borderColor: '#0F766E',
   },
   photoPlaceholder: {
     alignItems: 'center',
     paddingVertical: 24,
   },
   cameraButton: {
-    backgroundColor: '#0F766E',
     marginBottom: 8,
     width: '100%',
   },
   galleryButton: {
-    borderColor: '#0F766E',
     width: '100%',
   },
   info: {
     marginTop: 8,
     padding: 12,
-    backgroundColor: '#F1F5F9',
     borderRadius: 8,
   },
   infoText: {
-    color: '#64748B',
     textAlign: 'center',
     lineHeight: 18,
   },

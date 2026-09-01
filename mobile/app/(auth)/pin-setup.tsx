@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, TextInput } from 'react-native-paper';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRouter } from 'expo-router';
 import { setPinCode } from '../../src/utils/biometric';
 
 export default function PinSetupScreen() {
+  const theme = useAppTheme();
   const router = useRouter();
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -36,17 +38,17 @@ export default function PinSetupScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.card}>
-        <Text variant="headlineMedium" style={styles.title}>
+        <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.text }]}>
           Установка PIN-кода
         </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
+        <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.placeholder }]}>
           PIN-код используется для разблокировки приложения, если биометрия недоступна
         </Text>
 
         {error ? (
-          <Text variant="bodyMedium" style={styles.error}>
+          <Text variant="bodyMedium" style={[styles.error, { color: theme.colors.error }]}>
             {error}
           </Text>
         ) : null}
@@ -78,7 +80,7 @@ export default function PinSetupScreen() {
           onPress={handleSave}
           loading={loading}
           disabled={loading || !pin || !confirmPin}
-          style={styles.button}
+          style={[styles.button, { backgroundColor: theme.colors.primary }]}
         >
           Сохранить
         </Button>
@@ -87,6 +89,7 @@ export default function PinSetupScreen() {
           mode="text"
           onPress={() => router.back()}
           style={styles.cancelButton}
+          textColor={theme.colors.placeholder}
         >
           Отмена
         </Button>
@@ -100,7 +103,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
     padding: 16,
   },
   card: {
@@ -110,17 +112,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '700',
-    color: '#0F172A',
     textAlign: 'center',
   },
   subtitle: {
     marginTop: 8,
-    color: '#64748B',
     textAlign: 'center',
     marginBottom: 24,
   },
   error: {
-    color: '#DC2626',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -128,11 +127,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#0F766E',
     marginTop: 8,
   },
   cancelButton: {
     marginTop: 12,
-    color: '#64748B',
   },
 });

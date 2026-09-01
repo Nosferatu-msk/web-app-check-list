@@ -1,15 +1,17 @@
-import { View, StyleSheet, Animated } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { View, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Text } from 'react-native-paper';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { useSyncStore } from '../sync/engine';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 
 export default function SyncIndicator() {
-  const theme = useTheme();
+  const theme = useAppTheme();
   const status = useSyncStore((state) => state.status);
   const pendingCount = useSyncStore((state) => state.pendingCount);
   const error = useSyncStore((state) => state.error);
   const lastSyncAt = useSyncStore((state) => state.lastSyncAt);
+  const cancelSync = useSyncStore((state) => state.cancelSync);
   const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export default function SyncIndicator() {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: 'rgba(220,38,38,0.1)' }]}>
-        <MaterialCommunityIcons name="cloud-alert" size={16} color="#DC2626" />
+        <MaterialCommunityIcons name="alert-circle" size={16} color="#DC2626" />
         <Text style={[styles.text, { color: '#DC2626' }]}>Ошибка</Text>
       </View>
     );
@@ -46,9 +48,12 @@ export default function SyncIndicator() {
     return (
       <View style={[styles.container, { backgroundColor: 'rgba(3,105,161,0.1)' }]}>
         <Animated.View style={{ transform: [{ rotate: spin }] }}>
-          <MaterialCommunityIcons name="sync" size={16} color="#0369A1" />
+          <MaterialCommunityIcons name="loading" size={16} color="#0369A1" />
         </Animated.View>
         <Text style={[styles.text, { color: '#0369A1' }]}>Синхронизация...</Text>
+        <TouchableOpacity onPress={cancelSync} accessibilityRole="button" accessibilityLabel="Отменить синхронизацию">
+          <MaterialCommunityIcons name="close-circle-outline" size={16} color="#0369A1" />
+        </TouchableOpacity>
       </View>
     );
   }
@@ -56,7 +61,7 @@ export default function SyncIndicator() {
   if (pendingCount > 0) {
     return (
       <View style={[styles.container, { backgroundColor: 'rgba(217,119,6,0.1)' }]}>
-        <MaterialCommunityIcons name="cloud-upload" size={16} color="#D97706" />
+        <MaterialCommunityIcons name="clock-outline" size={16} color="#D97706" />
         <Text style={[styles.text, { color: '#D97706' }]}>
           {pendingCount} не отправлено
         </Text>

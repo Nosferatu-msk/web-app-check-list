@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, Text, Surface } from 'react-native-paper';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function LoginScreen() {
+  const theme = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,7 +28,13 @@ export default function LoginScreen() {
 
     try {
       await login(email, password);
-      router.replace('/(tabs)/visits');
+      const hasSeenBioSetup = await SecureStore.getItemAsync('bio_setup_done');
+      if (!hasSeenBioSetup) {
+        await SecureStore.setItemAsync('bio_setup_done', 'true');
+        router.replace('/(auth)/biometric-setup');
+      } else {
+        router.replace('/(tabs)/visits');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Ошибка входа. Проверьте email и пароль.');
     } finally {
@@ -35,21 +44,21 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Surface style={styles.card} elevation={2}>
+      <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={3}>
         <View style={styles.header}>
-          <Text variant="headlineLarge" style={styles.title}>
+          <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.primary }]}>
             Чек-лист инженера
           </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
+          <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.placeholder }]}>
             Войдите в систему
           </Text>
         </View>
 
         {error ? (
-          <Text variant="bodyMedium" style={styles.error}>
+          <Text variant="bodyMedium" style={[styles.error, { color: theme.colors.error }]}>
             {error}
           </Text>
         ) : null}
@@ -86,7 +95,7 @@ export default function LoginScreen() {
           onPress={handleLogin}
           loading={loading}
           disabled={loading}
-          style={styles.button}
+          style={[styles.button, { backgroundColor: theme.colors.primary }]}
           contentStyle={styles.buttonContent}
         >
           Войти
@@ -102,12 +111,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#F8FAFC',
   },
   card: {
     width: '100%',
     maxWidth: 400,
-    padding: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
     borderRadius: 16,
   },
   header: {
@@ -115,16 +124,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    color: '#0F766E',
     fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
-    color: '#64748B',
     marginTop: 8,
   },
   error: {
-    color: '#DC2626',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -133,7 +139,6 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 8,
-    backgroundColor: '#0F766E',
   },
   buttonContent: {
     height: 48,

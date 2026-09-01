@@ -3,20 +3,31 @@ import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { Text, Button, SegmentedButtons, FAB } from 'react-native-paper';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRouter } from 'expo-router';
-import { useVisits } from '../../src/api/queries';
+import { useQuery } from '@tanstack/react-query';
 import VisitCard from '../../src/components/VisitCard';
 import VisitCardSkeleton from '../../src/components/VisitCardSkeleton';
 import SyncIndicator from '../../src/components/SyncIndicator';
 import NotificationBell from '../../src/components/NotificationBell';
 import { Visit } from '../../src/types';
 import { STATUS_BAR_HEIGHT, BOTTOM_PADDING_TAB_SCREEN } from '../../src/constants/layout';
+import api from '../../src/api/client';
 
-export default function VisitsScreen() {
+function useMtrVisits(tab: 'active' | 'completed') {
+  return useQuery({
+    queryKey: ['mtr-visits', tab],
+    queryFn: async () => {
+      const response = await api.get('/mtr/visits', { params: { status: tab } });
+      return response.data as Visit[];
+    },
+  });
+}
+
+export default function MtrVisitsScreen() {
   const [tab, setTab] = useState<'active' | 'completed'>('active');
   const router = useRouter();
   const theme = useAppTheme();
 
-  const { data: visits, isLoading, error, refetch, isRefetching } = useVisits(tab);
+  const { data: visits, isLoading, error, refetch, isRefetching } = useMtrVisits(tab);
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -29,22 +40,21 @@ export default function VisitsScreen() {
   const renderEmpty = () => (
     <View style={styles.empty}>
       <Text variant="titleLarge" style={[styles.emptyTitle, { color: theme.colors.text }]}>
-        Нет визитов
+        Нет визитов МТР
       </Text>
       <Text variant="bodyMedium" style={[styles.emptyText, { color: theme.colors.placeholder }]}>
         {tab === 'active'
-          ? 'Создайте первый визит для начала работы'
-          : 'Завершённые визиты появятся здесь'}
+          ? 'Создайте первый визит МТР для начала работы'
+          : 'Завершённые визиты МТР появятся здесь'}
       </Text>
       {tab === 'active' && (
         <Button
           mode="contained"
-          onPress={() => router.push('/visit/new')}
+          onPress={() => router.push('/mtr/new')}
           style={[styles.emptyButton, { backgroundColor: theme.colors.primary }]}
           icon="plus"
-          accessibilityLabel="Создать визит"
         >
-          Создать визит
+          Создать визит МТР
         </Button>
       )}
     </View>
@@ -53,7 +63,7 @@ export default function VisitsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Мои визиты</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>Визиты МТР</Text>
         <View style={styles.headerActions}>
           <NotificationBell />
           <SyncIndicator />
@@ -64,8 +74,8 @@ export default function VisitsScreen() {
         value={tab}
         onValueChange={(value) => setTab(value as 'active' | 'completed')}
         buttons={[
-          { value: 'active', label: 'Активные', icon: 'clipboard-clock-outline', accessibilityLabel: 'Активные визиты' },
-          { value: 'completed', label: 'Завершённые', icon: 'clipboard-check-outline', accessibilityLabel: 'Завершённые визиты' },
+          { value: 'active', label: 'Активные', icon: 'clipboard-clock-outline' },
+          { value: 'completed', label: 'Завершённые', icon: 'clipboard-check-outline' },
         ]}
         style={styles.tabs}
         theme={{ colors: { secondaryContainer: '#E0F2F1' } }}
@@ -84,7 +94,7 @@ export default function VisitsScreen() {
             Ошибка загрузки
           </Text>
           <Text variant="bodyMedium" style={[styles.emptyText, { color: theme.colors.placeholder }]}>
-            Не удалось загрузить визиты. Проверьте подключение к сети.
+            Не удалось загрузить визиты МТР. Проверьте подключение к сети.
           </Text>
           <Button
             mode="contained"
@@ -113,13 +123,11 @@ export default function VisitsScreen() {
         />
       )}
 
-      {/* FAB для создания визита */}
       <FAB
         icon="plus"
-        onPress={() => router.push('/visit/new')}
+        onPress={() => router.push('/mtr/new')}
         style={styles.fab}
         color={theme.colors.surface}
-        accessibilityLabel="Создать визит"
       />
     </View>
   );

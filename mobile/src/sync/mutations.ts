@@ -20,8 +20,8 @@ export function useSyncMutation() {
     // Сохраняем в локальную БД
     const db = await getDatabase();
     await db.runAsync(
-      `INSERT INTO visits (id, address_id, address, date, time_start, season, status, dirty, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+      `INSERT INTO visits (id, address_id, address, date, time_start, season, status, latitude, longitude, gps_accuracy, dirty, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
       [
         mutation.entity_id,
         visitData.address_id,
@@ -30,6 +30,9 @@ export function useSyncMutation() {
         visitData.time_start,
         visitData.season,
         visitData.status || 'not_started',
+        visitData.latitude ?? null,
+        visitData.longitude ?? null,
+        visitData.gps_accuracy ?? null,
         new Date().toISOString(),
       ]
     );
@@ -125,10 +128,59 @@ export function useSyncMutation() {
     await addToQueue(mutation);
   };
 
+  const savePhoto = async (photoData: {
+    id: string;
+    task_id: string;
+    moment: 'before' | 'after';
+    file_path: string;
+    file_name: string;
+  }) => {
+    const mutation: SyncMutation = {
+      client_mutation_id: uuidv4(),
+      entity_type: 'photo',
+      entity_id: photoData.id,
+      action: 'create',
+      payload: photoData,
+    };
+
+    const db = await getDatabase();
+    await db.runAsync(
+      `INSERT INTO photos (id, task_id, moment, file_path, file_name, uploaded, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?)`,
+      [
+        photoData.id,
+        photoData.task_id,
+        photoData.moment,
+        photoData.file_path,
+        photoData.file_name,
+        new Date().toISOString(),
+      ]
+    );
+
+    await addToQueue(mutation);
+  };
+
+  const deletePhoto = async (photoId: string) => {
+    const mutation: SyncMutation = {
+      client_mutation_id: uuidv4(),
+      entity_type: 'photo',
+      entity_id: photoId,
+      action: 'delete',
+      payload: { id: photoId },
+    };
+
+    const db = await getDatabase();
+    await db.runAsync(`DELETE FROM photos WHERE id = ?`, [photoId]);
+
+    await addToQueue(mutation);
+  };
+
   return {
     createVisit,
     updateVisit,
     createTask,
     updateTask,
+    savePhoto,
+    deletePhoto,
   };
 }

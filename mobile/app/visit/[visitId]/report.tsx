@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { View, StyleSheet, ScrollView, Linking, Platform, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Linking, Alert } from 'react-native';
 import { Text, Button, Surface, ActivityIndicator } from 'react-native-paper';
+import { useAppTheme } from '../../../src/hooks/useAppTheme';
 import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import Pdf from 'react-native-pdf';
 import { useVisit } from '../../../src/api/queries';
 import api from '../../../src/api/client';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import CustomHeader from '../../../src/components/CustomHeader';
+import { BOTTOM_PADDING_NESTED_SCREEN } from '../../../src/constants/layout';
+
+type ReportFormat = 'zip' | 'pdf';
 
 export default function VisitReportScreen() {
   const { visitId } = useLocalSearchParams<{ visitId: string }>();
@@ -14,19 +20,27 @@ export default function VisitReportScreen() {
 
   const [loading, setLoading] = useState(false);
   const [reportPath, setReportPath] = useState<string | null>(null);
+  const [reportFormat, setReportFormat] = useState<ReportFormat>('zip');
   const [error, setError] = useState<string | null>(null);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const theme = useAppTheme();
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (format: ReportFormat = 'zip') => {
     setLoading(true);
     setError(null);
+    setShowPdfViewer(false);
 
     try {
-      // Запрашиваем генерацию отчёта с сервера
-      const response = await api.get(`/reports/${visitId}`, {
+      // Формируем запрос в зависимости от формата
+      const endpoint = format === 'zip'
+        ? `/reports/${visitId}?format=zip`
+        : `/reports/${visitId}`;
+
+      const response = await api.get(endpoint, {
         responseType: 'arraybuffer',
       });
 
-      // Сохраняем PDF в файловую систему
+      // Сохраняем файл в файловую систему
       const base64 = btoa(
         new Uint8Array(response.data).reduce(
           (data, byte) => data + String.fromCharCode(byte),
@@ -34,7 +48,8 @@ export default function VisitReportScreen() {
         )
       );
 
-      const fileName = `report_${visitId}_${Date.now()}.pdf`;
+      const ext = format === 'zip' ? 'zip' : 'pdf';
+      const fileName = `report_${visitId}_${Date.now()}.${ext}`;
       const baseDir = FileSystem.documentDirectory ?? '';
       const filePath = baseDir + fileName;
 
@@ -43,6 +58,7 @@ export default function VisitReportScreen() {
       });
 
       setReportPath(filePath);
+      setReportFormat(format);
     } catch (err: any) {
       console.error('Error generating report:', err);
       setError('Не удалось сформировать отчёт. Проверьте подключение к интернету.');
@@ -61,8 +77,10 @@ export default function VisitReportScreen() {
         return;
       }
 
+      const mimeType = reportFormat === 'zip' ? 'application/zip' : 'application/pdf';
+
       await Sharing.shareAsync(reportPath, {
-        mimeType: 'application/pdf',
+        mimeType,
         dialogTitle: 'Отправить отчёт',
       });
     } catch (err) {
@@ -73,65 +91,85 @@ export default function VisitReportScreen() {
 
   const handleOpenInBrowser = async () => {
     if (!reportPath) return;
-    
+
     try {
       await Linking.openURL(reportPath);
     } catch (err) {
-      console.error('Error opening PDF:', err);
-      Alert.alert('Ошибка', 'Не удалось открыть PDF');
+      console.error('Error opening file:', err);
+      Alert.alert('Ошибка', 'Не удалось открыть файл');
     }
   };
 
+  const isZip = reportFormat === 'zip';
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text variant="headlineMedium" style={styles.title}>Отчёт по визиту</Text>
-      
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <CustomHeader title="Отчёт" />
+      <ScrollView contentContainerStyle={styles.content}>
+      <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.text }]}>Отчёт по визиту</Text>
+
       {visit && (
-        <Surface style={styles.infoCard} elevation={1}>
-          <Text variant="titleMedium" style={styles.address}>
+        <Surface style={[styles.infoCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+          <Text variant="titleMedium" style={[styles.address, { color: theme.colors.text }]}>
             {visit.address}
           </Text>
-          <Text variant="bodyMedium" style={styles.date}>
+          <Text variant="bodyMedium" style={[styles.date, { color: theme.colors.placeholder }]}>
             {new Date(visit.date).toLocaleDateString('ru-RU')} • {visit.time_start}
           </Text>
         </Surface>
       )}
 
       {error && (
-        <View style={styles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle" size={24} color="#DC2626" />
-          <Text style={styles.errorText}>{error}</Text>
+        <View style={[styles.errorContainer, { backgroundColor: 'rgba(220,38,38,0.08)' }]}>
+          <MaterialCommunityIcons name="alert-circle" size={24} color={theme.colors.error} />
+          <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
         </View>
       )}
 
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0F766E" />
-          <Text style={styles.loadingText}>Формирование отчёта...</Text>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.placeholder }]}>Формирование отчёта...</Text>
         </View>
       )}
 
       {!loading && !reportPath && (
-        <Button
-          mode="contained"
-          onPress={handleGenerateReport}
-          icon="file-pdf-box"
-          style={styles.generateButton}
-          contentStyle={styles.generateButtonContent}
-        >
-          Сформировать отчёт
-        </Button>
+        <View style={styles.generateButtons}>
+          <Button
+            mode="contained"
+            onPress={() => handleGenerateReport('zip')}
+            icon="file-document-arrow-right"
+            style={[styles.generateButton, { backgroundColor: theme.colors.primary }]}
+            contentStyle={styles.generateButtonContent}
+          >
+            Сформировать отчёт (ZIP)
+          </Button>
+          <Button
+            mode="outlined"
+            onPress={() => handleGenerateReport('pdf')}
+            icon="file-pdf-box"
+            style={[styles.generateButton, { borderColor: theme.colors.primary }]}
+            textColor={theme.colors.primary}
+            contentStyle={styles.generateButtonContent}
+          >
+            Только PDF
+          </Button>
+        </View>
       )}
 
       {reportPath && (
         <View style={styles.reportActions}>
-          <Surface style={styles.successCard} elevation={1}>
-            <MaterialCommunityIcons name="check-circle" size={48} color="#059669" />
-            <Text variant="titleMedium" style={styles.successText}>
+          <Surface style={[styles.successCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <MaterialCommunityIcons
+              name={isZip ? 'zip-box' : 'check-circle'}
+              size={48}
+              color={theme.colors.success}
+            />
+            <Text variant="titleMedium" style={[styles.successText, { color: theme.colors.text }]}>
               Отчёт сформирован
             </Text>
-            <Text variant="bodySmall" style={styles.successSubtext}>
-              PDF готов к отправке
+            <Text variant="bodySmall" style={[styles.successSubtext, { color: theme.colors.placeholder }]}>
+              {isZip ? 'Отчёт с фото готов к отправке' : 'PDF готов к отправке'}
             </Text>
           </Surface>
 
@@ -139,48 +177,71 @@ export default function VisitReportScreen() {
             mode="contained"
             onPress={handleShare}
             icon="share-variant"
-            style={styles.shareButton}
+            style={[styles.shareButton, { backgroundColor: theme.colors.primary }]}
             contentStyle={styles.buttonContent}
           >
-            Отправить отчёт
+            {isZip ? 'Отправить ZIP' : 'Отправить PDF'}
           </Button>
 
-          <Button
-            mode="outlined"
-            onPress={handleOpenInBrowser}
-            icon="eye"
-            style={styles.viewButton}
-          >
-            Просмотреть PDF
-          </Button>
+          {isZip ? (
+            <View style={[styles.zipInfoCard, { backgroundColor: theme.colors.surface }]}>
+              <MaterialCommunityIcons name="zip-box" size={24} color={theme.colors.placeholder} />
+              <Text variant="bodyMedium" style={[styles.zipInfoText, { color: theme.colors.placeholder }]}>
+                ZIP-архив содержит PDF-отчёт и фотографии. Откройте в почтовом клиенте для просмотра PDF.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Button
+                mode="outlined"
+                onPress={() => setShowPdfViewer(!showPdfViewer)}
+                icon={showPdfViewer ? 'eye-off' : 'eye'}
+                style={[styles.viewButton, { borderColor: theme.colors.primary }]}
+              >
+                {showPdfViewer ? 'Скрыть PDF' : 'Просмотреть PDF'}
+              </Button>
+
+              {showPdfViewer && reportPath && (
+                <View style={styles.pdfContainer}>
+                  <Pdf
+                    source={{ uri: reportPath }}
+                    style={styles.pdf}
+                    trustAllCerts={false}
+                    onError={() => Alert.alert('Ошибка', 'Не удалось открыть PDF')}
+                  />
+                </View>
+              )}
+            </>
+          )}
 
           <Button
             mode="text"
             onPress={() => {
               setReportPath(null);
               setError(null);
+              setShowPdfViewer(false);
             }}
-            textColor="#64748B"
+            textColor={theme.colors.placeholder}
           >
             Сформировать заново
           </Button>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   content: {
     padding: 16,
+    paddingBottom: BOTTOM_PADDING_NESTED_SCREEN,
   },
   title: {
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 16,
   },
   infoCard: {
@@ -190,23 +251,19 @@ const styles = StyleSheet.create({
   },
   address: {
     fontWeight: '600',
-    color: '#0F172A',
   },
   date: {
-    color: '#64748B',
     marginTop: 4,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     gap: 8,
   },
   errorText: {
-    color: '#DC2626',
     flex: 1,
   },
   loadingContainer: {
@@ -215,11 +272,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#64748B',
+  },
+  generateButtons: {
+    gap: 12,
+    marginTop: 8,
   },
   generateButton: {
-    backgroundColor: '#0F766E',
-    marginTop: 16,
+    marginTop: 0,
   },
   generateButtonContent: {
     height: 48,
@@ -236,24 +295,39 @@ const styles = StyleSheet.create({
   successText: {
     marginTop: 12,
     fontWeight: '600',
-    color: '#0F172A',
   },
   successSubtext: {
     marginTop: 4,
-    color: '#64748B',
   },
   shareButton: {
-    backgroundColor: '#0F766E',
     marginBottom: 12,
   },
   buttonContent: {
     height: 48,
   },
   viewButton: {
-    borderColor: '#0F766E',
     marginBottom: 12,
   },
-  regenerateButton: {
-    color: '#64748B',
+  zipInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  zipInfoText: {
+    flex: 1,
+  },
+  pdfContainer: {
+    height: 400,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  pdf: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
 });

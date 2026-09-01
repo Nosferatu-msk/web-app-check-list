@@ -1,15 +1,17 @@
 import { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { Surface } from 'react-native-paper';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 export default function VisitCardSkeleton() {
+  const theme = useAppTheme();
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true, easing: Easing.ease }),
+        Animated.timing(opacity, { toValue: 0.3, duration: 300, useNativeDriver: true, easing: Easing.ease }),
       ])
     );
     animation.start();
@@ -18,10 +20,10 @@ export default function VisitCardSkeleton() {
 
   return (
     <Animated.View style={{ opacity }}>
-      <Surface style={styles.card} elevation={1}>
+      <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
         <View style={styles.header}>
           <View style={styles.content}>
-            <View style={[styles.line, styles.addressLine]} />
+            <View style={[styles.line, styles.addressLine, { backgroundColor: theme.colors.border }]} />
             <View style={[styles.line, styles.dateLine]} />
           </View>
           <View style={[styles.line, styles.badge]} />
@@ -53,7 +55,6 @@ const styles = StyleSheet.create({
   },
   line: {
     height: 14,
-    backgroundColor: '#E2E8F0',
     borderRadius: 4,
   },
   addressLine: {

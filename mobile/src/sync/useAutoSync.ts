@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import { AppState } from 'react-native';
 import { useSyncStore } from './engine';
+import { syncReferences } from '../services/refCache';
 
 export function useAutoSync() {
   const sync = useSyncStore((state) => state.sync);
@@ -31,6 +32,10 @@ export function useAutoSync() {
       }
     });
 
+    // Синхронизация справочников при старте и каждые 10 минут
+    syncReferences();
+    const refInterval = setInterval(() => syncReferences(), 10 * 60 * 1000);
+
     const interval = setInterval(() => {
       if (status !== 'syncing') {
         doSync();
@@ -42,6 +47,7 @@ export function useAutoSync() {
       unsubscribeNetInfo();
       appStateSubscription.remove();
       clearInterval(interval);
+      clearInterval(refInterval);
     };
   }, [sync, status]);
 }

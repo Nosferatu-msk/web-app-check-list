@@ -4,8 +4,9 @@
     "slug": "checklist-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+    "screenOrientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "scheme": "checklist",
     "splash": {
       "image": "./assets/splash.png",
@@ -13,6 +14,11 @@
       "backgroundColor": "#0F766E"
     },
     "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#0D655E",
+      "translucent": false
+    },
+    "androidNavigationBar": {
       "barStyle": "light-content",
       "backgroundColor": "#0D655E"
     },
@@ -32,7 +38,8 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -45,7 +52,11 @@
       "expo-location",
       "expo-local-authentication",
       "expo-sharing",
-      "expo-image-picker"
+      "expo-image-picker",
+      "@react-native-community/datetimepicker",
+      "expo-speech-recognition",
+      "expo-notifications",
+      "expo-device"
     ],
     "extra": {
       "router": {

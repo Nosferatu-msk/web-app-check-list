@@ -2,8 +2,9 @@ import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 
 const commonColors = {
   primary: '#0F766E',
-  secondary: '#14B8A6',
-  accent: '#0369A1',
+  onPrimary: '#FFFFFF',
+  secondary: '#0369A1',
+  purple: '#7C3AED',
   success: '#059669',
   warning: '#D97706',
   danger: '#DC2626',
@@ -14,6 +15,7 @@ export const theme = {
   colors: {
     ...MD3LightTheme.colors,
     primary: commonColors.primary,
+    onPrimary: commonColors.onPrimary,
     secondary: commonColors.secondary,
     background: '#F8FAFC',
     surface: '#FFFFFF',
@@ -21,8 +23,12 @@ export const theme = {
     text: '#0F172A',
     onSurface: '#0F172A',
     placeholder: '#64748B',
+    textSecondary: '#64748B',
     border: '#E2E8F0',
     error: commonColors.danger,
+    success: commonColors.success,
+    warning: commonColors.warning,
+    purple: commonColors.purple,
     elevation: {
       level1: '#FFFFFF',
       level2: '#F8FAFC',
@@ -45,7 +51,8 @@ export const darkTheme = {
   colors: {
     ...MD3DarkTheme.colors,
     primary: '#14B8A6',
-    secondary: '#14B8A6',
+    onPrimary: '#FFFFFF',
+    secondary: '#0369A1',
     background: '#0F172A',
     surface: '#1E293B',
     surfaceVariant: '#334155',

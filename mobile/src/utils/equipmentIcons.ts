@@ -1,33 +1,32 @@
 export type EquipmentIconName =
-  | 'flash'
+  | 'electric-switch'
   | 'fan'
+  | 'snowflake'
   | 'air-conditioner'
-  | 'thermometer-water'
   | 'gauge'
-  | 'lightning-bolt'
-  | 'water-pump'
-  | 'pipe'
-  | 'air-conditioner-outdoor';
+  | 'meter-electric'
+  | 'water'
+  | 'thermometer';
 
 const EQUIPMENT_ICONS: Record<string, EquipmentIconName> = {
-  rsch: 'flash',
+  rsch: 'electric-switch',
   vent: 'fan',
-  vrv_vn: 'air-conditioner',
-  mssvn: 'air-conditioner',
-  splitvn: 'air-conditioner',
-  vrv_nar: 'air-conditioner-outdoor',
-  mssnar: 'air-conditioner-outdoor',
-  splitnar: 'air-conditioner-outdoor',
+  vrv_vn: 'snowflake',
+  mssvn: 'snowflake',
+  splitvn: 'snowflake',
+  vrv_nar: 'air-conditioner',
+  mssnar: 'air-conditioner',
+  splitnar: 'air-conditioner',
   schetchik_gvs: 'gauge',
   schetchik_hvs: 'gauge',
-  schetchik_electroshc: 'lightning-bolt',
-  seti_vodosnab: 'water-pump',
-  teplovye_seti: 'pipe',
+  schetchik_electroshc: 'meter-electric',
+  seti_vodosnab: 'water',
+  teplovye_seti: 'thermometer',
 };
 
 export function getEquipmentIcon(code?: string): EquipmentIconName {
-  if (!code) return 'flash';
-  return EQUIPMENT_ICONS[code] || 'flash';
+  if (!code) return 'electric-switch';
+  return EQUIPMENT_ICONS[code] || 'electric-switch';
 }
 
 export const EQUIPMENT_STATUS_COLORS: Record<string, string> = {

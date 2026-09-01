@@ -10,10 +10,12 @@ interface SyncState {
   pendingCount: number;
   lastSyncAt: Date | null;
   error: string | null;
-  
+  cancelled: boolean;
+
   // Actions
   addToQueue: (mutation: SyncMutation) => Promise<void>;
   sync: () => Promise<void>;
+  cancelSync: () => void;
   clearError: () => void;
   refreshPendingCount: () => Promise<void>;
 }
@@ -31,6 +33,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   pendingCount: 0,
   lastSyncAt: null,
   error: null,
+  cancelled: false,
 
   addToQueue: async (mutation: SyncMutation) => {
     const db = await getDatabase();
@@ -55,7 +58,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     const state = get();
     if (state.status === 'syncing') return;
 
-    set({ status: 'syncing', error: null });
+    set({ status: 'syncing', error: null, cancelled: false });
 
     // Таймаут: если синхронизация зависнет — возвращаем в idle через 10 сек
     const timeout = setTimeout(() => {
@@ -77,6 +80,13 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         clearTimeout(timeout);
         set({ status: 'idle' });
         return;
+      }
+
+      // Exponential backoff: задержка перед retry на основе максимального retry_count
+      const maxRetryCount = Math.max(...mutations.map((m: any) => m.retry_count || 0));
+      if (maxRetryCount > 0) {
+        const delay = Math.min(1000 * Math.pow(2, maxRetryCount - 1), 30000);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
 
       // Формируем batch запрос
@@ -105,10 +115,14 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         } else if (result.status === 'failed') {
           const retryCount = mutation.retry_count + 1;
           const newStatus = retryCount >= mutation.max_retries ? 'failed' : 'pending';
-          
+
+          // Пометка конфликта при 409
+          const isConflict = result.error?.includes('409') || result.error?.includes('conflict');
+          const syncError = isConflict ? 'CONFLICT: ' + (result.error || '') : result.error;
+
           await db.runAsync(
             `UPDATE sync_queue SET status = ?, retry_count = ?, error = ? WHERE id = ?`,
-            [newStatus, retryCount, result.error, mutation.id]
+            [newStatus, retryCount, syncError, mutation.id]
           );
         }
       }
@@ -130,8 +144,12 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     }
   },
 
+  cancelSync: () => {
+    set({ cancelled: true, status: 'idle' });
+  },
+
   clearError: () => {
-    set({ error: null });
+    set({ error: null, cancelled: false });
   },
 
   refreshPendingCount: async () => {

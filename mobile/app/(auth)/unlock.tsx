@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, TextInput } from 'react-native-paper';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -13,6 +14,7 @@ import {
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function UnlockScreen() {
+  const theme = useAppTheme();
   const router = useRouter();
   const unlock = useAuthStore((state) => state.unlock);
 
@@ -102,18 +104,18 @@ export default function UnlockScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.card}>
-        <MaterialCommunityIcons name="lock" size={64} color="#0F766E" />
-        <Text variant="headlineMedium" style={styles.title}>
+        <MaterialCommunityIcons name="lock" size={64} color={theme.colors.primary} />
+        <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.text }]}>
           Чек-лист инженера
         </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
+        <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.placeholder }]}>
           Приложение заблокировано
         </Text>
 
         {error ? (
-          <Text variant="bodyMedium" style={styles.error}>
+          <Text variant="bodyMedium" style={[styles.error, { color: theme.colors.error }]}>
             {error}
           </Text>
         ) : null}
@@ -136,7 +138,7 @@ export default function UnlockScreen() {
               onPress={handlePinSubmit}
               loading={loading}
               disabled={loading}
-              style={styles.button}
+              style={[styles.button, { backgroundColor: theme.colors.primary }]}
             >
               Разблокировать
             </Button>
@@ -150,7 +152,7 @@ export default function UnlockScreen() {
               loading={loading}
               disabled={loading}
               icon="fingerprint"
-              style={styles.button}
+              style={[styles.button, { backgroundColor: theme.colors.primary }]}
             >
               Разблокировать
             </Button>
@@ -172,6 +174,7 @@ export default function UnlockScreen() {
           mode="text"
           onPress={handleLogout}
           style={styles.logoutButton}
+          textColor={theme.colors.placeholder}
         >
           Выйти из аккаунта
         </Button>
@@ -185,7 +188,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
     padding: 16,
   },
   card: {
@@ -197,16 +199,13 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 16,
     fontWeight: '700',
-    color: '#0F172A',
     textAlign: 'center',
   },
   subtitle: {
     marginTop: 8,
-    color: '#64748B',
     textAlign: 'center',
   },
   error: {
-    color: '#DC2626',
     marginTop: 16,
     textAlign: 'center',
   },
@@ -218,7 +217,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#0F766E',
     width: '100%',
   },
   biometricButton: {
@@ -226,6 +224,5 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     marginTop: 24,
-    color: '#64748B',
   },
 });

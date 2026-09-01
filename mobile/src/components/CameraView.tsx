@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, PanResponder, Alert } from 'react-native';
 import { CameraView as ExpoCameraView, CameraType, FlashMode, useCameraPermissions } from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface CameraScreenProps {
@@ -12,33 +14,49 @@ interface CameraScreenProps {
 const CONSENT_KEY = 'camera_152_consent';
 
 export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProps) {
+  const theme = useAppTheme();
   const [permission, requestPermission] = useCameraPermissions();
+  const [consentChecked, setConsentChecked] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
+  const [zoom, setZoom] = useState(0);
+  const [focusIndicator, setFocusIndicator] = useState<{ x: number; y: number } | null>(null);
   const cameraRef = useRef<ExpoCameraView>(null);
+  const zoomRef = useRef(0);
 
-  // Запрос разрешения при первом действии
-  const handleFirstAction = async () => {
-    if (!permission?.granted) {
-      await requestPermission();
-    }
-  };
+  // Pinch-to-zoom через PanResponder
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
+      onPanResponderMove: (_, gestureState) => {
+        const newZoom = Math.max(0, Math.min(1, zoomRef.current - gestureState.dy * 0.005));
+        zoomRef.current = newZoom;
+        setZoom(newZoom);
+      },
+      onPanResponderRelease: () => {
+        zoomRef.current = zoom;
+      },
+    })
+  ).current;
+
+  // Focus-by-tap
+  const handleCameraTap = useCallback((event: any) => {
+    const { locationX, locationY } = event.nativeEvent;
+    setFocusIndicator({ x: locationX, y: locationY });
+    setTimeout(() => setFocusIndicator(null), 1000);
+  }, []);
 
   useEffect(() => {
-    if (permission?.granted) {
-      handleFirstAction();
-    }
-  }, [permission?.granted]);
-
-  const checkConsent = async () => {
-    const consent = await SecureStore.getItemAsync(CONSENT_KEY);
-    if (!consent) {
-      setShowConsent(true);
-      return false;
-    }
-    return true;
-  };
+    (async () => {
+      const consent = await SecureStore.getItemAsync(CONSENT_KEY);
+      if (!consent) {
+        setShowConsent(true);
+      }
+      setConsentChecked(true);
+    })();
+  }, []);
 
   const handleConsentAccept = async () => {
     await SecureStore.setItemAsync(CONSENT_KEY, 'true');
@@ -48,11 +66,14 @@ export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProp
   const takePicture = async () => {
     if (!cameraRef.current) return;
 
-    // Проверяем согласие при первом фото
-    const hasConsent = await checkConsent();
-    if (!hasConsent) return;
-
     try {
+      // Проверка свободного места (минимум 50 МБ)
+      const freeSpace = await FileSystem.getFreeDiskStorageAsync();
+      if (freeSpace < 50 * 1024 * 1024) {
+        Alert.alert('Недостаточно места', 'Недостаточно места для сохранения фото. Освободите минимум 50 МБ.');
+        return;
+      }
+
       const photo = await cameraRef.current.takePictureAsync({
         quality: 1,
         skipProcessing: true,
@@ -60,8 +81,15 @@ export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProp
       if (photo?.uri) {
         onPhotoTaken(photo.uri);
       }
-    } catch (error) {
-      console.error('Error taking picture:', error);
+    } catch (error: any) {
+      const msg = error?.message || '';
+      if (msg.includes('camera is currently in use') || msg.includes('Camera is busy')) {
+        Alert.alert('Камера недоступна', 'Камера занята другим приложением. Закройте другое приложение и попробуйте снова.');
+      } else if (msg.includes('Could not') || msg.includes('Failed')) {
+        Alert.alert('Ошибка съёмки', 'Не удалось сделать фото. Попробуйте ещё раз.');
+      } else {
+        Alert.alert('Ошибка', 'Не удалось сделать фото. Попробуйте ещё раз.');
+      }
     }
   };
 
@@ -73,81 +101,101 @@ export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProp
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   };
 
-  // Запрос разрешения
-  if (!permission?.granted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.text}>Нет доступа к камере</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Разрешить</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>Закрыть</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // Предупреждение 152-ФЗ
-  if (showConsent) {
+  // 1. Предупреждение 152-ФЗ — ПОКАЗЫВАЕТСЯ ДО КАМЕРЫ
+  if (!consentChecked || showConsent) {
     return (
       <View style={styles.consentContainer}>
-        <View style={styles.consentCard}>
-          <MaterialCommunityIcons name="shield-alert" size={48} color="#D97706" />
-          <Text style={styles.consentTitle}>ВНИМАНИЕ!</Text>
-          <Text style={styles.consentText}>
+        <View style={[styles.consentCard, { backgroundColor: theme.colors.surface }]}>
+          <MaterialCommunityIcons name="shield-alert" size={48} color={theme.colors.warning} />
+          <Text style={[styles.consentTitle, { color: theme.colors.warning }]}>ВНИМАНИЕ!</Text>
+          <Text style={[styles.consentText, { color: theme.colors.text }]}>
             Убедитесь, что в кадр не попали:{'\n'}
             • Лица посетителей{'\n'}
             • Персональные данные на мониторах{'\n'}
             • Банковские карты и документы
           </Text>
-          <TouchableOpacity style={styles.consentButton} onPress={handleConsentAccept}>
-            <Text style={styles.consentButtonText}>Понятно, сделать фото</Text>
+          <TouchableOpacity style={[styles.consentButton, { backgroundColor: theme.colors.primary }]} onPress={handleConsentAccept}>
+            <Text style={[styles.consentButtonText, { color: theme.colors.surface }]}>Понятно, сделать фото</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowConsent(false)}>
-            <Text style={styles.consentCancel}>Отмена</Text>
+          <TouchableOpacity style={styles.consentCancelBtn} onPress={onClose}>
+            <Text style={[styles.consentCancel, { color: theme.colors.placeholder }]}>Отмена</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
+  // 2. Запрос разрешения на камеру (после согласия)
+  if (!permission?.granted) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.consentContainer}>
+          <View style={[styles.consentCard, { backgroundColor: theme.colors.surface }]}>
+            <MaterialCommunityIcons name="camera-off" size={48} color={theme.colors.placeholder} />
+            <Text style={[styles.consentTitle, { color: theme.colors.warning }]}>Доступ к камере</Text>
+            <Text style={[styles.consentText, { color: theme.colors.text }]}>
+              Разрешите доступ к камере для фотофиксации оборудования
+            </Text>
+            <TouchableOpacity style={[styles.consentButton, { backgroundColor: theme.colors.primary }]} onPress={requestPermission}>
+              <Text style={[styles.consentButtonText, { color: theme.colors.surface }]}>Разрешить</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.consentCancelBtn} onPress={onClose}>
+              <Text style={[styles.consentCancel, { color: theme.colors.placeholder }]}>Отмена</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // 3. Камера
   return (
     <View style={styles.container}>
-      <ExpoCameraView
-        ref={cameraRef}
-        style={styles.camera}
-        facing={facing}
-        flash={flash}
-      >
-        {/* Верхняя панель */}
-        <View style={styles.topBar}>
-          <TouchableOpacity style={styles.controlButton} onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.controlButton} onPress={toggleFlash}>
-            <MaterialCommunityIcons 
-              name={flash === 'off' ? 'flash-off' : 'flash'} 
-              size={28} 
-              color={flash === 'off' ? '#FFFFFF' : '#FFD700'} 
-            />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.cameraContainer} {...panResponder.panHandlers}>
+        <ExpoCameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing={facing}
+          flash={flash}
+          zoom={zoom}
+        >
+          {/* Индикатор фокуса */}
+          {focusIndicator && (
+            <View style={[styles.focusIndicator, { left: focusIndicator.x - 30, top: focusIndicator.y - 30 }]} />
+          )}
 
-        {/* Нижняя панель */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.controlButton} onPress={toggleFacing}>
-            <MaterialCommunityIcons name="camera-switch" size={32} color="#FFFFFF" />
-          </TouchableOpacity>
+          {/* Верхняя панель */}
+          <View style={styles.topBar}>
+            <TouchableOpacity style={styles.controlButton} onPress={onClose} accessibilityRole="button" accessibilityLabel="Закрыть камеру">
+              <MaterialCommunityIcons name="close" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
-            <View style={styles.shutterInner} />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.controlButton} onPress={toggleFlash} accessibilityRole="button" accessibilityLabel={flash === 'off' ? 'Включить фонарик' : 'Выключить фонарик'}>
+              <MaterialCommunityIcons
+                name={flash === 'off' ? 'flash-off' : 'flash'}
+                size={28}
+                color={flash === 'off' ? '#FFFFFF' : '#FFD700'}
+              />
+            </TouchableOpacity>
+          </View>
 
-          <View style={styles.controlButton} />
-        </View>
-      </ExpoCameraView>
+          {/* Нижняя панель */}
+          <View style={styles.bottomBar}>
+            <TouchableOpacity style={styles.controlButton} onPress={toggleFacing} accessibilityRole="button" accessibilityLabel="Переключить камеру">
+              <MaterialCommunityIcons name="camera-switch" size={32} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.shutterButton} onPress={takePicture} accessibilityRole="button" accessibilityLabel="Сделать фото">
+              <View style={styles.shutterInner} />
+            </TouchableOpacity>
+
+            <View style={styles.controlButton} />
+          </View>
+        </ExpoCameraView>
+
+        {/* Tap-to-focus overlay */}
+        <View style={styles.tapOverlay} onTouchEnd={handleCameraTap} pointerEvents="box-none" />
+      </View>
     </View>
   );
 }
@@ -157,8 +205,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  cameraContainer: {
+    flex: 1,
+  },
   camera: {
     flex: 1,
+  },
+  focusIndicator: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    backgroundColor: 'transparent',
+  },
+  tapOverlay: {
+    ...StyleSheet.absoluteFill,
   },
   text: {
     color: '#FFFFFF',
@@ -213,7 +276,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   consentCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -222,19 +284,16 @@ const styles = StyleSheet.create({
   consentTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#D97706',
     marginTop: 16,
     marginBottom: 12,
   },
   consentText: {
     fontSize: 14,
-    color: '#0F172A',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 20,
   },
   consentButton: {
-    backgroundColor: '#0F766E',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -242,24 +301,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   consentButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  consentCancel: {
-    color: '#64748B',
-    fontSize: 14,
+  consentCancelBtn: {
     marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
+  consentCancel: {
+    fontSize: 14,
   },
   permissionButton: {
-    backgroundColor: '#0F766E',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 20,
   },
   permissionButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -267,7 +326,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   closeButtonText: {
-    color: '#64748B',
     fontSize: 14,
   },
 });

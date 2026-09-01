@@ -1,5 +1,6 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Surface, Text, useTheme } from 'react-native-paper';
+import { Surface, Text } from 'react-native-paper';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Visit } from '../types';
@@ -11,8 +12,8 @@ interface VisitCardProps {
 
 export default function VisitCard({ visit }: VisitCardProps) {
   const router = useRouter();
-  const theme = useTheme();
-  const statusColor = VISIT_STATUS_COLORS[visit.status] || '#64748B';
+  const theme = useAppTheme();
+  const statusColor = VISIT_STATUS_COLORS[visit.status] || theme.colors.placeholder;
   const statusLabel = VISIT_STATUS_LABELS[visit.status] || visit.status;
   const progress = visit.tasks_count
     ? (visit.completed_tasks_count || 0) / visit.tasks_count
@@ -23,14 +24,14 @@ export default function VisitCard({ visit }: VisitCardProps) {
   };
 
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Визит: ${visit.address}`}>
       <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
         <View style={styles.header}>
           <Text variant="titleMedium" style={[styles.address, { color: theme.colors.onSurface }]} numberOfLines={2}>
             {visit.address}
           </Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusText}>{statusLabel}</Text>
+            <Text style={[styles.statusText, { color: theme.colors.surface }]}>{statusLabel}</Text>
           </View>
         </View>
 
@@ -38,16 +39,16 @@ export default function VisitCard({ visit }: VisitCardProps) {
           <View style={styles.badges}>
             {visit.request_number && (
               <View style={[styles.badge, { backgroundColor: 'rgba(124,58,237,0.08)' }]}>
-                <MaterialCommunityIcons name="file-document-outline" size={11} color="#7C3AED" />
-                <Text style={[styles.badgeText, { color: '#7C3AED' }]}>
+                <MaterialCommunityIcons name="file-document-outline" size={11} color={theme.colors.purple} />
+                <Text style={[styles.badgeText, { color: theme.colors.purple }]}>
                   Заявка №{visit.request_number}
                 </Text>
               </View>
             )}
             {visit.contract_number && (
               <View style={[styles.badge, { backgroundColor: 'rgba(3,105,161,0.08)' }]}>
-                <MaterialCommunityIcons name="file-sign" size={11} color="#0369A1" />
-                <Text style={[styles.badgeText, { color: '#0369A1' }]}>
+                <MaterialCommunityIcons name="file-sign" size={11} color={theme.colors.secondary} />
+                <Text style={[styles.badgeText, { color: theme.colors.secondary }]}>
                   {visit.contract_number}
                 </Text>
               </View>
@@ -57,14 +58,14 @@ export default function VisitCard({ visit }: VisitCardProps) {
 
         <View style={styles.meta}>
           <View style={styles.metaItem}>
-            <MaterialCommunityIcons name="calendar" size={13} color="#94A3B8" />
-            <Text variant="bodySmall" style={styles.metaText}>
+            <MaterialCommunityIcons name="calendar" size={13} color={theme.colors.placeholder} />
+            <Text variant="bodySmall" style={[styles.metaText, { color: theme.colors.placeholder }]}>
               {new Date(visit.date).toLocaleDateString('ru-RU')}
             </Text>
           </View>
           <View style={styles.metaItem}>
-            <MaterialCommunityIcons name="clock-outline" size={13} color="#94A3B8" />
-            <Text variant="bodySmall" style={styles.metaText}>
+            <MaterialCommunityIcons name="clock-outline" size={13} color={theme.colors.placeholder} />
+            <Text variant="bodySmall" style={[styles.metaText, { color: theme.colors.placeholder }]}>
               {visit.time_start}
             </Text>
           </View>
@@ -75,10 +76,10 @@ export default function VisitCard({ visit }: VisitCardProps) {
               <MaterialCommunityIcons
                 name={visit.season === 'summer' ? 'weather-sunny' : 'weather-snowy'}
                 size={11}
-                color={visit.season === 'summer' ? '#D97706' : '#0369A1'}
+                color={visit.season === 'summer' ? theme.colors.warning : theme.colors.secondary}
               />
               <Text style={[styles.seasonText, {
-                color: visit.season === 'summer' ? '#D97706' : '#0369A1',
+                color: visit.season === 'summer' ? theme.colors.warning : theme.colors.secondary,
               }]}>
                 {visit.season === 'summer' ? 'Лето' : 'Зима'}
               </Text>
@@ -88,23 +89,23 @@ export default function VisitCard({ visit }: VisitCardProps) {
 
         {visit.tasks_count ? (
           <View style={styles.progressSection}>
-            <View style={styles.progressBar}>
+            <View style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
               <View style={[styles.progressFill, {
                 width: `${progress * 100}%`,
-                backgroundColor: progress === 1 ? '#059669' : statusColor,
+                backgroundColor: progress === 1 ? theme.colors.success : statusColor,
               }]} />
             </View>
             <View style={styles.progressInfo}>
-              <MaterialCommunityIcons name="cog-outline" size={12} color="#94A3B8" />
-              <Text variant="bodySmall" style={styles.progressText}>
+              <MaterialCommunityIcons name="cog-outline" size={12} color={theme.colors.placeholder} />
+              <Text variant="bodySmall" style={[styles.progressText, { color: theme.colors.placeholder }]}>
                 {visit.completed_tasks_count} / {visit.tasks_count} задач
               </Text>
             </View>
           </View>
         ) : (
           <View style={styles.noTasks}>
-            <MaterialCommunityIcons name="package-variant" size={12} color="#94A3B8" />
-            <Text variant="bodySmall" style={styles.noTasksText}>Нет задач</Text>
+            <MaterialCommunityIcons name="package-variant" size={12} color={theme.colors.placeholder} />
+            <Text variant="bodySmall" style={[styles.noTasksText, { color: theme.colors.placeholder }]}>Нет задач</Text>
           </View>
         )}
       </Surface>
@@ -136,7 +137,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusText: {
-    color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   meta: {
@@ -171,7 +171,6 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   metaText: {
-    color: '#94A3B8',
     fontSize: 12,
   },
   seasonChip: {
@@ -183,7 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   seasonText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   progressSection: {
@@ -192,7 +191,6 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#E2E8F0',
     overflow: 'hidden',
   },
   progressFill: {
@@ -206,7 +204,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   progressText: {
-    color: '#94A3B8',
     fontSize: 11,
   },
   noTasks: {
@@ -216,7 +213,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   noTasksText: {
-    color: '#94A3B8',
     fontSize: 11,
   },
 });

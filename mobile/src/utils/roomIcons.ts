@@ -1,26 +1,26 @@
 export type RoomIconName =
-  | 'flash'
+  | 'lightning-bolt'
   | 'server'
   | 'account-group'
   | 'silverware-fork-knife'
   | 'toilet'
   | 'home-roof'
   | 'office-building'
-  | 'cart'
+  | 'kiosk'
   | 'door'
   | 'radiator'
   | 'cash'
   | 'package-variant';
 
 const ROOM_ICONS: Record<string, RoomIconName> = {
-  electric_room: 'flash',
+  electric_room: 'lightning-bolt',
   server_room: 'server',
   client_hall: 'account-group',
   food_room: 'silverware-fork-knife',
   bathroom: 'toilet',
   roof: 'home-roof',
   facade: 'office-building',
-  self_service: 'cart',
+  self_service: 'kiosk',
   porch: 'door',
   heat_unit: 'radiator',
   cashbox: 'cash',

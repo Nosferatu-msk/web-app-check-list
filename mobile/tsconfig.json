@@ -1,10 +1,13 @@
 {
   "compilerOptions": {
     "strict": true,
+    "allowJs": true,
     "target": "ESNext",
     "module": "ESNext",
+    "moduleDetection": "force",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
+    "lib": ["DOM", "ESNext"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -13,20 +16,10 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "@shared/*": [
-        "../shared/*"
-      ]
+      "@/*": ["src/*"],
+      "@shared/*": ["../shared/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
-  "extends": "expo/tsconfig.base"
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }
