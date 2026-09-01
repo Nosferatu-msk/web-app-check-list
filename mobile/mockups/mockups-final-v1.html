@@ -1,0 +1,692 @@
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0F172A;color:#E2E8F0;min-height:100vh;padding:40px 20px}
+h1{text-align:center;font-size:32px;font-weight:700;margin-bottom:8px;color:#F8FAFC}
+.subtitle{text-align:center;font-size:16px;color:#94A3B8;margin-bottom:48px}
+.section-title{font-size:20px;font-weight:600;color:#F8FAFC;margin:48px 0 24px;text-align:center}
+.section-title:first-of-type{margin-top:0}
+.phones-row{display:flex;flex-wrap:wrap;justify-content:center;gap:32px;margin-bottom:16px}
+.phone-wrapper{display:flex;flex-direction:column;align-items:center;gap:12px}
+.phone-label{font-size:14px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px}
+.phone{width:375px;height:812px;background:#F8FAFC;border-radius:36px;overflow:hidden;position:relative;box-shadow:0 0 0 3px #1E293B,0 0 0 6px #334155,0 25px 60px rgba(0,0,0,.5)}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:28px;background:#000;border-radius:0 0 18px 18px;z-index:20}
+.status-bar{position:absolute;top:0;left:0;right:0;height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 6px;z-index:15;pointer-events:none}
+.status-bar .sb-time{font-size:13px;font-weight:600;color:#0F172A}
+.status-bar .sb-icons{display:flex;align-items:center;gap:5px}
+.status-bar .sb-icons svg{width:16px;height:16px}
+.home-indicator{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:134px;height:5px;background:#0F172A;border-radius:3px;z-index:15;pointer-events:none}
+.nav-bar{position:absolute;bottom:0;left:0;right:0;height:42px;background:#FFF;border-top:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-around;padding:0 40px;z-index:7}
+.nav-bar svg{width:20px;height:20px;fill:#64748B}
+.screen{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:none}
+.screen::-webkit-scrollbar{display:none}
+.app-header{display:flex;align-items:center;padding:12px;background:#FFF;border-bottom:1px solid #E2E8F0;padding-top:52px;position:sticky;top:0;z-index:5}
+.app-header .back-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.app-header .back-btn svg{width:24px;height:24px;fill:#0F766E}
+.app-header .header-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:#0F172A}
+.app-header .spacer{width:40px}
+.tab-bar{position:absolute;bottom:42px;left:0;right:0;height:63px;background:#FFF;border-top:1px solid #E2E8F0;display:flex;align-items:flex-start;padding-top:8px;z-index:6}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.tab-item svg{width:24px;height:24px}
+.tab-item span{font-size:11px;font-weight:500}
+.tab-item.active svg{fill:#0F766E}
+.tab-item.active span{color:#0F766E;font-weight:600}
+.tab-item:not(.active) svg{fill:#64748B}
+.tab-item:not(.active) span{color:#64748B}
+.btn-contained{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;background:#0F766E;border-radius:12px;color:#FFF;font-size:15px;font-weight:600;border:none;cursor:pointer;width:100%}
+.btn-success{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;background:#059669;border-radius:12px;color:#FFF;font-size:15px;font-weight:600;border:none;cursor:pointer;width:100%}
+.btn-outlined{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;background:transparent;border:1px solid #0F766E;border-radius:12px;color:#0F766E;font-size:15px;font-weight:600;cursor:pointer;width:100%}
+.btn-danger-outlined{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;background:transparent;border:1px solid #DC2626;border-radius:12px;color:#DC2626;font-size:15px;font-weight:600;cursor:pointer;width:100%}
+.fab{position:absolute;right:16px;bottom:100px;width:56px;height:56px;background:#0F766E;border-radius:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(15,118,110,.4);z-index:5}
+.fab svg{width:28px;height:28px;fill:#FFF}
+.login-screen{background:#F8FAFC;height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;background:#FFF;border-radius:16px;padding:32px 24px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.login-logo{width:64px;height:64px;background:#0F766E;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.login-title{font-size:24px;font-weight:700;color:#0F766E;text-align:center;margin-bottom:4px}
+.login-subtitle{font-size:14px;color:#64748B;text-align:center;margin-bottom:28px}
+.input-wrapper{position:relative;margin-bottom:16px}
+.input-wrapper .input-label{position:absolute;top:-8px;left:10px;font-size:11px;color:#0F766E;background:#FFF;padding:0 4px;font-weight:500;z-index:1}
+.input-wrapper .fake-input{width:100%;height:48px;border:1px solid #E2E8F0;border-radius:12px;padding:0 14px;font-size:14px;color:#0F172A;background:#FFF;display:flex;align-items:center}
+.visits-screen{background:#F8FAFC;height:100%;padding-bottom:130px}
+.visits-header{display:flex;justify-content:space-between;align-items:center;padding:52px 16px 8px}
+.visits-title{font-size:26px;font-weight:700;color:#0F172A}
+.sync-pill{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:16px;font-size:12px;font-weight:600}
+.sync-pill.synced{background:rgba(5,150,105,.1);color:#059669}
+.segmented-buttons{display:flex;margin:8px 16px 12px;background:#E0F2F1;border-radius:12px;overflow:hidden}
+.seg-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;font-size:13px;font-weight:500;color:#64748B;cursor:pointer;border-radius:10px}
+.seg-btn.active{background:#FFF;color:#0F766E;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.visit-card{background:#FFF;margin:4px 16px;padding:14px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.visit-card-header{display:flex;justify-content:space-between;align-items:flex-start}
+.visit-card-address{font-size:15px;font-weight:600;color:#0F172A;line-height:20px;flex:1;margin-right:8px}
+.status-badge{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;color:#FFF;white-space:nowrap}
+.status-badge.in_progress{background:#0369A1}
+.status-badge.not_started{background:#64748B}
+.status-badge.completed{background:#059669}
+.status-badge.planned{background:#D97706}
+.visit-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.visit-badge{display:flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600}
+.visit-badge.request{background:rgba(124,58,237,.08);color:#7C3AED}
+.visit-badge.contract{background:rgba(3,105,161,.08);color:#0369A1}
+.visit-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.visit-meta-item{display:flex;align-items:center;gap:3px;font-size:12px;color:#94A3B8}
+.season-chip{display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.season-chip.summer{background:#FEF3C7;color:#D97706}
+.visit-progress{margin-top:10px}
+.progress-bar{height:4px;border-radius:2px;background:#E2E8F0;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px}
+.progress-info{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:11px;color:#94A3B8}
+.detail-screen{background:#F8FAFC;height:100%;padding:16px;padding-top:52px;padding-bottom:70px}
+.detail-card{background:#FFF;padding:16px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px}
+.detail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.detail-address{font-size:18px;font-weight:700;color:#0F172A;line-height:22px;flex:1;margin-right:8px}
+.detail-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.detail-meta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px}
+.detail-meta-item{display:flex;align-items:center;gap:4px;font-size:12px;color:#64748B}
+.detail-engineer{display:flex;align-items:center;gap:4px;font-size:12px;color:#64748B}
+.detail-progress{margin-top:10px}
+.detail-progress-bar{height:6px;border-radius:3px;background:#E2E8F0;overflow:hidden}
+.detail-progress-fill{height:100%;border-radius:3px}
+.detail-progress-text{font-size:12px;color:#64748B;margin-top:4px}
+.section-title-inline{font-size:16px;font-weight:600;color:#0F172A;margin-bottom:12px}
+.task-card{display:flex;align-items:center;padding:12px;background:#FFF;border-radius:12px;border:1px solid #E2E8F0;margin-bottom:8px}
+.task-icon-wrap{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-right:12px}
+.task-content{flex:1}
+.task-name{font-size:14px;font-weight:500;color:#0F172A}
+.task-room{font-size:12px;color:#64748B;margin-top:2px}
+.task-status{padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;color:#FFF;margin-left:8px;white-space:nowrap}
+.detail-actions{margin-top:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:50px}
+.scroll-content{padding:16px;padding-bottom:70px}
+.field-group{margin-bottom:16px}
+.field-label{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:#0F172A;margin-bottom:6px}
+.field-label .required{color:#DC2626}
+.search-bar{display:flex;align-items:center;gap:8px;background:#FFF;border:1px solid #E2E8F0;border-radius:12px;padding:0 14px;height:48px}
+.search-bar svg{width:20px;height:20px;fill:#94A3B8;flex-shrink:0}
+.dropdown{background:#FFF;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:16px}
+.dropdown-item{display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid #F1F5F9;font-size:14px;color:#0F172A}
+.dropdown-item:last-child{border-bottom:none}
+.row-2{display:flex;gap:12px}
+.row-2>*{flex:1}
+.input-outlined{width:100%;height:48px;border:1px solid #E2E8F0;border-radius:12px;padding:0 14px;font-size:14px;color:#0F172A;background:#FFF;display:flex;align-items:center}
+.season-row{display:flex;gap:10px}
+.season-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-radius:12px;background:#F1F5F9;border:1.5px solid transparent;font-size:14px;font-weight:500;color:#64748B;cursor:pointer}
+.season-btn.active{background:#0F766E;border-color:#0F766E;color:#FFF}
+.season-btn.active svg{fill:#FFF}
+.gps-card{background:#FFF;padding:12px;border-radius:12px;border:1px solid #E2E8F0;margin-bottom:16px}
+.gps-header{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.gps-header span{font-size:13px;font-weight:600;color:#0F172A}
+.gps-coords{font-size:14px;color:#0F172A;font-family:'SF Mono','Courier New',monospace}
+.gps-accuracy{font-size:12px;font-weight:500;margin-top:2px}
+.steps-bar{display:flex;align-items:center;padding:16px;background:#FFF;margin-bottom:8px}
+.step-item{display:flex;align-items:center;gap:6px}
+.step-num{width:26px;height:26px;border-radius:13px;background:#E2E8F0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#FFF}
+.step-num.active{background:#0F766E}
+.step-num.done{background:#059669}
+.step-text{font-size:13px;color:#64748B}
+.step-text.active{color:#0F172A;font-weight:600}
+.step-line{flex:1;height:2px;background:#E2E8F0;margin:0 12px}
+.room-card{display:flex;align-items:center;padding:14px;background:#FFF;border-radius:12px;border:1.5px solid #E2E8F0;margin-bottom:8px}
+.room-icon{width:40px;height:40px;border-radius:10px;background:#F0FDFA;display:flex;align-items:center;justify-content:center;margin-right:12px}
+.room-icon svg{width:22px;height:22px;fill:#0F766E}
+.room-info{flex:1}
+.room-name{font-size:14px;font-weight:500;color:#0F172A}
+.room-count{font-size:12px;color:#64748B;margin-top:2px}
+.room-badge{background:rgba(15,118,110,.1);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:600;color:#0F766E;margin-right:8px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px}
+.counter-text{font-size:12px;color:#64748B}
+.counter-bold{color:#0F766E;font-weight:600}
+.select-all{display:flex;align-items:center;gap:6px;font-size:13px;color:#0F766E;font-weight:600}
+.eq-item{display:flex;align-items:center;gap:10px;padding:12px;background:#FFF;border-radius:10px;border:1.5px solid #E2E8F0;margin-bottom:6px}
+.eq-item.selected{border-color:#0F766E;background:#F0FDFA}
+.checkbox{width:22px;height:22px;border-radius:6px;border:2px solid #CBD5E1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.checkbox.checked{background:#0F766E;border-color:#0F766E}
+.checkbox svg{width:14px;height:14px;fill:#FFF}
+.eq-info{flex:1}
+.eq-name{font-size:14px;font-weight:500;color:#0F172A}
+.eq-detail{font-size:11px;color:#94A3B8;margin-top:2px}
+.bottom-bar{position:absolute;bottom:42px;left:0;right:0;padding:16px 16px 20px;background:#FFF;border-top:1px solid #E2E8F0;z-index:8}
+.task-detail-screen{background:#F8FAFC;height:100%;padding:16px;padding-bottom:70px}
+.task-header-block{margin-bottom:16px}
+.task-eq-name{font-size:20px;font-weight:700;color:#0F172A}
+.task-room-name{font-size:14px;color:#64748B;margin-top:4px}
+.save-indicator{padding:8px;background:#FFF;border-radius:8px;margin-bottom:16px;font-size:12px}
+.save-indicator.saved{color:#059669}
+.param-card{background:#FFF;padding:16px;border-radius:14px;border:1px solid #E2E8F0;margin-bottom:16px}
+.param-label{font-size:13px;font-weight:600;color:#0F172A;margin-bottom:8px}
+.param-input{width:100%;height:44px;border:1px solid #E2E8F0;border-radius:12px;padding:0 14px;font-size:14px;color:#0F172A;background:#FFF;margin-bottom:12px;display:flex;align-items:center}
+.conclusion-buttons{display:flex;background:#E0F2F1;border-radius:12px;overflow:hidden;margin-bottom:16px}
+.conclusion-btn{flex:1;padding:10px 6px;text-align:center;font-size:12px;font-weight:500;color:#64748B;cursor:pointer;border-radius:10px}
+.conclusion-btn.active{background:#FFF;color:#0F766E;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.photo-card{background:#FFF;padding:16px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px}
+.photo-moment-title{font-size:16px;font-weight:600;color:#0F172A;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.photo-preview-img{width:100%;height:200px;background:linear-gradient(135deg,#E2E8F0 0%,#CBD5E1 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94A3B8;font-size:13px;position:relative}
+.photo-size{font-size:12px;color:#64748B;margin-top:8px}
+.info-block{padding:12px;background:#F1F5F9;border-radius:8px;font-size:12px;color:#64748B;text-align:center;line-height:18px}
+.photo-placeholder{display:flex;flex-direction:column;align-items:center;padding:24px 0;gap:8px}
+.report-screen{background:#F8FAFC;height:100%;padding:16px;padding-top:52px;padding-bottom:70px}
+.report-info-card{background:#FFF;padding:16px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:24px}
+.report-address{font-size:16px;font-weight:600;color:#0F172A}
+.report-date{font-size:14px;color:#64748B;margin-top:4px}
+.success-card{background:#FFF;padding:24px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;margin-bottom:24px}
+.success-text{font-size:16px;font-weight:600;color:#0F172A;margin-top:4px}
+.success-subtext{font-size:12px;color:#64748B;margin-top:4px}
+.profile-screen{background:#F8FAFC;height:100%;padding:16px;padding-bottom:130px}
+.profile-title{font-size:26px;font-weight:700;color:#0F172A;margin-bottom:24px;padding-top:36px}
+.user-card{background:#FFF;padding:16px;border-radius:14px;display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.avatar{width:52px;height:52px;border-radius:26px;background:#0F766E;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#FFF;flex-shrink:0}
+.user-name{font-size:18px;font-weight:600;color:#0F172A}
+.user-email{font-size:14px;color:#64748B;margin-top:4px}
+.user-role{font-size:11px;color:#0F766E;text-transform:uppercase;font-weight:600;margin-top:4px}
+.profile-section-title{font-size:16px;font-weight:600;color:#0F172A;margin-bottom:8px;margin-top:16px}
+.profile-list-item{background:#FFF;border-radius:8px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.profile-list-item-title{font-size:14px;font-weight:500;color:#0F172A}
+.profile-list-item-desc{font-size:12px;color:#64748B;margin-top:2px}
+.switch{width:44px;height:24px;border-radius:12px;background:#0F766E;position:relative}
+.switch::after{content:'';width:20px;height:20px;border-radius:10px;background:#FFF;position:absolute;top:2px;right:2px}
+.profile-link{font-size:13px;color:#0F766E;font-weight:600}
+.pin-screen{background:#F8FAFC;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.pin-icon{width:64px;height:64px;border-radius:32px;background:rgba(15,118,110,.1);display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.pin-title{font-size:22px;font-weight:700;color:#0F172A;margin-bottom:8px}
+.pin-subtitle{font-size:14px;color:#64748B;margin-bottom:32px;text-align:center}
+.pin-dots{display:flex;gap:16px;margin-bottom:40px}
+.pin-dot{width:16px;height:16px;border-radius:8px;border:2px solid #CBD5E1;background:transparent}
+.pin-dot.filled{background:#0F766E;border-color:#0F766E}
+.pin-pad{display:grid;grid-template-columns:repeat(3,72px);gap:12px}
+.pin-key{width:72px;height:72px;border-radius:36px;background:#FFF;border:1px solid #E2E8F0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:600;color:#0F172A;cursor:pointer}
+.pin-key:active{background:#F1F5F9}
+.pin-key.empty{background:transparent;border:none}
+.pin-key.action{background:transparent;border:none;font-size:14px;color:#0F766E;font-weight:600}
+.requests-screen{background:#F8FAFC;height:100%;padding-bottom:130px}
+.requests-header{display:flex;justify-content:space-between;align-items:center;padding:52px 16px 8px}
+.requests-title{font-size:26px;font-weight:700;color:#0F172A}
+.request-tabs{display:flex;margin:8px 16px 12px;background:#E0F2F1;border-radius:12px;overflow:hidden}
+.request-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:10px 4px;font-size:12px;font-weight:500;color:#64748B;cursor:pointer;border-radius:10px}
+.request-tab.active{background:#FFF;color:#0F766E;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.request-tab .tab-count{font-size:10px;background:rgba(15,118,110,.15);padding:1px 6px;border-radius:8px;font-weight:600}
+.request-tab.active .tab-count{background:rgba(15,118,110,.1)}
+.request-card{background:#FFF;margin:4px 16px;padding:14px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.request-card-header{display:flex;justify-content:space-between;align-items:flex-start}
+.request-number{font-size:15px;font-weight:600;color:#7C3AED}
+.request-address{font-size:14px;color:#0F172A;margin-top:4px;line-height:18px}
+.request-equipment{font-size:12px;color:#64748B;margin-top:4px;display:flex;align-items:center;gap:4px}
+.request-actions{display:flex;gap:8px;margin-top:10px}
+.request-actions .btn-contained{height:40px;font-size:13px;flex:1}
+.request-actions .btn-outlined{height:40px;font-size:13px;flex:1}
+</style>
+
+<h1>Чек-лист инженера ТО</h1>
+<p class="subtitle">Мобильное приложение — Макеты экранов v1.1</p>
+
+<div class="section-title">🔐 Авторизация</div>
+<div class="phones-row">
+
+<!-- Login -->
+<div class="phone-wrapper">
+  <div class="phone-label">Экран входа</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="login-screen">
+        <div class="login-card">
+          <div class="login-logo" style="border-radius:20px">
+            <svg viewBox="0 0 24 24" width="40" height="40"><path d="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41-1.41L9,16.17Z" fill="#FFF"/></svg>
+          </div>
+          <div class="login-title">Чек-лист инженера</div>
+          <div class="login-subtitle">Войдите в систему</div>
+          <div class="input-wrapper"><span class="input-label">Email</span><div class="fake-input" style="color:#0F172A">engineer@company.ru</div></div>
+          <div class="input-wrapper"><span class="input-label">Пароль</span><div class="fake-input" style="justify-content:space-between"><span>••••••••</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div></div>
+          <button class="btn-contained" style="margin-top:8px">Войти</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- PIN Setup -->
+<div class="phone-wrapper">
+  <div class="phone-label">Установка PIN</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="pin-screen">
+        <div class="pin-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="#0F766E"><path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10A2,2 0 0,1 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/></svg></div>
+        <div class="pin-title">Установите PIN-код</div>
+        <div class="pin-subtitle">Введите 4-значный код для<br>быстрого доступа к приложению</div>
+        <div class="pin-dots"><div class="pin-dot filled"></div><div class="pin-dot filled"></div><div class="pin-dot filled"></div><div class="pin-dot"></div></div>
+        <div class="pin-pad"><div class="pin-key">1</div><div class="pin-key">2</div><div class="pin-key">3</div><div class="pin-key">4</div><div class="pin-key">5</div><div class="pin-key">6</div><div class="pin-key">7</div><div class="pin-key">8</div><div class="pin-key">9</div><div class="pin-key action"></div><div class="pin-key">0</div><div class="pin-key action">⌫</div></div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- Unlock -->
+<div class="phone-wrapper">
+  <div class="phone-label">Разблокировка</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="pin-screen">
+        <div class="pin-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="#0F766E"><path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10A2,2 0 0,1 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/></svg></div>
+        <div class="pin-title">Чек-лист инженера</div>
+        <div class="pin-subtitle">Приложение заблокировано</div>
+        <button class="btn-contained" style="max-width:280px;margin-bottom:12px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFF"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" opacity=".3"/><path d="M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6Z"/></svg>
+          Разблокировать
+        </button>
+        <div style="width:100%;max-width:280px;margin-top:8px">
+          <div class="input-wrapper"><span class="input-label">PIN-код</span><div class="fake-input" style="color:#0F172A">••••</div></div>
+          <button class="btn-outlined" style="margin-bottom:16px">Ввести PIN</button>
+        </div>
+        <button class="btn-danger-outlined" style="max-width:280px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#DC2626"><path d="M17,7H22V17H17V20L12,15L17,10V7M16,5L11,0L11,3L3,3L3,17L11,17L11,20L16,15L16,5M5,15L5,5L11,5L11,7L5,7L5,15L11,15L11,17L5,17Z"/></svg>
+          Выйти из аккаунта
+        </button>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+</div>
+
+<div class="section-title">📋 Основной рабочий процесс</div>
+<div class="phones-row">
+
+<!-- Visits List -->
+<div class="phone-wrapper">
+  <div class="phone-label">Список визитов</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="visits-screen">
+        <div class="visits-header">
+          <div class="visits-title">Мои визиты</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#64748B"><path d="M12,22A2,2 0 0,0 14,20H10A2,2 0 0,0 12,22M18,16V11C18,7.93 16.37,5.36 13.5,4.68V4A1.5,1.5 0 0,0 12,2.5A1.5,1.5 0 0,0 10.5,4V4.68C7.64,5.36 6,7.92 6,11V16L4,18V19H20V18L18,16Z"/></svg>
+              <div style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:#DC2626;border-radius:4px;border:2px solid #F8FAFC"></div>
+            </div>
+            <div class="sync-pill synced"><svg width="16" height="16" viewBox="0 0 24 24" fill="#059669"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2m-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>Синхронизировано</div>
+          </div>
+        </div>
+        <div class="segmented-buttons">
+          <div class="seg-btn active"><svg width="16" height="16" viewBox="0 0 24 24" fill="#0F766E"><path d="M19,3H14.82C14.4,1.84 13.3,1 12,1S9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M7,7H17V9H7V7M12,11L16,15H8L12,11Z"/></svg>Активные</div>
+          <div class="seg-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="#64748B"><path d="M19,3H14.82C14.4,1.84 13.3,1 12,1S9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M10,17l-4-4 1.41-1.41L10,14.17l6.59-6.59L18,9l-8,8z"/></svg>Завершённые</div>
+        </div>
+        <div class="visit-card">
+          <div class="visit-card-header"><div class="visit-card-address">ул. Тверская, д. 15, стр. 2</div><div class="status-badge in_progress">В работе</div></div>
+          <div class="visit-badges"><div class="visit-badge request"><svg width="11" height="11" viewBox="0 0 24 24" fill="#7C3AED"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>Заявка №42</div><div class="visit-badge contract"><svg width="11" height="11" viewBox="0 0 24 24" fill="#0369A1"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>ДО-2026/089</div></div>
+          <div class="visit-meta"><div class="visit-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="#94A3B8"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1"/></svg>01.09.2026</div><div class="visit-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="#94A3B8"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/></svg>09:30</div><div class="season-chip summer"><svg width="11" height="11" viewBox="0 0 24 24" fill="#D97706"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.22 6.91,16.85 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.78 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>Лето</div></div>
+          <div class="visit-progress"><div class="progress-bar"><div class="progress-fill" style="width:60%;background:#0369A1"></div></div><div class="progress-info"><svg width="12" height="12" viewBox="0 0 24 24" fill="#94A3B8"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/></svg>3 / 5 задач</div></div>
+        </div>
+        <div class="visit-card">
+          <div class="visit-card-header"><div class="visit-card-address">Ленинградское ш., д. 25, корп. 1</div><div class="status-badge not_started">Не начат</div></div>
+          <div class="visit-meta"><div class="visit-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="#94A3B8"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1"/></svg>02.09.2026</div><div class="visit-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="#94A3B8"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/></svg>14:00</div><div class="season-chip summer"><svg width="11" height="11" viewBox="0 0 24 24" fill="#D97706"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.22 6.91,16.85 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.78 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>Лето</div></div>
+          <div class="visit-progress"><div style="display:flex;align-items:center;gap:4px;margin-top:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#94A3B8"><path d="M7,2H17A2,2 0 0,1 19,4V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V4A2,2 0 0,1 7,2M7,4V8H17V4H7M7,10V12H9V10H7M11,10V12H13V10H11M15,10V12H17V10H15M7,14V16H9V14H7M11,14V16H13V14H11M15,14V16H17V14H15Z"/></svg><span style="font-size:11px;color:#94A3B8">Нет задач</span></div></div>
+        </div>
+        <div class="fab"><svg viewBox="0 0 24 24"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg></div>
+        <div class="tab-bar">
+          <div class="tab-item active"><svg viewBox="0 0 24 24"><path d="M19,3H14.82C14.4,1.84 13.3,1 12,1S9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M7,7H17V9H7V7Z"/></svg><span>Визиты</span></div>
+          <div class="tab-item"><svg viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg><span>Заявки</span></div>
+          <div class="tab-item"><svg viewBox="0 0 24 24"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg><span>Профиль</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- Requests (NEW) -->
+<div class="phone-wrapper">
+  <div class="phone-label">Заявки</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="requests-screen">
+        <div class="requests-header">
+          <div class="requests-title">Мои заявки</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#64748B"><path d="M12,22A2,2 0 0,0 14,20H10A2,2 0 0,0 12,22M18,16V11C18,7.93 16.37,5.36 13.5,4.68V4A1.5,1.5 0 0,0 12,2.5A1.5,1.5 0 0,0 10.5,4V4.68C7.64,5.36 6,7.92 6,11V16L4,18V19H20V18L18,16Z"/></svg>
+              <div style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:#DC2626;border-radius:4px;border:2px solid #F8FAFC"></div>
+            </div>
+            <div class="sync-pill synced"><svg width="16" height="16" viewBox="0 0 24 24" fill="#059669"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2m-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>Синхронизировано</div>
+          </div>
+        </div>
+        <div class="request-tabs">
+          <div class="request-tab active">Все<span class="tab-count">5</span></div>
+          <div class="request-tab">Новые<span class="tab-count">2</span></div>
+          <div class="request-tab">В работе<span class="tab-count">2</span></div>
+          <div class="request-tab">Заверш.</div>
+        </div>
+        <div class="request-card">
+          <div class="request-card-header"><div class="request-number">Заявка №42</div><div class="status-badge in_progress">В работе</div></div>
+          <div class="request-address">ул. Тверская, д. 15, стр. 2</div>
+          <div class="request-equipment"><svg width="14" height="14" viewBox="0 0 24 24" fill="#64748B"><path d="M12,3L2,12H5V20H19V12H22L12,3M12,8.75A1.25,1.25 0 0,1 13.25,10A1.25,1.25 0 0,1 12,11.25A1.25,1.25 0 0,1 10.75,10A1.25,1.25 0 0,1 12,8.75Z"/></svg>РЩ/ГРЩ, Вентиляция, VRV</div>
+          <div class="request-actions"><button class="btn-contained">Продолжить визит</button></div>
+        </div>
+        <div class="request-card">
+          <div class="request-card-header"><div class="request-number">Заявка №38</div><div class="status-badge in_progress">В работе</div></div>
+          <div class="request-address">ул. Новый Арбат, д. 36/9</div>
+          <div class="request-equipment"><svg width="14" height="14" viewBox="0 0 24 24" fill="#64748B"><path d="M12,3L2,12H5V20H19V12H22L12,3M12,8.75A1.25,1.25 0 0,1 13.25,10A1.25,1.25 0 0,1 12,11.25A1.25,1.25 0 0,1 10.75,10A1.25,1.25 0 0,1 12,8.75Z"/></svg>Внутренний блок VRV</div>
+          <div class="request-actions"><button class="btn-contained">Продолжить визит</button></div>
+        </div>
+        <div class="request-card">
+          <div class="request-card-header"><div class="request-number">Заявка №45</div><div class="status-badge planned">Новая</div></div>
+          <div class="request-address">Ленинградский пр-т, д. 80</div>
+          <div class="request-equipment"><svg width="14" height="14" viewBox="0 0 24 24" fill="#64748B"><path d="M12,3L2,12H5V20H19V12H22L12,3M12,8.75A1.25,1.25 0 0,1 13.25,10A1.25,1.25 0 0,1 12,11.25A1.25,1.25 0 0,1 10.75,10A1.25,1.25 0 0,1 12,8.75Z"/></svg>Сети водоснабжения</div>
+          <div class="request-actions"><button class="btn-contained">Начать визит</button></div>
+        </div>
+        <div class="request-card">
+          <div class="request-card-header"><div class="request-number">Заявка №35</div><div class="status-badge completed">Завершена</div></div>
+          <div class="request-address">ул. Садовая-Триумфальная, д. 4</div>
+          <div class="request-equipment"><svg width="14" height="14" viewBox="0 0 24 24" fill="#64748B"><path d="M12,3L2,12H5V20H19V12H22L12,3M12,8.75A1.25,1.25 0 0,1 13.25,10A1.25,1.25 0 0,1 12,11.25A1.25,1.25 0 0,1 10.75,10A1.25,1.25 0 0,1 12,8.75Z"/></svg>Тепловые сети</div>
+          <div class="request-actions"><button class="btn-outlined">Просмотреть отчёт</button></div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab-item"><svg viewBox="0 0 24 24"><path d="M19,3H14.82C14.4,1.84 13.3,1 12,1S9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M7,7H17V9H7V7Z"/></svg><span>Визиты</span></div>
+          <div class="tab-item active"><svg viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg><span>Заявки</span></div>
+          <div class="tab-item"><svg viewBox="0 0 24 24"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg><span>Профиль</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- Visit Detail -->
+<div class="phone-wrapper">
+  <div class="phone-label">Детали визита</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="detail-screen">
+        <div class="detail-card">
+          <div class="detail-header"><div class="detail-address">ул. Тверская, д. 15, стр. 2</div><div class="status-badge in_progress">В работе</div></div>
+          <div class="detail-badges"><div class="visit-badge request"><svg width="12" height="12" viewBox="0 0 24 24" fill="#7C3AED"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>Заявка №42</div><div class="visit-badge contract"><svg width="12" height="12" viewBox="0 0 24 24" fill="#0369A1"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>ДО-2026/089</div></div>
+          <div class="detail-meta"><div class="detail-meta-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="#64748B"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1"/></svg>01.09.2026</div><div class="detail-meta-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="#64748B"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/></svg>09:30</div><div class="season-chip summer"><svg width="12" height="12" viewBox="0 0 24 24" fill="#D97706"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.22 6.91,16.85 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.78 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>Лето</div></div>
+          <div class="detail-engineer"><svg width="15" height="15" viewBox="0 0 24 24" fill="#64748B"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg>Иванов А.П.</div>
+          <div class="detail-progress"><div class="detail-progress-bar"><div class="detail-progress-fill" style="width:60%;background:#0369A1"></div></div><div class="detail-progress-text">3 из 5 задач выполнено</div></div>
+        </div>
+        <div class="section-title-inline">Задачи (5)</div>
+        <div class="task-card"><div class="task-icon-wrap" style="background:rgba(5,150,105,.08)"><svg width="20" height="20" viewBox="0 0 24 24" fill="#059669"><path d="M2,4V20H22V4H2M4,6H20V18H4V6M6,8V16H8V8H6M10,8V16H12V8H10M14,8V16H16V8H14M18,8V16H20V8H18Z"/></svg></div><div class="task-content"><div class="task-name">РЩ/ГРЩ</div><div class="task-room">Электрощитовая</div></div><div class="task-status" style="background:#059669">Завершён</div></div>
+        <div class="task-card"><div class="task-icon-wrap" style="background:rgba(5,150,105,.08)"><svg width="20" height="20" viewBox="0 0 24 24" fill="#059669"><path d="M12,12C12,12 14,8 14,6C14,4 12,2 12,2C12,2 10,4 10,6C10,8 12,12 12,12M12,12C12,12 8,10 6,10C4,10 2,12 2,12C2,12 4,14 6,14C8,14 12,12 12,12M12,12C12,12 10,16 10,18C10,20 12,22 12,22C12,22 14,20 14,18C14,16 12,12 12,12M12,12C12,12 16,14 18,14C20,14 22,12 22,12C22,12 20,10 18,10C16,10 12,12 12,12Z"/></svg></div><div class="task-content"><div class="task-name">Вентиляционная установка</div><div class="task-room">Серверная</div></div><div class="task-status" style="background:#059669">Завершён</div></div>
+        <!-- Группировка климатического оборудования (как в PWA) -->
+        <div class="task-card"><div class="task-icon-wrap" style="background:rgba(3,105,161,.08)"><svg width="20" height="20" viewBox="0 0 24 24" fill="#0369A1"><path d="M22,12L18,5L14,12L18,19L22,12M2,12L6,5L10,12L6,19L2,12M12,2L5,6L12,10L19,6L12,2M12,22L5,18L12,14L19,18L12,22Z"/></svg></div><div class="task-content"><div class="task-name">Климатическое оборудование</div><div class="task-room">Клиентский зал · 3 ед. (VRV, МСС, СС)</div></div><div class="task-status" style="background:#0369A1">В работе</div></div>
+        <div class="task-card"><div class="task-icon-wrap" style="background:rgba(100,116,139,.08)"><svg width="20" height="20" viewBox="0 0 24 24" fill="#64748B"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,7L10.5,12H13.5L12,7M12,14A2,2 0 0,1 14,16A2,2 0 0,1 12,18A2,2 0 0,1 10,16A2,2 0 0,1 12,14Z"/></svg></div><div class="task-content"><div class="task-name">Прибор учёта ГВС</div><div class="task-room">Тепловой узел</div></div><div class="task-status" style="background:#64748B">Не начат</div></div>
+        <div class="task-card"><div class="task-icon-wrap" style="background:rgba(100,116,139,.08)"><svg width="20" height="20" viewBox="0 0 24 24" fill="#64748B"><path d="M12,2C12,2 5,10 5,14A7,7 0 0,0 12,21A7,7 0 0,0 19,14C19,10 12,2 12,2Z"/></svg></div><div class="task-content"><div class="task-name">Сети водоснабжения</div><div class="task-room">Санузел</div></div><div class="task-status" style="background:#64748B">Не начат</div></div>
+        <div class="detail-actions">
+          <button class="btn-outlined"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0F766E"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>Добавить оборудование</button>
+          <button class="btn-success"><svg width="18" height="18" viewBox="0 0 24 24" fill="#FFF"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>Завершить визит</button>
+          <button class="btn-danger-outlined"><svg width="18" height="18" viewBox="0 0 24 24" fill="#DC2626"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19V4M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>Удалить визит</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+</div>
+
+<div class="section-title">🔧 Оборудование и задачи</div>
+<div class="phones-row">
+
+<!-- Add Equipment Step 1 -->
+<div class="phone-wrapper">
+  <div class="phone-label">Шаг 1 — Помещение</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="app-header"><div class="back-btn"><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div><div class="header-title">Добавить оборудование</div><div class="spacer"></div></div>
+      <div class="steps-bar"><div class="step-item"><div class="step-num active">1</div><div class="step-text active">Помещение</div></div><div class="step-line"></div><div class="step-item"><div class="step-num">2</div><div class="step-text">Оборудование</div></div></div>
+      <div class="scroll-content" style="padding-top:8px">
+        <div class="room-card"><div class="room-icon"><svg viewBox="0 0 24 24"><path d="M7,2V4H8V18A4,4 0 0,0 12,22A4,4 0 0,0 16,18V4H17V2H7M11,16H13V18H11V16M11,8H13V14H11V8Z" fill="#0F766E"/></svg></div><div class="room-info"><div class="room-name">Электрощитовая</div><div class="room-count">3 ед. оборудования</div></div><div class="room-badge">3</div><svg width="20" height="20" viewBox="0 0 24 24" fill="#94A3B8"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg></div>
+        <div class="room-card"><div class="room-icon"><svg viewBox="0 0 24 24"><path d="M4,2H20A2,2 0 0,1 22,4V20A2,2 0 0,1 20,22H4A2,2 0 0,1 2,20V4A2,2 0 0,1 4,2M6,6V10H10V6H6M6,12V18H10V12H6M12,6V10H18V6H12M12,12V18H18V12H12Z" fill="#0F766E"/></svg></div><div class="room-info"><div class="room-name">Серверная</div><div class="room-count">5 ед. оборудования</div></div><div class="room-badge">5</div><svg width="20" height="20" viewBox="0 0 24 24" fill="#94A3B8"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg></div>
+        <div class="room-card"><div class="room-icon"><svg viewBox="0 0 24 24"><path d="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z" fill="#0F766E"/></svg></div><div class="room-info"><div class="room-name">Клиентский зал</div><div class="room-count">8 ед. оборудования</div></div><div class="room-badge">8</div><svg width="20" height="20" viewBox="0 0 24 24" fill="#94A3B8"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg></div>
+        <!-- Кнопка ручного ввода -->
+        <div style="display:flex;align-items:center;justify-content:center;padding:16px 0 8px">
+          <button class="btn-outlined" style="max-width:260px;font-size:13px;height:44px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#0F766E"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+            Ввести оборудование вручную
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- Add Equipment Step 2 -->
+<div class="phone-wrapper">
+  <div class="phone-label">Шаг 2 — Оборудование</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="app-header"><div class="back-btn"><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div><div class="header-title">Серверная</div><div class="spacer"></div></div>
+      <div class="steps-bar"><div class="step-item"><div class="step-num done">✓</div><div class="step-text">Помещение</div></div><div class="step-line"></div><div class="step-item"><div class="step-num active">2</div><div class="step-text active">Оборудование</div></div></div>
+      <div class="toolbar"><div class="counter-text">Выбрано: <span class="counter-bold">3 из 5</span></div><div class="select-all"><div class="checkbox"></div><span>Все</span></div></div>
+      <div style="padding:0 16px 120px">
+        <div class="eq-item selected"><div class="checkbox checked"><svg viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg></div><div class="eq-info"><div class="eq-name">Вентиляционная установка</div><div class="eq-detail">Daikin · DQ200 · SN-48291</div></div></div>
+        <div class="eq-item selected"><div class="checkbox checked"><svg viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg></div><div class="eq-info"><div class="eq-name">Внутренний блок VRV</div><div class="eq-detail">Daikin · FXAQ20M · SN-77312</div></div></div>
+        <div class="eq-item selected"><div class="checkbox checked"><svg viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg></div><div class="eq-info"><div class="eq-name">Наружный блок VRV</div><div class="eq-detail">Daikin · RXYQ10 · SN-55128</div></div></div>
+        <div class="eq-item"><div class="checkbox"></div><div class="eq-info"><div class="eq-name">Прибор учёта э/э</div><div class="eq-detail">Меркурий · 230-AM · SN-00412</div></div></div>
+        <div class="eq-item"><div class="checkbox"></div><div class="eq-info"><div class="eq-name">РЩ/ГРЩ</div><div class="eq-detail">Щит РП-6 · 2024</div></div></div>
+      </div>
+      <div class="bottom-bar"><button class="btn-contained">Добавить (3)</button></div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- New Equipment/Room (manual) -->
+<div class="phone-wrapper">
+  <div class="phone-label">Новое оборуд. / помещение</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="app-header"><div class="back-btn"><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div><div class="header-title">Новое оборудование</div><div class="spacer"></div></div>
+      <div class="scroll-content" style="padding-top:8px">
+        <div style="background:#FFF3E0;border:1px solid #FFE0B2;border-radius:10px;padding:10px 12px;margin-bottom:16px;display:flex;align-items:flex-start;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#D97706" style="flex-shrink:0;margin-top:1px"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
+          <span style="font-size:12px;color:#92400E;line-height:16px">Оборудование не найдено в справочнике. Заполните данные вручную — оно будет добавлено на объект.</span>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Тип оборудования <span class="required">*</span></div>
+          <div class="input-outlined" style="color:#0F172A">Внутренний блок VRV</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Помещение <span class="required">*</span></div>
+          <div class="input-outlined" style="color:#0F172A">Клиентский зал</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Бренд</div>
+          <div class="input-outlined" style="color:#0F172A">Daikin</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Модель</div>
+          <div class="input-outlined" style="color:#0F172A">FXAQ20M</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Серийный номер</div>
+          <div class="input-outlined" style="color:#0F172A">SN-77312</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Год установки</div>
+          <div class="input-outlined" style="color:#0F172A">2023</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-top:8px">
+          <button class="btn-contained"><svg width="18" height="18" viewBox="0 0 24 24" fill="#FFF"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>Добавить оборудование</button>
+          <button class="btn-outlined">+ Новое помещение</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- Task Detail -->
+<div class="phone-wrapper">
+  <div class="phone-label">Задача — Параметры</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="app-header"><div class="back-btn"><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div><div class="header-title">Задача</div><div class="spacer"></div></div>
+      <div class="scroll-content" style="padding-top:8px">
+        <div class="task-header-block"><div class="task-eq-name">Климатическое оборудование</div><div class="task-room-name">Клиентский зал · 3 ед. (VRV, МСС, СС)</div></div>
+        <div class="save-indicator saved">✓ Сохранено 14:32:05</div>
+        <div class="section-title-inline">Параметры</div>
+        <div class="param-card">
+          <div class="param-label">Температура помещения на уровне 1,2м от пола, °C <span style="color:#DC2626">*</span></div>
+          <div class="param-input">23.5</div>
+        </div>
+        <!-- Рекомендации -->
+        <div class="section-title-inline">Рекомендации</div>
+        <div style="background:#FFF;border-radius:12px;border:1px solid #E2E8F0;padding:12px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #F1F5F9">
+            <div class="checkbox checked"><svg viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg></div>
+            <span style="font-size:13px;color:#0F172A">Проверить и очистить фильтры</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #F1F5F9">
+            <div class="checkbox checked"><svg viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg></div>
+            <span style="font-size:13px;color:#0F172A">Проверить дренажную систему</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0">
+            <div class="checkbox"></div>
+            <span style="font-size:13px;color:#0F172A">Дозаправить хладагент</span>
+          </div>
+        </div>
+        <!-- Примечание с голосовым вводом -->
+        <div class="section-title-inline">Примечание</div>
+        <div style="position:relative;margin-bottom:16px">
+          <div style="width:100%;min-height:80px;border:1px solid #E2E8F0;border-radius:12px;padding:12px 48px 12px 14px;font-size:14px;color:#0F172A;background:#FFF">Работают все 3 блока, температура в норме</div>
+          <div style="position:absolute;right:10px;bottom:10px;width:36px;height:36px;border-radius:18px;background:#0F766E;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(15,118,110,.3)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFF"><path d="M12,14A3,3 0 0,0 15,11V5A3,3 0 0,0 9,5V11A3,3 0 0,0 12,14M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/></svg>
+          </div>
+        </div>
+        <div class="section-title-inline">Заключение</div>
+        <div class="conclusion-buttons"><div class="conclusion-btn active">Исправно</div><div class="conclusion-btn">Замечания</div><div class="conclusion-btn">Неисправно</div></div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-bottom:24px">
+          <button class="btn-outlined"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0F766E"><path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/></svg>Фото ДО/ПОСЛЕ</button>
+          <button class="btn-contained">Сохранить</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+</div>
+
+<div class="section-title"> Фотофиксация и отчёты</div>
+<div class="phones-row">
+
+<!-- Photos -->
+<div class="phone-wrapper">
+  <div class="phone-label">Фотофиксация</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="app-header"><div class="back-btn"><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div><div class="header-title">Фото</div><div class="spacer"></div></div>
+      <div class="scroll-content" style="padding-top:8px">
+        <div style="margin-bottom:4px"><div style="font-size:20px;font-weight:700;color:#0F172A">Фотофиксация</div><div style="font-size:14px;color:#64748B;margin-top:4px">Вентиляционная установка</div></div>
+        <div class="photo-card">
+          <div class="photo-moment-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0F766E"><path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/></svg>Фото ДО</div>
+          <div class="photo-preview-img"><div style="position:absolute;z-index:1;text-align:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="#94A3B8" opacity=".5"><path d="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z"/></svg></div></div>
+          <div style="text-align:center"><div class="photo-size">142 КБ</div><button class="btn-outlined" style="margin-top:12px;max-width:200px;margin-left:auto;margin-right:auto">Переснять</button></div>
+        </div>
+        <div class="photo-card">
+          <div class="photo-moment-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0F766E"><path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/></svg>Фото ПОСЛЕ</div>
+          <div class="photo-placeholder">
+            <button class="btn-contained" style="width:100%"><svg width="18" height="18" viewBox="0 0 24 24" fill="#FFF"><path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/></svg>Сделать фото</button>
+            <button class="btn-outlined" style="width:100%"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0F766E"><path d="M22,16V4C22,2.89 21.1,2 20,2H8C6.89,2 6,2.89 6,4V16C6,17.1 6.89,18 8,18H20C21.1,18 22,17.1 22,16M2,6H4V18H14V20H4C2.89,20 2,19.1 2,18V6Z"/></svg>Из галереи</button>
+          </div>
+        </div>
+        <div class="info-block">Фото сжимается до ~150 КБ для быстрой загрузки.<br>Разрешение: 1280px, JPEG quality 0.65</div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- Report -->
+<div class="phone-wrapper">
+  <div class="phone-label">Отчёт</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="app-header"><div class="back-btn"><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div><div class="header-title">Отчёт</div><div class="spacer"></div></div>
+      <div class="scroll-content" style="padding-top:8px">
+        <div style="font-size:26px;font-weight:700;color:#0F172A;margin-bottom:16px">Отчёт по визиту</div>
+        <div class="report-info-card"><div class="report-address">ул. Тверская, д. 15, стр. 2</div><div class="report-date">01.09.2026 · 09:30</div></div>
+        <div class="success-card">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="#059669"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2m-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <div class="success-text">Отчёт сформирован</div>
+          <div class="success-subtext">PDF готов к отправке</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <button class="btn-contained"><svg width="18" height="18" viewBox="0 0 24 24" fill="#FFF"><path d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.35C15.11,18.56 15.08,18.78 15.08,19C15.08,20.61 16.39,21.92 18,21.92C19.61,21.92 20.92,20.61 20.92,19C20.92,17.39 19.61,16.08 18,16.08Z"/></svg>Отправить отчёт</button>
+          <button class="btn-outlined"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0F766E"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>Просмотреть PDF</button>
+          <div style="text-align:center;padding:8px"><span style="font-size:14px;color:#64748B;cursor:pointer">Сформировать заново</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+<!-- Profile -->
+<div class="phone-wrapper">
+  <div class="phone-label">Профиль</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span class="sb-time">9:41</span><span class="sb-icons"><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M1,9L5,5V8H9V10H5V13L1,9M23,9L19,5V8H15V10H19V13L23,9M12,2L8,6H10V10H12V6H14L12,2M12,22L8,18H10V14H12V18H14L12,22Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.5,1H9V3H15.5C17.43,3 19,4.57 19,6.5V8H21V6.5C21,3.46 18.54,1 15.5,1M5,3V6.5H7V3H5M15.5,5H9V7H15.5C16.33,7 17,7.67 17,8.5V17H19V8.5C19,6.57 17.43,5 15.5,5M5,8.5V17H7V8.5H5M9,19V21H15.5C17.43,21 19,19.43 19,17.5V17H17V17.5C17,18.33 16.33,19 15.5,19H9M5,19V21H7V19H5Z"/></svg><svg viewBox="0 0 24 24" fill="#0F172A"><path d="M15.67,4H14V2H10V4H8.33C7.6,4 7,4.6 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67C16.4,22 17,21.4 17,20.67V5.33C17,4.6 16.4,4 15.67,4Z"/></svg></span></div>
+    <div class="screen">
+      <div class="profile-screen">
+        <div class="profile-title">Профиль</div>
+        <div class="user-card"><div class="avatar">И</div><div><div class="user-name">Иванов Алексей П.</div><div class="user-email">ivanov@company.ru</div><div class="user-role">Инженер ТО</div></div></div>
+        <div class="profile-section-title">Безопасность</div>
+        <div class="profile-list-item"><div><div class="profile-list-item-title">Биометрия</div><div class="profile-list-item-desc">Вход по отпечатку или лицу</div></div><div class="switch"></div></div>
+        <div class="profile-list-item"><div><div class="profile-list-item-title">PIN-код</div><div class="profile-list-item-desc">Установлен</div></div><div class="profile-link">Изменить</div></div>
+        <div style="margin-top:24px"><button class="btn-danger-outlined"><svg width="18" height="18" viewBox="0 0 24 24" fill="#DC2626"><path d="M17,7H22V17H17V20L12,15L17,10V7M16,5L11,0L11,3L3,3L3,17L11,17L11,20L16,15L16,5M5,15L5,5L11,5L11,7L5,7L5,15L11,15L11,17L5,17Z"/></svg>Выйти из аккаунта</button></div>
+        <div class="tab-bar">
+          <div class="tab-item"><svg viewBox="0 0 24 24"><path d="M19,3H14.82C14.4,1.84 13.3,1 12,1S9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M7,7H17V9H7V7Z"/></svg><span>Визиты</span></div>
+          <div class="tab-item"><svg viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg><span>Заявки</span></div>
+          <div class="tab-item active"><svg viewBox="0 0 24 24"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg><span>Профиль</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="nav-bar"><svg viewBox="0 0 24 24"><path d="M3,3H21V21H3V3M5,5V19H19V5H5Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#64748B" stroke-width="2"/></svg><svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></div>
+  </div>
+</div>
+
+</div>
+
+<div style="text-align:center;padding:48px 0 24px;color:#475569;font-size:13px">
+  <div style="margin-bottom:8px;font-weight:600;color:#94A3B8">Применённые стандарты</div>
+  <div>✅ Цветовая система DESIGN_RULES.md · ✅ Типографика (28/20/16/14/12sp) · ✅ Touch targets 48×48dp · ✅ Кастомный header (одинарный) · ✅ Корневые экраны без header · ✅ MaterialCommunityIcons · ✅ Border radius (14/12/10/8) · ✅ Elevation (0/1/2) · ✅ Accessibility labels · ✅ Status colors + text · ✅ Empty states с CTA · ✅ SyncIndicator pill · ✅ Иконка приложения (teal + checkmark) на Login · ✅ Экран «Разблокировка» · ✅ Экран «Заявки» с табами и бейджами · ✅ Группировка климатического оборудования (как в PWA: splitvn/mssvn/vrv_vn → «Климатическое оборудование») · ✅ Кнопка «Удалить визит» · ✅ Экран «Новое оборудование/помещение» (ручной ввод) · ✅ Кнопка голосового ввода в примечании · ✅ Секция «Рекомендации» с чекбоксами · ✅ Правильные параметры group_climate · ✅ Иконка уведомлений (колокольчик с бейджем)</div>
+</div>
