@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Button, Switch, List, SegmentedButtons } from 'react-native-paper';
+import { Text, Button, Switch, List } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
-import { useThemeStore, ThemeMode } from '../../src/stores/themeStore';
 import {
   isBiometricAvailable,
   isBiometricEnabled,
@@ -15,7 +14,6 @@ import {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { mode: themeMode, setMode: setThemeMode } = useThemeStore();
 
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -105,22 +103,6 @@ export default function ProfileScreen() {
         )}
         style={styles.listItem}
       />
-
-      {/* Тема */}
-      <Text variant="titleMedium" style={styles.sectionTitle}>Внешний вид</Text>
-      <View style={styles.themeSection}>
-        <Text variant="bodyMedium" style={styles.themeLabel}>Тема оформления</Text>
-        <SegmentedButtons
-          value={themeMode}
-          onValueChange={(value) => setThemeMode(value as ThemeMode)}
-          buttons={[
-            { value: 'light', label: 'Светлая' },
-            { value: 'system', label: 'Системная' },
-            { value: 'dark', label: 'Тёмная' },
-          ]}
-          style={styles.themeButtons}
-        />
-      </View>
 
       {/* Выход */}
       <Button

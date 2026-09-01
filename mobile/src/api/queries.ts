@@ -67,8 +67,15 @@ export function useCreateVisit() {
 
   return useMutation({
     mutationFn: async (data: Partial<Visit>) => {
-      const response = await api.post('/visits', data);
-      return response.data as Visit;
+      const payload = {
+        addressId: data.address_id,
+        engineerName: data.engineer_name || '',
+        dateStart: data.date,
+        timeStart: data.time_start,
+        season: data.season || 'summer',
+      };
+      const response = await api.post('/visits', payload);
+      return mapServerVisit(response.data) as Visit;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visits'] });

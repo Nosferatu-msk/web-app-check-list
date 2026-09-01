@@ -4,7 +4,7 @@ import { Text, Button, Surface, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVisit } from '../../../src/api/queries';
-import { useEquipmentRooms, useObjectEquipment, useCreateTask } from '../../../src/api/tasks';
+import { useEquipmentRooms, useObjectEquipment, useCreateTask, useEquipmentTypes, useRoomTypes } from '../../../src/api/tasks';
 
 type Step = 'room' | 'equipment';
 
@@ -18,12 +18,20 @@ export default function AddEquipmentScreen() {
   const [selectedRoom, setSelectedRoom] = useState<{ id: string; name: string; code: string } | null>(null);
   const [selectedEquipment, setSelectedEquipment] = useState<Set<string>>(new Set());
 
+  // Fallback: manual mode
+  const [manualEqType, setManualEqType] = useState<string | null>(null);
+  const [manualRoomType, setManualRoomType] = useState<string | null>(null);
+
   const { data: rooms, isLoading: loadingRooms } = useEquipmentRooms(addressId);
   const { data: equipment, isLoading: loadingEquipment } = useObjectEquipment(
     addressId,
     selectedRoom ? { binding_level: 'room', room_type_code: selectedRoom.code } : undefined
   );
+  const { data: equipmentTypes } = useEquipmentTypes();
+  const { data: roomTypes } = useRoomTypes();
   const createTask = useCreateTask();
+
+  const hasRooms = rooms && rooms.length > 0;
 
   const handleRoomSelect = (room: { room_type_id: string; room_type_name: string; room_type_code: string }) => {
     setSelectedRoom({ id: room.room_type_id, name: room.room_type_name, code: room.room_type_code });
@@ -34,8 +42,7 @@ export default function AddEquipmentScreen() {
   const toggleEquipment = (id: string) => {
     setSelectedEquipment(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -49,9 +56,8 @@ export default function AddEquipmentScreen() {
     }
   };
 
-  const handleCreate = async () => {
+  const handleCreateBatch = async () => {
     if (!selectedRoom || selectedEquipment.size === 0) return;
-
     try {
       for (const eqId of selectedEquipment) {
         const eq = equipment?.find(e => e.id === eqId);
@@ -71,18 +77,87 @@ export default function AddEquipmentScreen() {
     }
   };
 
+  const handleCreateManual = async () => {
+    if (!manualEqType) return;
+    const room = roomTypes?.find(r => r.id === manualRoomType);
+    try {
+      await createTask.mutateAsync({
+        visitId,
+        data: {
+          equipmentTypeId: manualEqType,
+          roomTypeId: manualRoomType || undefined,
+          roomTypeCode: room?.code || undefined,
+        },
+      });
+      router.back();
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
+  };
+
   if (loadingRooms) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#0F766E" />
-        <Text style={styles.loadingText}>Загрузка помещений...</Text>
+        <Text style={styles.loadingText}>Загрузка...</Text>
       </View>
     );
   }
 
+  // Manual mode — no rooms from API
+  if (!hasRooms) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#0F766E" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Добавить оборудование</Text>
+          <View style={styles.backBtn} />
+        </View>
+        <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
+          <Text style={styles.sectionTitle}>Тип оборудования *</Text>
+          {equipmentTypes?.map((eq) => (
+            <TouchableOpacity key={eq.id} onPress={() => setManualEqType(eq.id)} activeOpacity={0.7}>
+              <View style={[styles.manualItem, manualEqType === eq.id && styles.manualItemSelected]}>
+                <View style={[styles.checkbox, manualEqType === eq.id && styles.checkboxChecked]}>
+                  {manualEqType === eq.id && <MaterialCommunityIcons name="check" size={14} color="#FFF" />}
+                </View>
+                <Text style={styles.manualItemText}>{eq.name}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Помещение</Text>
+          {roomTypes?.map((room) => (
+            <TouchableOpacity key={room.id} onPress={() => setManualRoomType(manualRoomType === room.id ? null : room.id)} activeOpacity={0.7}>
+              <View style={[styles.manualItem, manualRoomType === room.id && styles.manualItemSelected]}>
+                <View style={[styles.checkbox, manualRoomType === room.id && styles.checkboxChecked]}>
+                  {manualRoomType === room.id && <MaterialCommunityIcons name="check" size={14} color="#FFF" />}
+                </View>
+                <Text style={styles.manualItemText}>{room.name}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          <Button
+            mode="contained"
+            onPress={handleCreateManual}
+            loading={createTask.isPending}
+            disabled={!manualEqType || createTask.isPending}
+            style={styles.addBtn}
+            contentStyle={{ height: 48 }}
+          >
+            Добавить
+          </Button>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Two-level mode: rooms → equipment
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         {step === 'equipment' && (
           <TouchableOpacity onPress={() => setStep('room')} style={styles.backBtn}>
@@ -95,13 +170,10 @@ export default function AddEquipmentScreen() {
         <View style={styles.backBtn} />
       </View>
 
-      {/* Steps indicator */}
       <View style={styles.steps}>
         <View style={styles.stepItem}>
-          <View style={[styles.stepNum, step === 'room' ? styles.stepNumActive : styles.stepNumDone, step === 'equipment' && styles.stepNumDone]}>
-            <Text style={styles.stepNumText}>
-              {step === 'equipment' ? '✓' : '1'}
-            </Text>
+          <View style={[styles.stepNum, step === 'room' ? styles.stepNumActive : styles.stepNumDone]}>
+            <Text style={styles.stepNumText}>{step === 'equipment' ? '✓' : '1'}</Text>
           </View>
           <Text style={[styles.stepText, step === 'room' && styles.stepTextActive]}>Помещение</Text>
         </View>
@@ -114,38 +186,28 @@ export default function AddEquipmentScreen() {
         </View>
       </View>
 
-      {/* Content */}
       {step === 'room' ? (
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
-          {rooms && rooms.length > 0 ? (
-            rooms.map((room) => (
-              <TouchableOpacity key={room.room_type_id} onPress={() => handleRoomSelect(room)} activeOpacity={0.7}>
-                <Surface style={styles.roomCard} elevation={0}>
-                  <View style={styles.roomIcon}>
-                    <MaterialCommunityIcons name="home-group" size={22} color="#0F766E" />
-                  </View>
-                  <View style={styles.roomInfo}>
-                    <Text style={styles.roomName}>{room.room_type_name}</Text>
-                    <Text style={styles.roomCount}>{room.count} ед. оборудования</Text>
-                  </View>
-                  <View style={styles.roomBadge}>
-                    <Text style={styles.roomBadgeText}>{room.count}</Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
-                </Surface>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.empty}>
-              <MaterialCommunityIcons name="home-group" size={48} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>Нет помещений</Text>
-              <Text style={styles.emptyText}>На этом объекте нет оборудования, привязанного к помещениям</Text>
-            </View>
-          )}
+        <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
+          {rooms!.map((room) => (
+            <TouchableOpacity key={room.room_type_id} onPress={() => handleRoomSelect(room)} activeOpacity={0.7}>
+              <Surface style={styles.roomCard} elevation={0}>
+                <View style={styles.roomIcon}>
+                  <MaterialCommunityIcons name="home-group" size={22} color="#0F766E" />
+                </View>
+                <View style={styles.roomInfo}>
+                  <Text style={styles.roomName}>{room.room_type_name}</Text>
+                  <Text style={styles.roomCount}>{room.count} ед. оборудования</Text>
+                </View>
+                <View style={styles.roomBadge}>
+                  <Text style={styles.roomBadgeText}>{room.count}</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
+              </Surface>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       ) : (
         <View style={styles.content}>
-          {/* Select all + counter */}
           {equipment && equipment.length > 0 && (
             <View style={styles.toolbar}>
               <Text style={styles.counterText}>
@@ -153,9 +215,7 @@ export default function AddEquipmentScreen() {
               </Text>
               <TouchableOpacity onPress={selectAll} style={styles.selectAllBtn}>
                 <View style={[styles.checkbox, selectedEquipment.size === equipment.length && styles.checkboxChecked]}>
-                  {selectedEquipment.size === equipment.length && (
-                    <MaterialCommunityIcons name="check" size={14} color="#FFF" />
-                  )}
+                  {selectedEquipment.size === equipment.length && <MaterialCommunityIcons name="check" size={14} color="#FFF" />}
                 </View>
                 <Text style={styles.selectAllText}>Все</Text>
               </TouchableOpacity>
@@ -193,12 +253,11 @@ export default function AddEquipmentScreen() {
             )}
           </ScrollView>
 
-          {/* Add button */}
           {selectedEquipment.size > 0 && (
             <View style={styles.bottomBar}>
               <Button
                 mode="contained"
-                onPress={handleCreate}
+                onPress={handleCreateBatch}
                 loading={createTask.isPending}
                 disabled={createTask.isPending}
                 style={styles.addBtn}
@@ -231,7 +290,7 @@ const styles = StyleSheet.create({
   stepTextActive: { color: '#0F172A', fontWeight: '600' },
   stepLine: { flex: 1, height: 2, backgroundColor: '#E2E8F0', marginHorizontal: 12 },
   content: { flex: 1 },
-  contentInner: { padding: 16 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A', marginBottom: 10 },
   roomCard: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#FFF', borderRadius: 12, borderWidth: 1.5, borderColor: '#E2E8F0', marginBottom: 8 },
   roomIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#F0FDFA', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   roomInfo: { flex: 1 },
@@ -256,5 +315,8 @@ const styles = StyleSheet.create({
   eqName: { fontSize: 14, fontWeight: '500', color: '#0F172A' },
   eqDetail: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
-  addBtn: { backgroundColor: '#0F766E', borderRadius: 12 },
+  addBtn: { backgroundColor: '#0F766E', borderRadius: 12, marginTop: 20 },
+  manualItem: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#FFF', borderRadius: 10, borderWidth: 1.5, borderColor: '#E2E8F0', marginBottom: 6, gap: 10 },
+  manualItemSelected: { borderColor: '#0F766E', backgroundColor: '#F0FDFA' },
+  manualItemText: { fontSize: 14, fontWeight: '500', color: '#0F172A' },
 });

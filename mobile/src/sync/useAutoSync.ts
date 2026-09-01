@@ -1,41 +1,44 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import { AppState } from 'react-native';
 import { useSyncStore } from './engine';
 
-/**
- * Хук для автоматической синхронизации при:
- * - Появлении сети
- * - Возврате в приложение
- * - Интервале 60 секунд
- */
 export function useAutoSync() {
   const sync = useSyncStore((state) => state.sync);
   const status = useSyncStore((state) => state.status);
+  const lastSyncRef = useRef<number>(0);
 
   useEffect(() => {
-    // Слушаем изменение состояния сети
+    const doSync = () => {
+      const now = Date.now();
+      if (now - lastSyncRef.current < 5000) return; // не чаще раза в 5 секунд
+      lastSyncRef.current = now;
+      sync();
+    };
+
+    // Небольшая задержка при старте — даём приложению инициализироваться
+    const startTimeout = setTimeout(() => doSync(), 2000);
+
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
       if (state.isConnected && state.isInternetReachable) {
-        sync();
+        doSync();
       }
     });
 
-    // Слушаем возврат в приложение
     const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
-        sync();
+        doSync();
       }
     });
 
-    // Интервальная синхронизация каждые 60 секунд
     const interval = setInterval(() => {
       if (status !== 'syncing') {
-        sync();
+        doSync();
       }
     }, 60000);
 
     return () => {
+      clearTimeout(startTimeout);
       unsubscribeNetInfo();
       appStateSubscription.remove();
       clearInterval(interval);

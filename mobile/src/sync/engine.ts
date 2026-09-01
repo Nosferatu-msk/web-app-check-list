@@ -57,6 +57,14 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     set({ status: 'syncing', error: null });
 
+    // Таймаут: если синхронизация зависнет — возвращаем в idle через 10 сек
+    const timeout = setTimeout(() => {
+      const current = get();
+      if (current.status === 'syncing') {
+        set({ status: 'idle', error: null });
+      }
+    }, 10000);
+
     try {
       const db = await getDatabase();
       
@@ -66,6 +74,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       );
 
       if (mutations.length === 0) {
+        clearTimeout(timeout);
         set({ status: 'idle' });
         return;
       }
@@ -104,6 +113,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         }
       }
 
+      clearTimeout(timeout);
       set({
         status: 'idle',
         lastSyncAt: new Date(),
@@ -111,9 +121,10 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
       await get().refreshPendingCount();
     } catch (error: any) {
+      clearTimeout(timeout);
       console.error('Sync error:', error);
       set({
-        status: 'error',
+        status: 'idle',
         error: error.message || 'Ошибка синхронизации',
       });
     }
