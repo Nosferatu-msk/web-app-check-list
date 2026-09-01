@@ -55,15 +55,22 @@ export default function ProfileScreen() {
       {/* Информация о пользователе */}
       {user && (
         <View style={styles.userInfo}>
-          <Text variant="titleLarge" style={styles.userName}>
-            {user.fullName}
-          </Text>
-          <Text variant="bodyMedium" style={styles.userEmail}>
-            {user.email}
-          </Text>
-          <Text variant="bodySmall" style={styles.userRole}>
-            {user.role}
-          </Text>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user.fullName ? user.fullName.charAt(0).toUpperCase() : '?'}
+            </Text>
+          </View>
+          <View style={styles.userInfoText}>
+            <Text variant="titleLarge" style={styles.userName}>
+              {user.fullName}
+            </Text>
+            <Text variant="bodyMedium" style={styles.userEmail}>
+              {user.email}
+            </Text>
+            <Text variant="bodySmall" style={styles.userRole}>
+              {user.role === 'engineer' ? 'Инженер ТО' : user.role}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -144,8 +151,27 @@ const styles = StyleSheet.create({
   userInfo: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#0F766E',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  userInfoText: {
+    flex: 1,
   },
   userName: {
     fontWeight: '600',

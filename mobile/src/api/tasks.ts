@@ -24,6 +24,44 @@ export function useRoomTypes() {
   });
 }
 
+export function useEquipmentRooms(addressId: string) {
+  return useQuery({
+    queryKey: ['equipment-rooms', addressId],
+    queryFn: async () => {
+      const response = await api.get('/refs/object-equipment/rooms', {
+        params: { address_id: addressId },
+      });
+      return response.data as { room_type_id: string; room_type_name: string; room_type_code: string; count: number }[];
+    },
+    enabled: !!addressId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useObjectEquipment(addressId: string, params?: { binding_level?: string; room_type_code?: string }) {
+  return useQuery({
+    queryKey: ['object-equipment', addressId, params],
+    queryFn: async () => {
+      const response = await api.get('/refs/object-equipment', {
+        params: { address_id: addressId, ...params },
+      });
+      return response.data as {
+        id: string;
+        equipment_type_id: string;
+        equipment_type_name: string;
+        equipment_type_code: string;
+        room_type_id: string;
+        room_type_name: string;
+        brand: string;
+        model: string;
+        serial_number: string;
+      }[];
+    },
+    enabled: !!addressId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useCreateTask() {
   const queryClient = useQueryClient();
 

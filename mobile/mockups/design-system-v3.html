@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Чек-лист инженера — Дизайн-система v3.0</title>
+<style>
+:root {
+  --primary: #0F766E; --primary-light: #14B8A6; --primary-dark: #0A5C56;
+  --on-primary: #FFFFFF; --secondary: #0369A1;
+  --bg: #F8FAFC; --surface: #FFFFFF; --surface-var: #F1F5F9;
+  --text: #0F172A; --text-sec: #475569; --placeholder: #94A3B8;
+  --border: #E2E8F0; --error: #DC2626; --success: #059669; --warning: #D97706; --info: #0369A1;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08); --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #E2E8F0; line-height: 1.5; }
+
+.hero { text-align: center; padding: 40px 20px 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+.hero h1 { font-size: 26px; font-weight: 700; color: #FFF; }
+.hero p { color: rgba(255,255,255,0.6); margin-top: 4px; font-size: 13px; }
+
+.toc { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 12px; background: #1E293B; position: sticky; top: 0; z-index: 100; }
+.toc a { color: #94A3B8; text-decoration: none; font-size: 11px; padding: 4px 10px; border-radius: 20px; background: #334155; }
+.toc a:hover { background: var(--primary); color: #FFF; }
+
+.sec { padding: 32px 20px; max-width: 1400px; margin: 0 auto; }
+.sec h2 { font-size: 20px; font-weight: 700; color: #F8FAFC; margin-bottom: 4px; }
+.sec .desc { color: #94A3B8; font-size: 13px; margin-bottom: 16px; }
+.sec .tag { display: inline-block; background: rgba(20,184,166,0.15); color: #14B8A6; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; margin-bottom: 16px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+.col { text-align: center; }
+.col .lbl { color: #F8FAFC; font-size: 12px; font-weight: 600; margin-top: 8px; }
+
+/* Phone */
+.ph { width: 340px; height: 680px; background: var(--bg); border-radius: 40px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 8px solid #1E293B; position: relative; }
+.sb { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; font-size: 12px; font-weight: 600; }
+.sb-w { background: #FFF; color: var(--text); border-bottom: 1px solid var(--border); }
+.sb-t { background: var(--primary); color: rgba(255,255,255,0.8); }
+.sc { height: calc(100% - 40px); overflow-y: auto; background: var(--bg); position: relative; }
+.sc::-webkit-scrollbar { display: none; }
+
+/* MDI SVG icons — strict, professional */
+.mdi { display: inline-flex; align-items: center; justify-content: center; }
+.mdi svg { fill: currentColor; }
+
+/* Nav */
+.nav { display: flex; align-items: center; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 8px; }
+.nav .back { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: var(--text); cursor: pointer; border-radius: 50%; }
+.nav .title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; color: var(--text); }
+.nav .spacer { width: 48px; }
+
+/* Components */
+.sync { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.sync-ok { background: rgba(5,150,105,0.1); color: var(--success); }
+.sync-p { background: rgba(217,119,6,0.1); color: var(--warning); }
+.sync-e { background: rgba(220,38,38,0.1); color: var(--error); }
+.sync-s { background: rgba(3,105,161,0.1); color: var(--info); }
+
+.seg { display: flex; background: var(--surface-var); border-radius: var(--r-md); padding: 3px; margin: 8px 16px; }
+.seg-i { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600; color: var(--text-sec); }
+.seg-i.on { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
+
+.fab { position: absolute; bottom: 72px; right: 16px; width: 56px; height: 56px; border-radius: var(--r-lg); background: var(--primary); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md); }
+.fab svg { fill: #FFF; width: 28px; height: 28px; }
+
+.tabbar { display: flex; background: var(--surface); border-top: 1px solid var(--border); position: absolute; bottom: 0; left: 0; right: 0; }
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 0 6px; gap: 2px; }
+.tab svg { width: 24px; height: 24px; fill: var(--placeholder); }
+.tab span { font-size: 11px; color: var(--placeholder); font-weight: 500; }
+.tab.on svg { fill: var(--primary); }
+.tab.on span { color: var(--primary); }
+
+/* Cards */
+.card { background: var(--surface); border-radius: var(--r-lg); border: 1px solid var(--border); }
+
+/* Visit card */
+.vc { background: var(--surface); margin: 4px 12px; padding: 14px; border-radius: var(--r-lg); border: 1px solid var(--border); }
+.vc-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.vc-a { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.35; flex: 1; }
+.vc-m { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.vc-mi { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--placeholder); }
+.vc-bar { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; margin-top: 8px; }
+.vc-fill { height: 100%; border-radius: 2px; }
+.vc-pt { font-size: 11px; color: var(--placeholder); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; color: #FFF; }
+
+/* Task item */
+.ti { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); margin: 0 12px 6px; }
+.ti-ic { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--surface-var); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ti-ic svg { width: 22px; height: 22px; }
+.ti-info { flex: 1; min-width: 0; }
+.ti-n { font-size: 14px; font-weight: 500; color: var(--text); }
+.ti-s { font-size: 12px; color: var(--placeholder); margin-top: 1px; }
+
+/* Buttons */
+.btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 13px 20px; border-radius: var(--r-md); font-size: 15px; font-weight: 600; border: none; min-height: 48px; cursor: pointer; }
+.btn-p { background: var(--primary); color: #FFF; }
+.btn-o { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+.btn-s { background: var(--success); color: #FFF; }
+.btn-d { background: transparent; color: var(--error); border: 1.5px solid var(--error); }
+
+/* Request/contract badge */
+.req-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; }
+
+/* Icon grid */
+.icon-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.icon-item { width: 90px; text-align: center; padding: 12px 4px; background: #1E293B; border-radius: var(--r-md); }
+.icon-item svg { width: 28px; height: 28px; fill: #E2E8F0; margin-bottom: 6px; }
+.icon-item .ic-name { font-size: 10px; color: #94A3B8; line-height: 1.3; }
+
+.note { margin-top: 10px; padding: 10px 14px; background: #1E293B; border-radius: var(--r-sm); font-size: 11px; color: #94A3B8; text-align: left; max-width: 340px; line-height: 1.6; border-left: 3px solid #14B8A6; }
+.note b { color: #14B8A6; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>📋 Чек-лист инженера v3.0</h1>
+  <p>Строгий профессиональный дизайн · Material Design Icons · Все 13 типов оборудования</p>
+</div>
+
+<div class="toc">
+  <a href="#icon">Иконка</a>
+  <a href="#eq-icons">Оборудование</a>
+  <a href="#room-icons">Помещения</a>
+  <a href="#visits">Визиты</a>
+  <a href="#detail">Детали</a>
+  <a href="#add-eq">Оборудование+</a>
+  <a href="#task">Задача</a>
+  <a href="#profile">Профиль</a>
+</div>
+
+<!-- ===== APP ICON ===== -->
+<div class="sec" id="icon">
+  <h2>Иконка приложения</h2>
+  <div class="desc">Строгий минималистичный дизайн. Clipboard с checkmark. Без мультяшности.</div>
+  <div class="tag">Material Design · Flat · 1024×1024</div>
+  <div class="row">
+    <div class="col">
+      <div style="width: 160px; height: 160px; border-radius: 36px; background: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 8px 24px rgba(15,118,110,0.35);">
+        <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
+          <path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3Z" fill="rgba(255,255,255,0.95)"/>
+          <path d="M10 14.59L7.71 12.3L6.3 13.71L10 17.41L18 9.41L16.59 8L10 14.59Z" fill="#14B8A6"/>
+        </svg>
+      </div>
+      <div class="lbl">160×160</div>
+    </div>
+    <div class="col">
+      <div style="width: 80px; height: 80px; border-radius: 18px; background: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 4px 12px rgba(15,118,110,0.3);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+          <path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3Z" fill="rgba(255,255,255,0.95)"/>
+          <path d="M10 14.59L7.71 12.3L6.3 13.71L10 17.41L18 9.41L16.59 8L10 14.59Z" fill="#14B8A6"/>
+        </svg>
+      </div>
+      <div class="lbl">80×80</div>
+    </div>
+    <div class="col">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3Z" fill="rgba(255,255,255,0.95)"/>
+          <path d="M10 14.59L7.71 12.3L6.3 13.71L10 17.41L18 9.41L16.59 8L10 14.59Z" fill="#14B8A6"/>
+        </svg>
+      </div>
+      <div class="lbl">44×44</div>
+    </div>
+  </div>
+  <div class="note"><b>Изменения:</b> Плоский дизайн без градиентов и бликов. Чистый clipboard из Material Design. Галочка teal-цветом. Строгий, профессиональный вид.</div>
+</div>
+
+<!-- ===== EQUIPMENT ICONS ===== -->
+<div class="sec" id="eq-icons">
+  <h2>Иконки оборудования — 13 типов</h2>
+  <div class="desc">Material Design Icons (MDI). Строгие, узнаваемые, профессиональные. Каждая — свой тип.</div>
+  <div class="tag">mdi · 24×24 · fill: currentColor</div>
+  <div class="icon-grid">
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V20C2 21.1 2.9 22 4 22H20C21.1 22 22 21.1 22 20V4C22 2.9 21.1 2 20 2M20 20H4V4H20V20M6 6H18V10H6V6M6 12H10V18H6V12M12 12H18V14H12V12M12 16H18V18H12V16Z"/></svg>
+      <div class="ic-name">РЩ/ГРЩ</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2M12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20M12 6C8.69 6 6 8.69 6 12H8C8 9.79 9.79 8 12 8V6Z"/><path d="M13 7H11V13L16.2 16.2L17 14.9L13 12.3V7Z"/></svg>
+      <div class="ic-name">Вентиляция</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M22 11H2V9H22V11ZM22 13H2V11H22V13ZM6 3H18V5H6V3ZM6 19H18V21H6V19ZM3 7H5V17H3V7ZM19 7H21V17H19V7ZM7 7H17V17H7V7ZM9 9V15H15V9H9Z"/></svg>
+      <div class="ic-name">Блок VRV вн.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M22 11H2V9H22V11ZM22 13H2V11H22V13ZM6 3H18V5H6V3ZM6 19H18V21H6V19ZM3 7H5V17H3V7ZM19 7H21V17H19V7ZM7 7H17V17H7V7ZM9 9V15H15V9H9Z"/></svg>
+      <div class="ic-name">Блок МСС вн.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M22 11H2V9H22V11ZM22 13H2V11H22V13ZM6 3H18V5H6V3ZM6 19H18V21H6V19ZM3 7H5V17H3V7ZM19 7H21V17H19V7ZM7 7H17V17H7V7ZM9 9V15H15V9H9Z"/></svg>
+      <div class="ic-name">Блок СС вн.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <div class="ic-name">Блок VRV нар.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 7H17V17H7V7Z" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <div class="ic-name">Блок МСС нар.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 8L16 16M16 8L8 16" stroke="currentColor" stroke-width="1.5"/></svg>
+      <div class="ic-name">Блок СС нар.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM13 17H11V11H13V17ZM13 9H11V7H13V9Z"/><path d="M12 3.5C8.36 3.5 5.5 6.36 5.5 10H7.5C7.5 7.52 9.52 5.5 12 5.5V3.5Z" fill="currentColor" opacity="0.5"/></svg>
+      <div class="ic-name">Счётчик ГВС</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM13 17H11V11H13V17ZM13 9H11V7H13V9Z"/><path d="M12 3.5C8.36 3.5 5.5 6.36 5.5 10H7.5C7.5 7.52 9.52 5.5 12 5.5V3.5Z" fill="currentColor" opacity="0.3"/></svg>
+      <div class="ic-name">Счётчик ХВС</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M7 2V13H10V22L17 10H13L17 2H7Z"/></svg>
+      <div class="ic-name">Счётчик э/э</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM11 19.93C7.05 19.44 4 16.08 4 12C4 11.38 4.08 10.79 4.21 10.21L9 15V16C9 17.1 9.9 18 11 18V19.93ZM17.9 17.39C17.64 16.58 16.91 16 16 16H15V13C15 12.45 14.55 12 14 12H8V10H10C10.55 10 11 9.55 11 9V7H13C14.1 7 15 6.1 15 5V4.59C17.93 5.78 20 8.65 20 12C20 14.08 19.2 15.97 17.9 17.39Z"/></svg>
+      <div class="ic-name">Сети водосн.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M12 17C12 17 8 13.5 8 10.5C8 8.01 9.79 6 12 6C14.21 6 16 8.01 16 10.5C16 13.5 12 17 12 17Z"/><path d="M12 2C14.21 2 16 3.79 16 6C16 8.21 14.21 10 12 10C9.79 10 8 8.21 8 6C8 3.79 9.79 2 12 2Z" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="18" width="16" height="3" rx="1.5"/></svg>
+      <div class="ic-name">Тепл. сети</div>
+    </div>
+  </div>
+  <div class="note"><b>Изменения:</b> Каждая иконка — уникальный SVG из Material Design. РЩ — щит с секциями. Вентиляция — круг с лопастями. Блоки — квадратные/прямоугольные (внутренние) vs круглые с решёткой (наружные). Счётчики — круговые с циферблатом. Сети — глобус (вода) и термометр (тепло).</div>
+</div>
+
+<!-- ===== ROOM ICONS ===== -->
+<div class="sec" id="room-icons">
+  <h2>Иконки помещений — 12 типов</h2>
+  <div class="desc">Понятные, однозначные иконки. Каждое помещение — своя иконка.</div>
+  <div class="icon-grid">
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M7 2V13H10V22L17 10H13L17 2H7Z"/></svg>
+      <div class="ic-name">Электрощитовая</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M20 18C21.1 18 21.99 17.1 21.99 16L22 6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6V16C2 17.1 2.9 18 4 18H0V20H24V18H20ZM4 6H20V16H4V6Z"/></svg>
+      <div class="ic-name">Серверная</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M16 11C17.66 11 18.99 9.66 18.99 8S17.66 5 16 5C14.34 5 13 6.34 13 8S14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8S9.66 5 8 5C6.34 5 5 6.34 5 8S6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z"/></svg>
+      <div class="ic-name">Клиентский зал</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M11 9H9V2H7V9H5V2H3V9C3 10.1 3.9 11 5 11H11C12.1 11 13 10.1 13 9V2H11V9ZM16 6C14.9 6 14 6.9 14 8V20C14 21.1 14.9 22 16 22H18C19.1 22 20 21.1 20 20V8C20 6.9 19.1 6 18 6H16ZM9 13C7.9 13 7 13.9 7 15V20C7 21.1 7.9 22 9 22H11C12.1 22 13 21.1 13 20V15C13 13.9 12.1 13 11 13H9Z"/></svg>
+      <div class="ic-name">Санузел</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M14 6L13.42 9H10.58L10 6H3L10 13L7 22L12 17L17 22L14 13L21 6H14Z"/></svg>
+      <div class="ic-name">Кровля</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M10 20V14H14V20H19V12H22L12 3L2 12H5V20H10Z"/></svg>
+      <div class="ic-name">Фасад</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M20 8H17V4H3C1.9 4 1 4.9 1 6V17H3C3 19.21 4.79 21 7 21S11 19.21 11 17H17C17 19.21 18.79 21 21 21S25 19.21 25 17H27V12L20 8ZM7 19C5.9 19 5 18.1 5 17S5.9 15 7 15 9 15.9 9 17 8.1 19 7 19ZM21 19C19.9 19 19 18.1 19 17S19.9 15 21 15 23 15.9 23 17 22.1 19 21 19ZM20 12H16V8H18.17L20 9.08V12Z"/></svg>
+      <div class="ic-name">Зона самообсл.</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M18 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V4C20 2.9 19.1 2 18 2ZM18 20H6V4H18V20ZM13 6H11V9H8V11H11V14H13V11H16V9H13V6Z"/></svg>
+      <div class="ic-name">Крыльцо</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M12 17C12 17 8 13.5 8 10.5C8 8.01 9.79 6 12 6C14.21 6 16 8.01 16 10.5C16 13.5 12 17 12 17Z"/><rect x="4" y="18" width="16" height="3" rx="1.5"/></svg>
+      <div class="ic-name">Тепловой узел</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M18 4H6C3.79 4 2 5.79 2 8V16C2 18.21 3.79 20 6 20H18C20.21 20 22 18.21 22 16V8C22 5.79 20.21 4 18 4ZM18 18H6C4.9 18 4 17.1 4 16V12H20V16C20 17.1 19.1 18 18 18ZM20 8H4V8C4 6.9 4.9 6 6 6H18C19.1 6 20 6.9 20 8Z"/><circle cx="7" cy="15" r="2"/><circle cx="12" cy="15" r="2"/></svg>
+      <div class="ic-name">Касса</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M18 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V4C20 2.9 19.1 2 18 2ZM6 4H11V12L8.5 10.5L6 12V4Z"/></svg>
+      <div class="ic-name">КХЦ</div>
+    </div>
+    <div class="icon-item">
+      <svg viewBox="0 0 24 24"><path d="M12 3L2 12H5V20H19V12H22L12 3ZM14 18H10V14H14V18Z"/></svg>
+      <div class="ic-name">Комната приёма</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VISITS LIST WITH REQUESTS/CONTRACTS ===== -->
+<div class="sec" id="visits">
+  <h2>Список визитов — с заявками и договорами</h2>
+  <div class="desc">Каждая карточка показывает: заявку (№), договор, адрес, статус, прогресс. Табы визуально разделены.</div>
+  <div class="tag">§2 Feedback · PWA-паттерн · Информация о заявках</div>
+  <div class="row">
+    <div class="col">
+      <div class="lbl">Активные визиты</div>
+      <div class="ph">
+        <div class="sb sb-w"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="sc" style="padding-bottom: 60px;">
+          <div style="padding: 14px 16px 6px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 24px; font-weight: 700; color: var(--text);">Мои визиты</span>
+            <div class="sync sync-ok">✓ Синхр.</div>
+          </div>
+          <div class="seg">
+            <div class="seg-i on">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V5H19V19ZM7 12H9V17H7V12ZM11 7H13V17H11V7ZM15 10H17V17H15V10Z"/></svg>
+              Активные
+            </div>
+            <div class="seg-i">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg>
+              Завершённые
+            </div>
+          </div>
+
+          <!-- Visit card with request + contract -->
+          <div class="vc">
+            <div class="vc-h">
+              <div class="vc-a">г. Москва, ул. Ленина, д. 15, стр. 2</div>
+              <div class="pill" style="background: #0369A1;">В работе</div>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <div class="req-badge" style="background: rgba(139,92,246,0.1); color: #7C3AED;">📋 Заявка №2847</div>
+              <div class="req-badge" style="background: rgba(3,105,161,0.1); color: #0369A1;">📄 Договор ТО-142</div>
+            </div>
+            <div class="vc-m">
+              <div class="vc-mi">📅 31.08.2026</div>
+              <div class="vc-mi">🕐 09:00</div>
+              <div style="padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; background: #FEF3C7; color: #D97706;">☀ Лето</div>
+            </div>
+            <div class="vc-bar"><div class="vc-fill" style="width: 60%; background: #0369A1;"></div></div>
+            <div class="vc-pt">⚙ 3 / 5 задач</div>
+          </div>
+
+          <div class="vc">
+            <div class="vc-h">
+              <div class="vc-a">г. Москва, ул. Пушкина, д. 42</div>
+              <div class="pill" style="background: #64748B;">Не начат</div>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <div class="req-badge" style="background: rgba(139,92,246,0.1); color: #7C3AED;">📋 Заявка №2851</div>
+            </div>
+            <div class="vc-m"><div class="vc-mi">📅 31.08</div><div class="vc-mi">🕐 14:00</div></div>
+            <div class="vc-bar"><div class="vc-fill" style="width: 0%;"></div></div>
+            <div class="vc-pt">⚙ 0 / 3 задач</div>
+          </div>
+
+          <div class="vc">
+            <div class="vc-h">
+              <div class="vc-a">г. Москва, пр. Мира, д. 101</div>
+              <div class="pill" style="background: #D97706;">Заплан.</div>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <div class="req-badge" style="background: rgba(3,105,161,0.1); color: #0369A1;">📄 Договор ТО-156</div>
+            </div>
+            <div class="vc-m"><div class="vc-mi">📅 01.09</div><div class="vc-mi">🕐 10:00</div></div>
+            <div class="vc-pt" style="margin-top: 6px;">⚙ Нет задач</div>
+          </div>
+
+          <div class="fab"><svg viewBox="0 0 24 24"><path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg></div>
+          <div class="tabbar">
+            <div class="tab on"><svg viewBox="0 0 24 24"><path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg><span>Визиты</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24"><path d="M12 12C14.21 12 16 10.21 16 8S14.21 4 12 4 8 5.79 8 8 9.79 12 12 12ZM12 14C9.33 14 4 15.33 4 18V20H20V18C20 15.33 14.67 14 12 14Z"/></svg><span>Профиль</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>Новое:</b> Бейджи заявок (фиолетовый) и договоров (синий) на каждой карточке. Иконки в табах. Строгие MDI-иконки. Визиты с заявками и без — оба варианта показаны.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VISIT DETAIL WITH PROPER ICONS ===== -->
+<div class="sec" id="detail">
+  <h2>Детали визита — с иконками оборудования</h2>
+  <div class="desc">Каждая задача — иконка её типа оборудования. Заявка и договор в шапке.</div>
+  <div class="row">
+    <div class="col">
+      <div class="ph">
+        <div class="sb sb-w"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="sc">
+          <div class="nav"><div class="back"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--text)"><path d="M20 11H7.83L13.42 5.41L12 4L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"/></svg></div><div class="title">Визит</div><div class="spacer"></div></div>
+          <div class="card" style="margin: 12px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; gap: 8px;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text); flex: 1; line-height: 1.35;">г. Москва, ул. Ленина, д. 15, стр. 2</div>
+              <div class="pill" style="background: #0369A1; font-size: 10px;">В работе</div>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+              <div class="req-badge" style="background: rgba(139,92,246,0.1); color: #7C3AED;">📋 Заявка №2847</div>
+              <div class="req-badge" style="background: rgba(3,105,161,0.1); color: #0369A1;">📄 Договор ТО-142</div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+              <div class="vc-mi">📅 31.08.2026</div>
+              <div class="vc-mi">🕐 09:00</div>
+              <div style="padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; background: #FEF3C7; color: #D97706;">☀ Лето</div>
+              <div class="vc-mi">👷 Иванов И.И.</div>
+            </div>
+            <div style="margin-top: 10px;">
+              <div style="height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;"><div style="width: 60%; height: 100%; border-radius: 3px; background: #0369A1;"></div></div>
+              <div style="font-size: 11px; color: var(--placeholder); margin-top: 4px;">3 из 5 задач выполнено</div>
+            </div>
+          </div>
+          <div style="padding: 4px 16px 8px;"><span style="font-size: 16px; font-weight: 700; color: var(--text);">Задачи (5)</span></div>
+
+          <!-- Tasks with proper equipment icons -->
+          <div class="ti">
+            <div class="ti-ic"><svg viewBox="0 0 24 24" fill="#059669"><path d="M20 2H4C2.9 2 2 2.9 2 4V20C2 21.1 2.9 22 4 22H20C21.1 22 22 21.1 22 20V4C22 2.9 21.1 2 20 2M20 20H4V4H20V20M6 6H18V10H6V6M6 12H10V18H6V12M12 12H18V14H12V12M12 16H18V18H12V16Z"/></svg></div>
+            <div class="ti-info"><div class="ti-n">РЩ/ГРЩ</div><div class="ti-s">Электрощитовая</div></div>
+            <div class="pill" style="background: #059669; font-size: 10px;">✓</div>
+          </div>
+          <div class="ti">
+            <div class="ti-ic"><svg viewBox="0 0 24 24" fill="#059669"><path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20M13 7H11V13L16.2 16.2L17 14.9L13 12.3V7Z"/></svg></div>
+            <div class="ti-info"><div class="ti-n">Вентиляционная установка</div><div class="ti-s">Серверная</div></div>
+            <div class="pill" style="background: #059669; font-size: 10px;">✓</div>
+          </div>
+          <div class="ti">
+            <div class="ti-ic"><svg viewBox="0 0 24 24" fill="#0369A1"><path d="M22 11H2V9H22V11ZM22 13H2V11H22V13ZM6 3H18V5H6V3ZM6 19H18V21H6V19ZM3 7H5V17H3V7ZM19 7H21V17H19V7ZM7 7H17V17H7V7ZM9 9V15H15V9H9Z"/></svg></div>
+            <div class="ti-info"><div class="ti-n">Внутренний блок VRV</div><div class="ti-s">Клиентский зал</div></div>
+            <div class="pill" style="background: #0369A1; font-size: 10px;">⟳</div>
+          </div>
+          <div class="ti">
+            <div class="ti-ic"><svg viewBox="0 0 24 24" fill="#94A3B8"><path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM13 17H11V11H13V17ZM13 9H11V7H13V9Z"/></svg></div>
+            <div class="ti-info"><div class="ti-n">Прибор учёта ГВС</div><div class="ti-s">Тепловой узел</div></div>
+            <div class="pill" style="background: #64748B; font-size: 10px;">○</div>
+          </div>
+          <div class="ti">
+            <div class="ti-ic"><svg viewBox="0 0 24 24" fill="#94A3B8"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM11 19.93C7.05 19.44 4 16.08 4 12C4 11.38 4.08 10.79 4.21 10.21L9 15V16C9 17.1 9.9 18 11 18V19.93ZM17.9 17.39C17.64 16.58 16.91 16 16 16H15V13C15 12.45 14.55 12 14 12H8V10H10C10.55 10 11 9.55 11 9V7H13C14.1 7 15 6.1 15 5V4.59C17.93 5.78 20 8.65 20 12C20 14.08 19.2 15.97 17.9 17.39Z"/></svg></div>
+            <div class="ti-info"><div class="ti-n">Сети водоснабжения</div><div class="ti-s">Санузел</div></div>
+            <div class="pill" style="background: #64748B; font-size: 10px;">○</div>
+          </div>
+
+          <div style="padding: 16px;">
+            <div class="btn btn-o" style="margin: 0 0 8px; width: 100%;">＋ Добавить оборудование</div>
+            <div class="btn btn-s" style="margin: 0; width: 100%;">✓ Завершить визит</div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>Новое:</b> Иконки оборудования — строгие MDI (щит, вентиляция, кондиционер, счётчик, глобус). Бейджи заявки и договора в шапке визита. Профиль — нормальная иконка человека.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROFILE WITH NORMAL ICON ===== -->
+<div class="sec" id="profile">
+  <h2>Профиль — нормальная иконка</h2>
+  <div class="desc">Аватар с инициалом вместо «страшного» значка. Строгий стиль.</div>
+  <div class="row">
+    <div class="col">
+      <div class="ph" style="width: 300px; height: 560px;">
+        <div class="sb sb-t"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="sc" style="padding-bottom: 56px;">
+          <div style="padding: 16px;"><span style="font-size: 22px; font-weight: 700; color: var(--text);">Профиль</span></div>
+          <div class="card" style="margin: 0 12px 16px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="width: 52px; height: 52px; border-radius: 26px; background: var(--primary); display: flex; align-items: center; justify-content: center; color: #FFF; font-size: 20px; font-weight: 700;">И</div>
+              <div>
+                <div style="font-size: 17px; font-weight: 700; color: var(--text);">Иванов Иван Иванович</div>
+                <div style="font-size: 13px; color: var(--text-sec); margin-top: 1px;">engineer@example.ru</div>
+                <div style="font-size: 11px; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-top: 2px;">Инженер ТО</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 0 16px; margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px;">Безопасность</span></div>
+          <div style="margin: 0 12px 16px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border);">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--surface-var);">
+              <div><div style="font-size: 14px; color: var(--text); font-weight: 500;">Биометрия</div><div style="font-size: 11px; color: var(--placeholder);">Вход по отпечатку или лицу</div></div>
+              <div style="width: 44px; height: 26px; border-radius: 13px; background: var(--primary); position: relative;"><div style="width: 22px; height: 22px; border-radius: 11px; background: #FFF; position: absolute; top: 2px; right: 2px;"></div></div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--surface);">
+              <div><div style="font-size: 14px; color: var(--text); font-weight: 500;">PIN-код</div><div style="font-size: 11px; color: var(--placeholder);">Установлен</div></div>
+              <span style="color: var(--primary); font-size: 14px; font-weight: 600;">Изменить</span>
+            </div>
+          </div>
+          <div style="padding: 0 16px; margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px;">Внешний вид</span></div>
+          <div class="card" style="margin: 0 12px 20px; padding: 14px;">
+            <div style="font-size: 13px; color: var(--text); margin-bottom: 8px;">Тема оформления</div>
+            <div class="seg" style="margin: 0;"><div class="seg-i on">Светлая</div><div class="seg-i">Системная</div><div class="seg-i">Тёмная</div></div>
+          </div>
+          <div style="margin: 0 12px;"><div class="btn btn-d" style="width: 100%;">Выйти из аккаунта</div></div>
+          <div class="tabbar">
+            <div class="tab"><svg viewBox="0 0 24 24"><path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg><span>Визиты</span></div>
+            <div class="tab on"><svg viewBox="0 0 24 24"><path d="M12 12C14.21 12 16 10.21 16 8S14.21 4 12 4 8 5.79 8 8 9.79 12 12 12ZM12 14C9.33 14 4 15.33 4 18V20H20V18C20 15.33 14.67 14 12 14Z"/></svg><span>Профиль</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>Профиль:</b> Круглый аватар с инициалом «И» на teal-фоне. Стандартная иконка человека в табе (MDI account). Без «страшных» значков.</div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align: center; padding: 32px 20px; color: #475569; font-size: 12px;">
+  Дизайн-система v3.0 · Строгий профессиональный стиль · Material Design Icons<br>
+  Все 13 типов оборудования + 12 типов помещений · Заявки и договоры на карточках
+</div>
+
+</body>
+</html>

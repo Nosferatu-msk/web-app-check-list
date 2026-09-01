@@ -8,6 +8,8 @@ export interface Visit {
   status: VisitStatus;
   engineer_id?: string;
   engineer_name?: string;
+  contract_number?: string;
+  request_number?: string;
   tasks?: Task[];
   tasks_count?: number;
   completed_tasks_count?: number;
@@ -31,8 +33,10 @@ export interface Task {
   visit_id: string;
   equipment_type_id: string;
   equipment_type_name?: string;
+  equipment_type_code?: string;
   room_type_id?: string;
   room_type_name?: string;
+  room_type_code?: string;
   object_equipment_id?: string;
   task_type: 'individual' | 'group_climate';
   status: TaskStatus;

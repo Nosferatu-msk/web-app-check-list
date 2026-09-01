@@ -8,6 +8,10 @@ function getSeason(dateStr: string): 'summer' | 'winter' {
 }
 
 function mapServerVisit(v: any): Visit {
+  const requestNumber = v.importedRequests?.[0]?.externalRequestId
+    || v.importedRequests?.[0]?.external_request_id
+    || undefined;
+
   return {
     id: v.id,
     address_id: v.addressId || v.address?.id || '',
@@ -18,6 +22,8 @@ function mapServerVisit(v: any): Visit {
     status: v.status,
     engineer_id: v.userId || v.engineer_id || '',
     engineer_name: v.user?.fullName || v.engineer_name || '',
+    contract_number: v.contract?.number || undefined,
+    request_number: requestNumber,
     tasks_count: v._count?.tasks ?? v.tasks_count ?? 0,
     completed_tasks_count: v.completed_tasks_count ?? 0,
     created_at: v.createdAt || v.created_at,

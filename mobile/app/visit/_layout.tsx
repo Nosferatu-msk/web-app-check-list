@@ -4,7 +4,7 @@ export default function VisitLayout() {
   return (
     <Stack>
       <Stack.Screen name="new" options={{ title: 'Новый визит' }} />
-      <Stack.Screen name="[id]" options={{ title: 'Визит' }} />
+      <Stack.Screen name="[visitId]" options={{ title: 'Визит' }} />
     </Stack>
   );
 }
