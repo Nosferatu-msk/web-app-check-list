@@ -49,10 +49,16 @@
     "@babel/core": "^7.25.0",
     "@react-native-community/cli": "^20.2.0",
     "@react-native/babel-preset": "^0.87.1",
+    "@react-native/jest-preset": "^0.87.1",
     "@react-native/metro-config": "^0.87.1",
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^30.0.0",
     "@types/react": "~18.3.0",
     "@types/uuid": "^10.0.0",
     "babel-preset-expo": "^57.0.9",
+    "jest": "^30.5.1",
+    "react-test-renderer": "^19.2.8",
+    "ts-jest": "^29.4.12",
     "typescript": "~5.6.0"
   },
   "private": true
