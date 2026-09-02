@@ -47,6 +47,9 @@ node_modules/
 test-results/
 test-reports/
 playwright-report/
+coverage/
+mobile/coverage/
+mobile/debug_*.png
 
 # Сборка
 dist/

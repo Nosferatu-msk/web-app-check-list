@@ -27,13 +27,17 @@ module.exports = {
     '^expo-sqlite$': '<rootDir>/__mocks__/expo-sqlite.js',
     '^expo-camera$': '<rootDir>/__mocks__/expo-camera.js',
     '^expo-speech-recognition$': '<rootDir>/__mocks__/expo-speech-recognition.js',
+    '^expo-local-authentication$': '<rootDir>/__mocks__/expo-local-authentication.js',
+    '^expo-image-manipulator$': '<rootDir>/__mocks__/expo-image-manipulator.js',
+    '^expo-image-manipulator/legacy$': '<rootDir>/__mocks__/expo-image-manipulator.js',
+    '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system.js',
     '^@tanstack/react-query$': '<rootDir>/__mocks__/react-query.js',
     '^test-renderer$': 'react-test-renderer',
   },
   globals: {
     __DEV__: true,
   },
-  testPathPattern: '__tests__/',
+  testMatch: ['**/__tests__/**/*.test.(ts|tsx|js|jsx)'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',

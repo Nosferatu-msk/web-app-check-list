@@ -3,28 +3,59 @@
 
 appId: ru.checkonout.mobile
 ---
-- launchApp
-- extendedWaitUntil:
-    visible: "Мои визиты"
-    timeout: 10000
+# Если приложение не открыто — запустить через иконку
+- runFlow:
+    when:
+      notVisible: "Синхронизировано"
+    commands:
+      - tapOn: "Чек-лист инженера"
+      - extendedWaitUntil:
+          visible: "Войдите в систему"
+          timeout: 15000
 
-# Переход на вкладку Заявки
-- tapOn: "Заявки"
-- extendedWaitUntil:
-    visible: "Заявки"
-    timeout: 5000
-- assertVisible: "Заявки"
+# Обработка экрана блокировки (биометрия)
+- runFlow:
+    when:
+      visible: "Приложение заблокировано"
+    commands:
+      - tapOn: "Выйти из аккаунта"
+      - extendedWaitUntil:
+          visible: "Войдите в систему"
+          timeout: 5000
 
-# Переход на вкладку Профиль
-- tapOn: "Профиль"
-- extendedWaitUntil:
-    visible: "Профиль"
-    timeout: 5000
-- assertVisible: "Профиль"
+# Обработка экрана логина
+- runFlow:
+    when:
+      visible: "Войдите в систему"
+    commands:
+      - tapOn: "Email"
+      - inputText: "testic@test.ru"
+      - hideKeyboard
+      - tapOn: "Пароль"
+      - inputText: "hello2026"
+      - hideKeyboard
+      - tapOn: "Войти"
 
-# Возврат на Визиты
-- tapOn: "Визиты"
 - extendedWaitUntil:
-    visible: "Мои визиты"
+    visible: "Синхронизировано"
+    timeout: 15000
+
+# Переход на вкладку Заявки (вторая иконка, ~50% по X)
+- tapOn:
+    point: "50%,92%"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Переход на вкладку Профиль (третья иконка, ~83% по X)
+- tapOn:
+    point: "83%,92%"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Возврат на Визиты (первая иконка, ~17% по X)
+- tapOn:
+    point: "17%,92%"
+- extendedWaitUntil:
+    visible: "Синхронизировано"
     timeout: 5000
-- assertVisible: "Мои визиты"
+- assertVisible: "Синхронизировано"

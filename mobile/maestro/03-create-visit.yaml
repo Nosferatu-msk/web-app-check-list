@@ -3,16 +3,46 @@
 
 appId: ru.checkonout.mobile
 ---
-- launchApp
+- runFlow:
+    when:
+      notVisible: "Синхронизировано"
+    commands:
+      - tapOn: "Чек-лист инженера"
+      - extendedWaitUntil:
+          visible: "Войдите в систему"
+          timeout: 15000
 
-# Ожидание списка визитов (предполагаем что уже залогинены)
+# Обработка экрана блокировки (биометрия)
+- runFlow:
+    when:
+      visible: "Приложение заблокировано"
+    commands:
+      - tapOn: "Выйти из аккаунта"
+      - extendedWaitUntil:
+          visible: "Войдите в систему"
+          timeout: 5000
+
+# Обработка экрана логина
+- runFlow:
+    when:
+      visible: "Войдите в систему"
+    commands:
+      - tapOn: "Email"
+      - inputText: "testic@test.ru"
+      - hideKeyboard
+      - tapOn: "Пароль"
+      - inputText: "hello2026"
+      - hideKeyboard
+      - tapOn: "Войти"
+
+# Ожидание списка визитов
 - extendedWaitUntil:
-    visible: "Мои визиты"
-    timeout: 10000
+    visible: "Синхронизировано"
+    timeout: 15000
 
-# Нажатие на FAB для создания визита
+# Нажатие на FAB для создания визита (правый нижний угол)
 - tapOn:
-    id: "fab-add-visit"
+    point: "83%,87%"
 
 # Ожидание экрана нового визита
 - extendedWaitUntil:
@@ -26,5 +56,5 @@ appId: ru.checkonout.mobile
 # Назад к списку
 - back
 - extendedWaitUntil:
-    visible: "Мои визиты"
+    visible: "Синхронизировано"
     timeout: 5000

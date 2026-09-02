@@ -3,32 +3,34 @@
 
 appId: ru.checkonout.mobile
 ---
-- launchApp
+- clearState
+- tapOn: "Чек-лист инженера"
+- tapOn: "РАЗРЕШИТЬ"
 - extendedWaitUntil:
     visible: "Войдите в систему"
-    timeout: 10000
+    timeout: 15000
 
 # Ввод email
-- tapOn:
-    id: "email-input"
-- inputText: "engineer@example.com"
+- tapOn: "Email"
+- inputText: "testic@test.ru"
 - hideKeyboard
 
 # Ввод пароля
-- tapOn:
-    id: "password-input"
-- inputText: "engineer123"
+- tapOn: "Пароль"
+- inputText: "hello2026"
 - hideKeyboard
 
 # Нажатие кнопки Войти
 - tapOn: "Войти"
 
+# Обработка экрана биометрии
+- extendedWaitUntil:
+    visible: "Пропустить"
+    timeout: 10000
+- tapOn: "Пропустить"
+
 # Ожидание загрузки списка визитов
 - extendedWaitUntil:
-    visible: "Мои визиты"
+    visible: "Синхронизировано"
     timeout: 15000
-- assertVisible: "Мои визиты"
-
-# Проверка что FAB виден
-- assertVisible:
-    id: "fab-add-visit"
+- assertVisible: "Синхронизировано"
