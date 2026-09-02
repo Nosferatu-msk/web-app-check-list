@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { Text, Button, SegmentedButtons, Surface } from 'react-native-paper';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
@@ -10,7 +10,7 @@ import NotificationBell from '../../src/components/NotificationBell';
 import RequestCardSkeleton from '../../src/components/RequestCardSkeleton';
 import { STATUS_BAR_HEIGHT, BOTTOM_PADDING_TAB_SCREEN } from '../../src/constants/layout';
 import api from '../../src/api/client';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Request {
   id: string;
@@ -43,22 +43,38 @@ export default function RequestsScreen() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const isMounted = useRef(true);
 
-  const fetchRequests = useCallback(async () => {
+  const fetchRequests = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await api.get('/requests', { params: { status: tab === 'all' ? undefined : tab } });
-      setRequests(response.data);
-    } catch (e) {
-      console.error('Error fetching requests:', e);
+      const response = await api.get('/requests', {
+        params: { status: tab === 'all' ? undefined : tab },
+        signal,
+      });
+      if (isMounted.current) {
+        setRequests(response.data);
+      }
+    } catch (e: any) {
+      if (e.name !== 'CanceledError') {
+        console.error('Error fetching requests:', e);
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [tab]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchRequests();
+      isMounted.current = true;
+      const controller = new AbortController();
+      fetchRequests(controller.signal);
+      return () => {
+        isMounted.current = false;
+        controller.abort();
+      };
     }, [fetchRequests])
   );
 
