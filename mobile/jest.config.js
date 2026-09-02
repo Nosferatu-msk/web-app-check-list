@@ -12,7 +12,7 @@ module.exports = {
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|expo|@expo|@react-navigation|react-native-paper|react-native-vector-icons|@testing-library|expo-sqlite)/)',
+    'node_modules/(?!(react-native|@react-native|expo|@expo|@react-navigation|react-native-paper|react-native-vector-icons|@testing-library|expo-sqlite|expo-camera|expo-speech-recognition)/)',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -25,6 +25,8 @@ module.exports = {
     '^expo-sharing$': '<rootDir>/__mocks__/expo-sharing.js',
     '^expo-image-picker$': '<rootDir>/__mocks__/expo-image-picker.js',
     '^expo-sqlite$': '<rootDir>/__mocks__/expo-sqlite.js',
+    '^expo-camera$': '<rootDir>/__mocks__/expo-camera.js',
+    '^expo-speech-recognition$': '<rootDir>/__mocks__/expo-speech-recognition.js',
     '^@tanstack/react-query$': '<rootDir>/__mocks__/react-query.js',
     '^test-renderer$': 'react-test-renderer',
   },
