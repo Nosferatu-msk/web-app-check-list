@@ -21,7 +21,7 @@ appId: ru.checkonout.mobile
 - assertVisible: "Задачи"
 
 # Назад к списку визитов
-- pressBack
+- back
 - extendedWaitUntil:
     visible: "Мои визиты"
     timeout: 5000
