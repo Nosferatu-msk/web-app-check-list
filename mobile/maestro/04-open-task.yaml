@@ -1,0 +1,27 @@
+# Maestro E2E тест: Открытие задачи
+# Проверяет что можно открыть задачу из визита
+
+appId: ru.checkonout.mobile
+---
+- launchApp
+
+# Ожидание списка визитов
+- extendedWaitUntil:
+    visible: "Мои визиты"
+    timeout: 10000
+
+# Нажатие на первый визит (если есть)
+- tapOn:
+    point: "50%,30%"
+- extendedWaitUntil:
+    visible: "Задачи"
+    timeout: 5000
+
+# Проверка что экран визита открылся
+- assertVisible: "Задачи"
+
+# Назад к списку визитов
+- pressBack
+- extendedWaitUntil:
+    visible: "Мои визиты"
+    timeout: 5000

@@ -1,0 +1,30 @@
+# Maestro E2E тест: Создание визита
+# Проверяет что можно создать новый визит
+
+appId: ru.checkonout.mobile
+---
+- launchApp
+
+# Ожидание списка визитов (предполагаем что уже залогинены)
+- extendedWaitUntil:
+    visible: "Мои визиты"
+    timeout: 10000
+
+# Нажатие на FAB для создания визита
+- tapOn:
+    id: "fab-add-visit"
+
+# Ожидание экрана нового визита
+- extendedWaitUntil:
+    visible: "Новый визит"
+    timeout: 5000
+- assertVisible: "Новый визит"
+
+# Проверка что есть кнопка выбора адреса
+- assertVisible: "Выберите адрес"
+
+# Назад к списку
+- pressBack
+- extendedWaitUntil:
+    visible: "Мои визиты"
+    timeout: 5000

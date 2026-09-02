@@ -1,0 +1,30 @@
+# Maestro E2E тест: Навигация между вкладками
+# Проверяет что переход между вкладками не вызывает краш
+
+appId: ru.checkonout.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Мои визиты"
+    timeout: 10000
+
+# Переход на вкладку Заявки
+- tapOn: "Заявки"
+- extendedWaitUntil:
+    visible: "Заявки"
+    timeout: 5000
+- assertVisible: "Заявки"
+
+# Переход на вкладку Профиль
+- tapOn: "Профиль"
+- extendedWaitUntil:
+    visible: "Профиль"
+    timeout: 5000
+- assertVisible: "Профиль"
+
+# Возврат на Визиты
+- tapOn: "Визиты"
+- extendedWaitUntil:
+    visible: "Мои визиты"
+    timeout: 5000
+- assertVisible: "Мои визиты"

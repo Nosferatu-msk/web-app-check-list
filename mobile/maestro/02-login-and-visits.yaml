@@ -1,0 +1,34 @@
+# Maestro E2E тест: Логин и список визитов
+# Проверяет что после логина показывается список визитов
+
+appId: ru.checkonout.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Войдите в систему"
+    timeout: 10000
+
+# Ввод email
+- tapOn:
+    id: "email-input"
+- inputText: "engineer@example.com"
+- hideKeyboard
+
+# Ввод пароля
+- tapOn:
+    id: "password-input"
+- inputText: "engineer123"
+- hideKeyboard
+
+# Нажатие кнопки Войти
+- tapOn: "Войти"
+
+# Ожидание загрузки списка визитов
+- extendedWaitUntil:
+    visible: "Мои визиты"
+    timeout: 15000
+- assertVisible: "Мои визиты"
+
+# Проверка что FAB виден
+- assertVisible:
+    id: "fab-add-visit"
