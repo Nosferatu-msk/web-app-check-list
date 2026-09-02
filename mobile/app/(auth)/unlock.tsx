@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Button, TextInput } from 'react-native-paper';
+import { Text, Button } from 'react-native-paper';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import {
   verifyPinCode,
 } from '../../src/utils/biometric';
 import { useAuthStore } from '../../src/stores/authStore';
+import PinPad from '../../src/components/PinPad';
 
 export default function UnlockScreen() {
   const theme = useAppTheme();
@@ -36,7 +37,6 @@ export default function UnlockScreen() {
       setBiometricEnabled(bioEnabled);
       setPinSet(pinIsSet);
 
-      // Автоматически пробуем биометрию при загрузке
       if (bioAvailable && bioEnabled) {
         handleBiometricAuth();
       } else if (pinIsSet) {
@@ -51,7 +51,7 @@ export default function UnlockScreen() {
     try {
       await unlock();
       router.replace('/(tabs)/visits');
-    } catch (err) {
+    } catch {
       setError('Сессия истекла. Войдите заново.');
       setTimeout(() => router.replace('/(auth)/login'), 2000);
     }
@@ -76,25 +76,27 @@ export default function UnlockScreen() {
     setLoading(false);
   };
 
-  const handlePinSubmit = async () => {
-    if (!pin) {
-      setError('Введите PIN-код');
-      return;
-    }
-
-    setLoading(true);
+  const handlePinDigitPress = async (digit: string) => {
     setError('');
+    const newPin = pin + digit;
+    setPin(newPin);
 
-    const valid = await verifyPinCode(pin);
-
-    if (valid) {
-      await handleUnlock();
-    } else {
-      setError('Неверный PIN-код');
-      setPin('');
+    if (newPin.length >= 4) {
+      setLoading(true);
+      const valid = await verifyPinCode(newPin);
+      if (valid) {
+        await handleUnlock();
+      } else {
+        setError('Неверный PIN-код');
+        setPin('');
+      }
+      setLoading(false);
     }
+  };
 
-    setLoading(false);
+  const handlePinDeletePress = () => {
+    setError('');
+    setPin(pin.slice(0, -1));
   };
 
   const handleLogout = async () => {
@@ -105,44 +107,26 @@ export default function UnlockScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.card}>
+      <View style={styles.content}>
         <MaterialCommunityIcons name="lock" size={64} color={theme.colors.primary} />
-        <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.text }]}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
           Чек-лист инженера
         </Text>
-        <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.placeholder }]}>
+        <Text style={[styles.subtitle, { color: theme.colors.placeholder }]}>
           Приложение заблокировано
         </Text>
 
         {error ? (
-          <Text variant="bodyMedium" style={[styles.error, { color: theme.colors.error }]}>
-            {error}
-          </Text>
+          <Text style={[styles.error, { color: theme.colors.error }]}>{error}</Text>
         ) : null}
 
         {showPinInput ? (
-          <View style={styles.pinSection}>
-            <TextInput
-              label="PIN-код"
-              value={pin}
-              onChangeText={setPin}
-              mode="outlined"
-              secureTextEntry
-              keyboardType="numeric"
-              maxLength={6}
-              style={styles.pinInput}
-              onSubmitEditing={handlePinSubmit}
-            />
-            <Button
-              mode="contained"
-              onPress={handlePinSubmit}
-              loading={loading}
-              disabled={loading}
-              style={[styles.button, { backgroundColor: theme.colors.primary }]}
-            >
-              Разблокировать
-            </Button>
-          </View>
+          <PinPad
+            pin={pin}
+            maxLength={6}
+            onDigitPress={handlePinDigitPress}
+            onDeletePress={handlePinDeletePress}
+          />
         ) : (
           biometricAvailable &&
           biometricEnabled && (
@@ -153,6 +137,7 @@ export default function UnlockScreen() {
               disabled={loading}
               icon="fingerprint"
               style={[styles.button, { backgroundColor: theme.colors.primary }]}
+              contentStyle={{ height: 48 }}
             >
               Разблокировать
             </Button>
@@ -168,6 +153,10 @@ export default function UnlockScreen() {
           >
             Использовать биометрию
           </Button>
+        )}
+
+        {loading && (
+          <Text style={[styles.loadingText, { color: theme.colors.placeholder }]}>Проверка...</Text>
         )}
 
         <Button
@@ -188,32 +177,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 360,
-    alignItems: 'center',
     padding: 24,
   },
+  content: {
+    alignItems: 'center',
+    maxWidth: 360,
+    width: '100%',
+  },
   title: {
-    marginTop: 16,
+    fontSize: 22,
     fontWeight: '700',
+    marginTop: 16,
     textAlign: 'center',
   },
   subtitle: {
+    fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
+    marginBottom: 24,
   },
   error: {
-    marginTop: 16,
+    fontSize: 14,
     textAlign: 'center',
-  },
-  pinSection: {
-    width: '100%',
-    marginTop: 24,
-  },
-  pinInput: {
     marginBottom: 16,
   },
   button: {
@@ -221,6 +206,10 @@ const styles = StyleSheet.create({
   },
   biometricButton: {
     marginTop: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    marginTop: 16,
   },
   logoutButton: {
     marginTop: 24,

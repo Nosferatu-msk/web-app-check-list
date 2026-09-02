@@ -92,7 +92,7 @@ export default function VisitCard({ visit }: VisitCardProps) {
             <View style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
               <View style={[styles.progressFill, {
                 width: `${progress * 100}%`,
-                backgroundColor: progress === 1 ? theme.colors.success : statusColor,
+                backgroundColor: progress === 1 ? theme.colors.success : '#0369A1',
               }]} />
             </View>
             <View style={styles.progressInfo}>

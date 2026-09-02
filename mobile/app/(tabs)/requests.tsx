@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getEquipmentIcon } from '../../src/utils/equipmentIcons';
 import SyncIndicator from '../../src/components/SyncIndicator';
 import NotificationBell from '../../src/components/NotificationBell';
+import RequestCardSkeleton from '../../src/components/RequestCardSkeleton';
 import { STATUS_BAR_HEIGHT, BOTTOM_PADDING_TAB_SCREEN } from '../../src/constants/layout';
 import api from '../../src/api/client';
 import { useFocusEffect } from 'expo-router';
@@ -155,9 +156,12 @@ export default function RequestsScreen() {
       />
 
       {loading ? (
-        <View style={styles.empty}>
-          <Text style={[styles.emptyText, { color: theme.colors.placeholder }]}>Загрузка...</Text>
-        </View>
+        <FlatList
+          data={[1, 2, 3]}
+          renderItem={() => <RequestCardSkeleton />}
+          keyExtractor={(item) => item.toString()}
+          showsVerticalScrollIndicator={false}
+        />
       ) : (
         <FlatList
           data={requests}

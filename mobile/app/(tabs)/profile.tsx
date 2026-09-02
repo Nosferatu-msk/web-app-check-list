@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Button, Switch, List, SegmentedButtons } from 'react-native-paper';
+import { Text, Button, Switch, List, SegmentedButtons, Surface } from 'react-native-paper';
 import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useThemeStore, ThemeMode } from '../../src/stores/themeStore';
 import SyncIndicator from '../../src/components/SyncIndicator';
@@ -18,6 +19,7 @@ import {
 } from '../../src/utils/biometric';
 import { registerForPushNotifications } from '../../src/services/pushNotifications';
 import { STATUS_BAR_HEIGHT, BOTTOM_PADDING_TAB_SCREEN } from '../../src/constants/layout';
+import { useVisits } from '../../src/api/queries';
 
 export default function ProfileScreen() {
   const theme = useAppTheme();
@@ -30,6 +32,16 @@ export default function ProfileScreen() {
   const [pushEnabled, setPushEnabled] = useState(true);
   const themeMode = useThemeStore((state) => state.mode);
   const setThemeMode = useThemeStore((state) => state.setMode);
+
+  const { data: allActive } = useVisits('active');
+  const { data: allCompleted } = useVisits('completed');
+  const activeCount = allActive?.length || 0;
+  const completedCount = allCompleted?.length || 0;
+  const totalCount = activeCount + completedCount;
+
+  const userAny = user as any;
+  const phone = userAny?.phone || userAny?.phoneNumber || '';
+  const specialization = userAny?.specialization || '';
 
   useEffect(() => {
     (async () => {
@@ -96,12 +108,37 @@ export default function ProfileScreen() {
             <Text variant="bodyMedium" style={[styles.userEmail, { color: theme.colors.placeholder }]}>
               {user.email}
             </Text>
+            {phone ? (
+              <View style={styles.userPhoneRow}>
+                <MaterialCommunityIcons name="phone" size={12} color={theme.colors.placeholder} />
+                <Text variant="bodySmall" style={[styles.userPhone, { color: theme.colors.placeholder }]}>
+                  {phone}
+                </Text>
+              </View>
+            ) : null}
             <Text variant="bodySmall" style={[styles.userRole, { color: theme.colors.primary }]}>
-              {user.role === 'engineer' ? 'Инженер ТО' : user.role}
+              {user.role === 'engineer' ? 'Инженер ТО' : user.role === 'engineer_mtr' ? 'Инженер МТР' : user.role}
+              {specialization ? ` · ${specialization}` : ''}
             </Text>
           </View>
         </View>
       )}
+
+      {/* Статистика визитов */}
+      <View style={styles.statsRow}>
+        <Surface style={[styles.statCard, { backgroundColor: theme.colors.surface }]} elevation={0}>
+          <Text style={[styles.statNumber, { color: theme.colors.primary }]}>{totalCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.placeholder }]}>Всего</Text>
+        </Surface>
+        <Surface style={[styles.statCard, { backgroundColor: theme.colors.surface }]} elevation={0}>
+          <Text style={[styles.statNumber, { color: theme.colors.success }]}>{completedCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.placeholder }]}>Завершено</Text>
+        </Surface>
+        <Surface style={[styles.statCard, { backgroundColor: theme.colors.surface }]} elevation={0}>
+          <Text style={[styles.statNumber, { color: theme.colors.secondary }]}>{activeCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.placeholder }]}>Активных</Text>
+        </Surface>
+      </View>
 
       {/* Настройки безопасности */}
       <Text variant="titleMedium" style={[styles.sectionTitle, { color: theme.colors.text }]}>Безопасность</Text>
@@ -233,10 +270,41 @@ const styles = StyleSheet.create({
   userEmail: {
     marginTop: 4,
   },
+  userPhoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  userPhone: {
+    fontSize: 12,
+  },
   userRole: {
     textTransform: 'uppercase',
     marginTop: 4,
     fontWeight: '600',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 4,
   },
   sectionTitle: {
     fontWeight: '600',

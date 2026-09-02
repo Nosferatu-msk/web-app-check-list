@@ -31,7 +31,7 @@ export default function CustomHeader({ title, onBack }: CustomHeaderProps) {
           accessibilityRole="button"
           accessibilityLabel="Назад"
         >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.text} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
           {title}

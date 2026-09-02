@@ -7,7 +7,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVisit } from '../../../src/api/queries';
 import { useEquipmentRooms, useObjectEquipment, useCreateTask, useEquipmentTypes, useRoomTypes } from '../../../src/api/tasks';
 import { getRoomIcon } from '../../../src/utils/roomIcons';
-import { STATUS_BAR_HEIGHT, BOTTOM_PADDING_NESTED_SCREEN } from '../../../src/constants/layout';
+import { BOTTOM_PADDING_NESTED_SCREEN } from '../../../src/constants/layout';
+import CustomHeader from '../../../src/components/CustomHeader';
 
 type Step = 'room' | 'equipment';
 
@@ -145,13 +146,7 @@ export default function AddEquipmentScreen() {
   if (!hasRooms) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Добавить оборудование</Text>
-          <View style={styles.backBtn} />
-        </View>
+        <CustomHeader title="Добавить оборудование" />
         <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
           <View style={styles.warningBanner}>
             <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#D97706" />
@@ -231,17 +226,10 @@ export default function AddEquipmentScreen() {
   // Two-level mode: rooms → equipment
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
-        {step === 'equipment' && (
-          <TouchableOpacity onPress={() => setStep('room')} style={styles.backBtn}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-        )}
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-          {step === 'room' ? 'Добавить оборудование' : selectedRoom?.name || ''}
-        </Text>
-        <View style={styles.backBtn} />
-      </View>
+      <CustomHeader
+        title={step === 'room' ? 'Добавить оборудование' : selectedRoom?.name || ''}
+        onBack={step === 'equipment' ? () => setStep('room') : undefined}
+      />
 
       <View style={[styles.steps, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.stepItem}>
@@ -260,7 +248,7 @@ export default function AddEquipmentScreen() {
       </View>
 
       {step === 'room' ? (
-        <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
+        <ScrollView style={styles.content} contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
           {rooms!.map((room) => (
             <TouchableOpacity key={room.room_type_id} onPress={() => handleRoomSelect(room)} activeOpacity={0.7}>
               <Surface style={[styles.roomCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]} elevation={0}>
@@ -278,6 +266,16 @@ export default function AddEquipmentScreen() {
               </Surface>
             </TouchableOpacity>
           ))}
+          <Button
+            mode="outlined"
+            onPress={() => setManualEqType('')}
+            icon="pencil-plus"
+            style={[styles.manualButton, { borderColor: theme.colors.primary }]}
+            contentStyle={{ height: 48 }}
+            accessibilityLabel="Ввести оборудование вручную"
+          >
+            Ввести вручную
+          </Button>
         </ScrollView>
       ) : (
         <View style={styles.content}>
@@ -350,9 +348,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 12 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 12, paddingTop: STATUS_BAR_HEIGHT + 12, borderBottomWidth: 1 },
-  backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600' },
   steps: { flexDirection: 'row', alignItems: 'center', padding: 16, marginBottom: 8 },
   stepItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stepNum: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
@@ -389,6 +384,7 @@ const styles = StyleSheet.create({
   eqDetail: { fontSize: 11, marginTop: 2 },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: BOTTOM_PADDING_NESTED_SCREEN, borderTopWidth: 1 },
   addBtn: { borderRadius: 12, marginTop: 20 },
+  manualButton: { marginTop: 16, borderRadius: 12 },
   warningBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 12, backgroundColor: 'rgba(217,119,6,0.08)', borderRadius: 10, marginBottom: 16 },
   warningText: { flex: 1, fontSize: 13, color: '#D97706', lineHeight: 18 },
   manualInput: { marginBottom: 12, borderRadius: 12 },

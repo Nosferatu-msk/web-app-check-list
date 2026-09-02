@@ -5,9 +5,10 @@ export default function Index() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const needsUnlock = useAuthStore((state) => state.needsUnlock);
   const isLoading = useAuthStore((state) => state.isLoading);
+  const user = useAuthStore((state) => state.user);
 
   if (isLoading) {
-    return null; // Загрузка
+    return null;
   }
 
   if (!isAuthenticated && !needsUnlock) {
@@ -18,5 +19,6 @@ export default function Index() {
     return <Redirect href="/(auth)/unlock" />;
   }
 
-  return <Redirect href="/(tabs)/visits" />;
+  const isMtr = user?.role === 'engineer_mtr' || user?.role === 'tm_mtr';
+  return <Redirect href={isMtr ? '/mtr/visits' : '/(tabs)/visits'} />;
 }

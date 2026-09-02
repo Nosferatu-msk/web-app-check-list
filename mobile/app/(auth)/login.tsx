@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { TextInput, Button, Text, Surface } from 'react-native-paper';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRouter } from 'expo-router';
@@ -29,11 +29,14 @@ export default function LoginScreen() {
     try {
       await login(email, password);
       const hasSeenBioSetup = await SecureStore.getItemAsync('bio_setup_done');
+      const currentUser = useAuthStore.getState().user;
+      const isMtr = currentUser?.role === 'engineer_mtr' || currentUser?.role === 'tm_mtr';
+      const targetScreen = isMtr ? '/mtr/visits' : '/(tabs)/visits';
       if (!hasSeenBioSetup) {
         await SecureStore.setItemAsync('bio_setup_done', 'true');
         router.replace('/(auth)/biometric-setup');
       } else {
-        router.replace('/(tabs)/visits');
+        router.replace(targetScreen);
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Ошибка входа. Проверьте email и пароль.');
@@ -49,6 +52,9 @@ export default function LoginScreen() {
     >
       <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={3}>
         <View style={styles.header}>
+          <View style={styles.logo}>
+            <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
+          </View>
           <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.primary }]}>
             Чек-лист инженера
           </Text>
@@ -122,6 +128,20 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 24,
+  },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#0F766E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 64,
+    height: 64,
   },
   title: {
     fontWeight: '700',

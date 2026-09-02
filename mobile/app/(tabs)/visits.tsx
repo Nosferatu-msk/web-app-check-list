@@ -17,6 +17,10 @@ export default function VisitsScreen() {
   const theme = useAppTheme();
 
   const { data: visits, isLoading, error, refetch, isRefetching } = useVisits(tab);
+  const { data: activeVisits } = useVisits('active');
+  const { data: completedVisits } = useVisits('completed');
+  const activeCount = activeVisits?.length || 0;
+  const completedCount = completedVisits?.length || 0;
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -64,8 +68,8 @@ export default function VisitsScreen() {
         value={tab}
         onValueChange={(value) => setTab(value as 'active' | 'completed')}
         buttons={[
-          { value: 'active', label: 'Активные', icon: 'clipboard-clock-outline', accessibilityLabel: 'Активные визиты' },
-          { value: 'completed', label: 'Завершённые', icon: 'clipboard-check-outline', accessibilityLabel: 'Завершённые визиты' },
+          { value: 'active', label: `Активные (${activeCount})`, icon: 'clipboard-clock-outline', accessibilityLabel: `Активные визиты: ${activeCount}` },
+          { value: 'completed', label: `Завершённые (${completedCount})`, icon: 'clipboard-check-outline', accessibilityLabel: `Завершённые визиты: ${completedCount}` },
         ]}
         style={styles.tabs}
         theme={{ colors: { secondaryContainer: '#E0F2F1' } }}

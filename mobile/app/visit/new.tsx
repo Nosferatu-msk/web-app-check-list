@@ -10,7 +10,8 @@ import { useCreateVisit } from '../../src/api/queries';
 import { useAuthStore } from '../../src/stores/authStore';
 import { Address } from '../../src/types';
 import api from '../../src/api/client';
-import { STATUS_BAR_HEIGHT, BOTTOM_PADDING_NESTED_SCREEN } from '../../src/constants/layout';
+import { BOTTOM_PADDING_NESTED_SCREEN } from '../../src/constants/layout';
+import CustomHeader from '../../src/components/CustomHeader';
 
 export default function NewVisitScreen() {
   const router = useRouter();
@@ -97,14 +98,7 @@ export default function NewVisitScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Назад">
-          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Новый визит</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <CustomHeader title="Новый визит" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* Address */}
@@ -242,9 +236,6 @@ export default function NewVisitScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 12, paddingTop: STATUS_BAR_HEIGHT + 12, borderBottomWidth: 1 },
-  backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600' },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: BOTTOM_PADDING_NESTED_SCREEN },
   field: { marginBottom: 16 },

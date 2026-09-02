@@ -4,6 +4,7 @@ import { Text, Button, Surface } from 'react-native-paper';
 import { useAppTheme } from '../../../../../src/hooks/useAppTheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CameraView from '../../../../../src/components/CameraView';
 import { compressPhoto, generateFileName, savePhotoToAppDir, formatFileSize } from '../../../../../src/utils/photoCompressor';
 import { useTask } from '../../../../../src/api/tasks';
@@ -187,9 +188,12 @@ export default function TaskPhotosScreen() {
 
       {/* Before */}
       <Surface style={[styles.photoCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
-        <Text variant="titleMedium" style={[styles.momentTitle, { color: theme.colors.text }]}>
-          📷 Фото ДО
-        </Text>
+        <View style={styles.momentTitleRow}>
+          <MaterialCommunityIcons name="camera" size={20} color={theme.colors.primary} />
+          <Text variant="titleMedium" style={[styles.momentTitle, { color: theme.colors.text }]}>
+            Фото ДО
+          </Text>
+        </View>
         {photos.before ? (
           <View style={styles.photoPreview}>
             <Image source={{ uri: photos.before.uri }} style={[styles.image, { backgroundColor: theme.colors.border }]} />
@@ -238,9 +242,12 @@ export default function TaskPhotosScreen() {
       {/* After — только для типов с 2 фото */}
       {!ONE_PHOTO_TYPES.has(task?.equipment_type_code || '') && (
       <Surface style={[styles.photoCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
-        <Text variant="titleMedium" style={[styles.momentTitle, { color: theme.colors.text }]}>
-          📷 Фото ПОСЛЕ
-        </Text>
+        <View style={styles.momentTitleRow}>
+          <MaterialCommunityIcons name="camera" size={20} color={theme.colors.primary} />
+          <Text variant="titleMedium" style={[styles.momentTitle, { color: theme.colors.text }]}>
+            Фото ПОСЛЕ
+          </Text>
+        </View>
         {photos.after ? (
           <View style={styles.photoPreview}>
             <Image source={{ uri: photos.after.uri }} style={[styles.image, { backgroundColor: theme.colors.border }]} />
@@ -318,9 +325,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
   },
+  momentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
   momentTitle: {
     fontWeight: '600',
-    marginBottom: 12,
   },
   photoPreview: {
     alignItems: 'center',

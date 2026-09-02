@@ -8,6 +8,7 @@ import {
   isBiometricAvailable,
   enableBiometric,
 } from '../../src/utils/biometric';
+import { useAuthStore } from '../../src/stores/authStore';
 
 export default function BiometricSetupScreen() {
   const theme = useAppTheme();
@@ -25,11 +26,15 @@ export default function BiometricSetupScreen() {
 
   const handleEnable = async () => {
     await enableBiometric();
-    router.replace('/(tabs)/visits');
+    const user = useAuthStore.getState().user;
+    const isMtr = user?.role === 'engineer_mtr' || user?.role === 'tm_mtr';
+    router.replace(isMtr ? '/mtr/visits' : '/(tabs)/visits');
   };
 
   const handleSkip = () => {
-    router.replace('/(tabs)/visits');
+    const user = useAuthStore.getState().user;
+    const isMtr = user?.role === 'engineer_mtr' || user?.role === 'tm_mtr';
+    router.replace(isMtr ? '/mtr/visits' : '/(tabs)/visits');
   };
 
   if (loading) {
