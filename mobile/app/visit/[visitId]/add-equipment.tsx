@@ -256,7 +256,9 @@ export default function AddEquipmentScreen() {
                   <MaterialCommunityIcons name={getRoomIcon(room.room_type_code) as any} size={22} color={theme.colors.primary} />
                 </View>
                 <View style={styles.roomInfo}>
-                  <Text style={[styles.roomName, { color: theme.colors.text }]}>{room.room_type_name}</Text>
+                  <Text style={[styles.roomName, { color: theme.colors.text }]}>
+                    {room.room_type_name || `Помещение ${room.room_type_code || room.room_type_id}`}
+                  </Text>
                   <Text style={[styles.roomCount, { color: theme.colors.placeholder }]}>{room.count} ед. оборудования</Text>
                 </View>
                 <View style={styles.roomBadge}>

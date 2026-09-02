@@ -75,8 +75,8 @@ export default function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProp
       }
 
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 1,
-        skipProcessing: true,
+        quality: 0.9,
+        skipProcessing: false,
       });
       if (photo?.uri) {
         onPhotoTaken(photo.uri);

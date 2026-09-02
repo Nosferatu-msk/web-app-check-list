@@ -121,7 +121,7 @@ export default function VisitsScreen() {
       <FAB
         icon="plus"
         onPress={() => router.push('/visit/new')}
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         color={theme.colors.surface}
         accessibilityLabel="Создать визит"
       />

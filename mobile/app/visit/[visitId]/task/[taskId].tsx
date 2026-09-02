@@ -18,6 +18,11 @@ export default function TaskDetailScreen() {
   const updateTask = useUpdateTask();
   const theme = useAppTheme();
 
+  // Извлекаем код типа оборудования из вложенного объекта
+  const eqCode = (task as any)?.equipmentType?.code || task?.equipment_type_code;
+  const eqName = (task as any)?.equipmentType?.name || task?.equipment_type_name || 'Оборудование';
+  const roomName = (task as any)?.roomType?.name || task?.room_type_name;
+
   const [parameters, setParameters] = useState<Record<string, any>>({});
   const [conclusion, setConclusion] = useState<Conclusion | ''>('');
   const [recommendations, setRecommendations] = useState('');
@@ -33,13 +38,13 @@ export default function TaskDetailScreen() {
 
   useEffect(() => {
     if (task) {
-      const defaults = getDefaultValues(getFormFields(task.equipment_type_code));
+      const defaults = getDefaultValues(getFormFields(eqCode));
       setParameters({ ...defaults, ...(task.parameters || {}) });
       setConclusion(task.conclusion || '');
       setRecommendations(task.additional_recommendations || '');
       setSelectedRecIds(task.selected_recommendation_ids || []);
     }
-  }, [task]);
+  }, [task, eqCode]);
 
   const handleSave = useCallback(async () => {
     if (!visitId || !taskId) return;
@@ -98,11 +103,11 @@ export default function TaskDetailScreen() {
       <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text variant="titleLarge" style={[styles.title, { color: theme.colors.text }]}>
-          {task.equipment_type_name || 'Оборудование'}
+          {eqName}
         </Text>
-        {task.room_type_name && (
+        {roomName && (
           <Text variant="bodyMedium" style={[styles.room, { color: theme.colors.placeholder }]}>
-            {task.room_type_name}
+            {roomName}
           </Text>
         )}
       </View>
@@ -124,7 +129,7 @@ export default function TaskDetailScreen() {
       <View style={styles.section}>
         <Text variant="titleMedium" style={[styles.sectionTitle, { color: theme.colors.text }]}>Параметры</Text>
         <ParameterForm
-          equipmentTypeCode={task.equipment_type_code}
+          equipmentTypeCode={eqCode}
           parameters={parameters}
           onParameterChange={handleParameterChange}
         />
@@ -175,7 +180,7 @@ export default function TaskDetailScreen() {
           Типовые рекомендации
         </Text>
         <RecommendationsList
-          equipmentTypeCode={task.equipment_type_code}
+          equipmentTypeCode={eqCode}
           selectedIds={selectedRecIds}
           onSelectionChange={(ids) => {
             setSelectedRecIds(ids);

@@ -31,12 +31,13 @@ export default function VisitReportScreen() {
     setShowPdfViewer(false);
 
     try {
-      // Формируем запрос в зависимости от формата
-      const endpoint = format === 'zip'
-        ? `/reports/${visitId}?format=zip`
-        : `/reports/${visitId}`;
+      // Сначала генерируем отчёт
+      await api.post(`/reports/${visitId}/report/generate`, {
+        format: format === 'zip' ? 'zip' : 'pdf',
+      });
 
-      const response = await api.get(endpoint, {
+      // Затем скачиваем
+      const response = await api.get(`/reports/${visitId}/report/download`, {
         responseType: 'arraybuffer',
       });
 
@@ -61,7 +62,8 @@ export default function VisitReportScreen() {
       setReportFormat(format);
     } catch (err: any) {
       console.error('Error generating report:', err);
-      setError('Не удалось сформировать отчёт. Проверьте подключение к интернету.');
+      const errorMsg = err?.response?.data?.error || err?.message || 'Неизвестная ошибка';
+      setError(`Не удалось сформировать отчёт: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
