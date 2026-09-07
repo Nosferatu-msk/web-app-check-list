@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { Text, Button, SegmentedButtons, Surface } from 'react-native-paper';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getEquipmentIcon } from '../../src/utils/equipmentIcons';
 import SyncIndicator from '../../src/components/SyncIndicator';
@@ -10,7 +10,6 @@ import NotificationBell from '../../src/components/NotificationBell';
 import RequestCardSkeleton from '../../src/components/RequestCardSkeleton';
 import { STATUS_BAR_HEIGHT, BOTTOM_PADDING_TAB_SCREEN } from '../../src/constants/layout';
 import api from '../../src/api/client';
-import { useFocusEffect } from '@react-navigation/native';
 
 interface Request {
   id: string;
