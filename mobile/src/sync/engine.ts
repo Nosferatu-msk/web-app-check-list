@@ -28,6 +28,26 @@ export interface SyncMutation {
   payload: any;
 }
 
+async function resetDirtyForCompleted(mutations: any[]) {
+  const db = await getDatabase();
+  for (const m of mutations) {
+    if (m.status !== 'completed') continue;
+    try {
+      if (m.entity_type === 'visit') {
+        await db.runAsync(`UPDATE visits SET dirty = 0 WHERE id = ?`, [m.entity_id]);
+      } else if (m.entity_type === 'task') {
+        await db.runAsync(`UPDATE tasks SET dirty = 0 WHERE id = ?`, [m.entity_id]);
+      } else if (m.entity_type === 'photo') {
+        if (m.action === 'create') {
+          await db.runAsync(`UPDATE photos SET uploaded = 1 WHERE id = ?`, [m.entity_id]);
+        }
+      }
+    } catch {
+      // Не критично — dirty останется до следующей синхронизации
+    }
+  }
+}
+
 export const useSyncStore = create<SyncState>((set, get) => ({
   status: 'idle',
   pendingCount: 0,
@@ -126,6 +146,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
           );
         }
       }
+
+      // Post-sync: сброс dirty-флагов для успешно синхронизированных записей
+      await resetDirtyForCompleted(mutations);
 
       clearTimeout(timeout);
       set({
