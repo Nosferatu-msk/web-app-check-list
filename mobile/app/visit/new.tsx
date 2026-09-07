@@ -90,7 +90,20 @@ export default function NewVisitScreen() {
       });
       router.replace(`/visit/${visit.id}`);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Ошибка создания визита');
+      console.error('Create visit error:', JSON.stringify(err.response?.data, null, 2));
+      console.error('Error status:', err.response?.status);
+      console.error('Error message:', err.message);
+      const serverError = err.response?.data?.error || err.response?.data?.message;
+      const status = err.response?.status;
+      if (status === 403) {
+        setError(serverError || 'Нет доступа к этому адресу (не закреплён за вашим ТМ)');
+      } else if (status === 400) {
+        setError(serverError || 'Ошибка валидации данных');
+      } else if (!err.response) {
+        setError('Нет связи с сервером. Проверьте подключение к интернету.');
+      } else {
+        setError(serverError || `Ошибка создания визита (код ${status || 'unknown'})`);
+      }
     }
   };
 
