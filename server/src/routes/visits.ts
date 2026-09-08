@@ -742,6 +742,21 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
     include: taskInclude,
   });
 
+  // Синхронизация с objectEquipment: если задача привязана к оборудованию,
+  // обновляем brand/model/serialNumber в справочнике
+  if (task.objectEquipmentId) {
+    const syncData: Record<string, any> = {};
+    if (data.brand !== undefined) syncData.brand = data.brand;
+    if (data.model !== undefined) syncData.model = data.model;
+    if (data.serialNumber !== undefined) syncData.serialNumber = data.serialNumber;
+    if (Object.keys(syncData).length > 0) {
+      await prisma.objectEquipment.update({
+        where: { id: task.objectEquipmentId },
+        data: syncData,
+      });
+    }
+  }
+
   // Автоматически переводим визит в "В работе" при первом изменении задачи
   if (['not_started', 'planned', 'awaiting_assignment'].includes(visit.status)) {
     await prisma.visit.update({
