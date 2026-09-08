@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Space, App, Spin, Result } from 'antd';
 import { DownloadOutlined, CheckCircleOutlined, FileTextOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import JSZip from 'jszip';
-import * as XLSX from 'xlsx';
 import { api } from '../api/client';
 
 function sanitizeFileName(str: string): string {
@@ -23,7 +22,8 @@ function buildBaseName(visit: any): string {
 
 const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs'];
 
-function buildEquipmentExcel(visit: any): Blob {
+async function buildEquipmentExcel(visit: any): Promise<Blob> {
+  const XLSX = await import('xlsx');
   const tasks = visit.tasks || [];
   const rows: any[][] = [
     ['Код объекта', 'Вид оборудования', 'Серийный номер', 'Изготовитель', 'Модель', 'Показания'],
@@ -150,7 +150,7 @@ export default function ReportPage() {
       }
 
       // 4. Generate Excel table
-      const excelBlob = buildEquipmentExcel(fullVisit);
+      const excelBlob = await buildEquipmentExcel(fullVisit);
       zip.file(`${baseName}.xlsx`, excelBlob);
 
       // 5. Generate and download ZIP
