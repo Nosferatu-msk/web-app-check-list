@@ -743,7 +743,7 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   });
 
   // Синхронизация с objectEquipment: если задача привязана к оборудованию,
-  // обновляем brand/model/serialNumber в справочнике
+  // обновляем brand/model/serialNumber/roomTypeCode в справочнике
   if (task.objectEquipmentId) {
     const syncData: Record<string, any> = {};
     if (data.brand !== undefined) syncData.brand = data.brand;
@@ -753,6 +753,11 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
     if (data.parameters) {
       if (data.parameters.model) syncData.model = data.parameters.model;
       if (data.parameters.serial_number) syncData.serialNumber = data.parameters.serial_number;
+    }
+    // Синхронизируем roomTypeCode из roomType
+    if (data.roomTypeId !== undefined) {
+      const roomType = await prisma.roomType.findUnique({ where: { id: data.roomTypeId || '' } });
+      if (roomType) syncData.roomTypeCode = roomType.code;
     }
     if (Object.keys(syncData).length > 0) {
       await prisma.objectEquipment.update({
