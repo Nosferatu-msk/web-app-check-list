@@ -76,6 +76,7 @@ async function processQueueItem(item: SyncQueueItem, token: string) {
           dateStart: visit.dateStart,
           timeStart: visit.timeStart,
           season: visit.season,
+          autoAssignRequests: true,
         }),
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
