@@ -1,4 +1,6 @@
-import prisma from '../src/models/prisma.js';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
