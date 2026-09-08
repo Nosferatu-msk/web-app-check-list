@@ -485,6 +485,27 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
       where: { id: proposal.id },
       data: { objectEquipmentId: created.id },
     });
+
+    // Привязываем задачу к созданному equipment (если найдём匹配)
+    const matchingTask = await prisma.task.findFirst({
+      where: {
+        visit: { addressId: proposal.addressId },
+        equipmentType: { code: proposal.equipmentTypeCode },
+        objectEquipmentId: null,
+        OR: [
+          ...(proposal.brand ? [{ brand: proposal.brand }] : []),
+          ...(proposal.model ? [{ model: proposal.model }] : []),
+          ...(proposal.serialNumber ? [{ serialNumber: proposal.serialNumber }] : []),
+          ...(proposal.model ? [{ parameters: { path: ['model'], equals: proposal.model } }] : []),
+        ],
+      },
+    });
+    if (matchingTask) {
+      await prisma.task.update({
+        where: { id: matchingTask.id },
+        data: { objectEquipmentId: created.id },
+      });
+    }
   }
 
   const updated = await prisma.equipmentProposal.update({
@@ -660,6 +681,26 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
             where: { id },
             data: { objectEquipmentId: created.id },
           });
+          // Привязываем задачу к созданному equipment
+          const matchingTask = await prisma.task.findFirst({
+            where: {
+              visit: { addressId: proposal.addressId },
+              equipmentType: { code: proposal.equipmentTypeCode },
+              objectEquipmentId: null,
+              OR: [
+                ...(proposal.brand ? [{ brand: proposal.brand }] : []),
+                ...(proposal.model ? [{ model: proposal.model }] : []),
+                ...(proposal.serialNumber ? [{ serialNumber: proposal.serialNumber }] : []),
+                ...(proposal.model ? [{ parameters: { path: ['model'], equals: proposal.model } }] : []),
+              ],
+            },
+          });
+          if (matchingTask) {
+            await prisma.task.update({
+              where: { id: matchingTask.id },
+              data: { objectEquipmentId: created.id },
+            });
+          }
         }
 
         await prisma.equipmentProposal.update({
