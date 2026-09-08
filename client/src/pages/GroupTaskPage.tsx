@@ -324,8 +324,9 @@ export default function GroupTaskPage() {
     setAddingItem(false);
   };
 
-  const handleGoToItemPhotos = (itemId: string) => {
-    navigate(`/visit/${visitId}/task/${taskId}/item/${itemId}/photos`);
+  const handleGoToItemPhotos = (item: EquipmentItem) => {
+    const targetTaskId = item.taskId || taskId;
+    navigate(`/visit/${visitId}/task/${targetTaskId}/item/${item.id}/photos`);
   };
 
   const getItemPhotoProgress = (item: EquipmentItem) => {
@@ -471,7 +472,7 @@ export default function GroupTaskPage() {
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ marginBottom: 8, fontWeight: 500 }}>Фотофиксация:</div>
                       <Space>
-                        <Button icon={<CameraOutlined />} onClick={() => handleGoToItemPhotos(item.id)}>
+                        <Button icon={<CameraOutlined />} onClick={() => handleGoToItemPhotos(item)}>
                           Фото ({getItemPhotoProgress(item)})
                         </Button>
                       </Space>

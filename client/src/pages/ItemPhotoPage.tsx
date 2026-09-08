@@ -56,7 +56,26 @@ export default function ItemPhotoPage() {
   const loadData = async () => {
     if (!visitId || !taskId) return;
     const t = await api.getTask(visitId, taskId);
-    const foundItem = (t.equipmentItems || []).find((i: any) => i.id === itemId);
+    let foundItem = (t.equipmentItems || []).find((i: any) => i.id === itemId);
+    if (!foundItem && t.id === itemId) {
+      foundItem = {
+        id: t.id,
+        photos: t.photos || [],
+        objectEquipment: t.objectEquipment,
+      };
+    }
+    if (!foundItem && itemId) {
+      try {
+        const otherTask = await api.getTask(visitId, itemId);
+        if (otherTask) {
+          foundItem = {
+            id: otherTask.id,
+            photos: otherTask.photos || [],
+            objectEquipment: otherTask.objectEquipment,
+          };
+        }
+      } catch { /* ignore */ }
+    }
     if (foundItem) {
       setItem(foundItem);
       setPhotos(foundItem.photos || []);
@@ -109,7 +128,7 @@ export default function ItemPhotoPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}/task/${taskId}/group`)}>Назад</Button>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>Назад</Button>
         <div className="page-title" style={{ margin: 0 }}>Фотофиксация</div>
       </div>
 
@@ -152,10 +171,10 @@ export default function ItemPhotoPage() {
         </div>
 
         <Space style={{ width: '100%' }} direction="vertical" size="middle">
-          <Button type="primary" onClick={() => navigate(`/visit/${visitId}/task/${taskId}/group`)} block size="large">
+          <Button type="primary" onClick={() => navigate(-1)} block size="large">
             <SaveOutlined style={{ marginRight: 6 }} />Сохранить и вернуться
           </Button>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/visit/${visitId}/task/${taskId}/group`)}>К задаче</Button>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>К задаче</Button>
         </Space>
       </Card>
     </div>

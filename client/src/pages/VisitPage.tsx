@@ -416,6 +416,9 @@ export default function VisitPage() {
         }
       }
 
+      // Определяем целевой roomTypeCode из контекста (выбранное помещение)
+      const targetRoomTypeCode = selectedRoom || '';
+
       // Для климатического оборудования — одна групповая задача на помещение
       if (climateIndoor.length > 0) {
         const firstEq = climateIndoor[0];
@@ -430,6 +433,18 @@ export default function VisitPage() {
           equipmentItemIds: climateIndoor.map(eq => eq.id),
         };
         await api.createTask(visit.id, taskData);
+
+        // Создаём room_change proposal для оборудования, у которого roomTypeCode не совпадает с целевым
+        for (const eq of climateIndoor) {
+          if (eq.roomTypeCode !== targetRoomTypeCode && targetRoomTypeCode) {
+            try {
+              await api.createRoomChangeProposal({
+                objectEquipmentId: eq.id,
+                newRoomTypeCode: targetRoomTypeCode,
+              });
+            } catch { /* proposal may already exist */ }
+          }
+        }
       }
 
       // Для остального оборудования — индивидуальные задачи
@@ -450,6 +465,16 @@ export default function VisitPage() {
         } else {
           await api.createTask(visit.id, taskData);
         }
+
+        // Создаём room_change proposal, если оборудование с уровня объекта добавляется в помещение
+        if (!eq.roomTypeCode && targetRoomTypeCode) {
+          try {
+            await api.createRoomChangeProposal({
+              objectEquipmentId: eq.id,
+              newRoomTypeCode: targetRoomTypeCode,
+            });
+          } catch { /* proposal may already exist */ }
+        }
       }
 
       const v = await api.getVisit(visit.id);
@@ -461,7 +486,7 @@ export default function VisitPage() {
       message.error(err.message || 'Ошибка добавления');
     }
     setAddingEquipment(false);
-  }, [visit, eqTypeMap, rmTypeMap, message]);
+  }, [visit, eqTypeMap, rmTypeMap, message, selectedRoom]);
 
   const handleAddNewTask = async (values: any) => {
     if (!visit?.id) { message.warning('Сначала сохраните визит'); return; }
