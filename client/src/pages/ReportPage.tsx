@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Space, App, Spin, Result } from 'antd';
 import { DownloadOutlined, CheckCircleOutlined, FileTextOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import JSZip from 'jszip';
+import * as XLSX from 'xlsx';
 import { api } from '../api/client';
 
 function sanitizeFileName(str: string): string {
@@ -18,6 +19,54 @@ function buildBaseName(visit: any): string {
   const house = sanitizeFileName(visit.address?.house || '');
   const date = formatDate(new Date(visit.dateStart)).replace(/\./g, '-');
   return `OTCHET_${street}_${house}_${date}`;
+}
+
+const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs'];
+
+function buildEquipmentExcel(visit: any): Blob {
+  const tasks = visit.tasks || [];
+  const rows: any[][] = [
+    ['Код объекта', 'Вид оборудования', 'Серийный номер', 'Изготовитель', 'Модель', 'Показания'],
+  ];
+
+  const objectCode = visit.address?.objectCode || '';
+
+  for (const task of tasks) {
+    // Групповые задачи (климатическое оборудование)
+    if (task.equipmentItems?.length > 0) {
+      for (const item of task.equipmentItems) {
+        const oe = item.objectEquipment || {};
+        rows.push([
+          objectCode,
+          task.equipmentType?.name || '',
+          oe.serialNumber || '',
+          oe.brand || '',
+          oe.model || '',
+          '',
+        ]);
+      }
+    } else {
+      // Индивидуальные задачи
+      const oe = task.objectEquipment || {};
+      const eqCode = task.equipmentType?.code || '';
+      const readings = METER_CODES.includes(eqCode) ? (task.parameters?.readings ?? '') : '';
+      rows.push([
+        objectCode,
+        task.equipmentType?.name || '',
+        oe.serialNumber || task.serialNumber || '',
+        oe.brand || task.brand || '',
+        oe.model || task.model || '',
+        readings,
+      ]);
+    }
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 12 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Оборудование');
+  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
 export default function ReportPage() {
@@ -100,7 +149,11 @@ export default function ReportPage() {
         }
       }
 
-      // 4. Generate and download ZIP
+      // 4. Generate Excel table
+      const excelBlob = buildEquipmentExcel(fullVisit);
+      zip.file(`${baseName}.xlsx`, excelBlob);
+
+      // 5. Generate and download ZIP
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(zipBlob);
