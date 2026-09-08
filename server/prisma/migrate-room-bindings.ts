@@ -99,7 +99,6 @@ async function main() {
   // 2. Групповые задачи (group_climate) — equipmentItems
   const climateItems = await prisma.taskEquipmentItem.findMany({
     where: {
-      objectEquipmentId: { not: null },
       task: {
         taskType: 'group_climate',
         visit: { status: { in: ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'] } },
@@ -111,9 +110,12 @@ async function main() {
     },
   });
 
-  console.log(`\nНайдено единиц климатического оборудования: ${climateItems.length}`);
+  // Фильтруем записи без objectEquipmentId
+  const climateItemsWithEq = climateItems.filter(item => item.objectEquipmentId);
 
-  for (const item of climateItems) {
+  console.log(`\nНайдено единиц климатического оборудования: ${climateItemsWithEq.length}`);
+
+  for (const item of climateItemsWithEq) {
     const eq = item.objectEquipment;
     if (!eq) continue;
 
