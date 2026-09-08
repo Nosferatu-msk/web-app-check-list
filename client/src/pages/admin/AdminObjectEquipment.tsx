@@ -195,7 +195,7 @@ export default function AdminObjectEquipment() {
           <Form.Item name="roomTypeCode" label="Тип помещения">
             <Select allowClear options={roomTypes.map((r: any) => ({ value: r.code, label: r.name }))} placeholder="Не указано = уровень объекта" />
           </Form.Item>
-          <Form.Item name="brand" label="Марка">
+          <Form.Item name="brand" label="Марка" rules={[{ required: true, message: 'Укажите марку' }]}>
             <AutoComplete
               placeholder="Начните вводить..."
               options={mfrOptions}
@@ -218,7 +218,7 @@ export default function AdminObjectEquipment() {
               allowClear
             />
           </Form.Item>
-          <Form.Item name="model" label="Модель">
+          <Form.Item name="model" label="Модель" rules={[{ required: true, message: 'Укажите модель' }]}>
             <AutoComplete
               placeholder="Начните вводить..."
               options={modelOptions}

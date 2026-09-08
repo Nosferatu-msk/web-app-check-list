@@ -1247,7 +1247,7 @@ export default function VisitPage() {
                 <Form.Item name="comment" label="Комментарий">
                   <Input placeholder="Необязательно" />
                 </Form.Item>
-                <Form.Item name="brand" label="Производитель">
+                <Form.Item name="brand" label="Производитель" rules={[{ required: true, message: 'Укажите производителя' }]}>
                   <AutoComplete
                     placeholder="Начните вводить..."
                     options={mfrOptions}
@@ -1270,7 +1270,7 @@ export default function VisitPage() {
                     allowClear
                   />
                 </Form.Item>
-                <Form.Item name="model" label="Модель">
+                <Form.Item name="model" label="Модель" rules={[{ required: true, message: 'Укажите модель' }]}>
                   <AutoComplete
                     placeholder="Начните вводить..."
                     options={modelOptions}

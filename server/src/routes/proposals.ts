@@ -55,8 +55,8 @@ const createProposalSchema = z.object({
   addressId: z.string().uuid(),
   equipmentTypeCode: z.string().min(1),
   roomTypeCode: z.string().default(''),
-  brand: z.string().optional(),
-  model: z.string().optional(),
+  brand: z.string().min(1, 'Укажите производителя'),
+  model: z.string().min(1, 'Укажите модель'),
   serialNumber: z.string().optional(),
   locationDescription: z.string().optional(),
   newManufacturer: z.object({
