@@ -387,8 +387,8 @@ const objectEquipmentSchema = z.object({
   roomTypeCode: z.string().min(1).optional().or(z.literal('')),
   brand: z.string().optional().or(z.literal('')),
   model: z.string().optional().or(z.literal('')),
-  serialNumber: z.string().optional(),
-  locationDescription: z.string().optional(),
+  serialNumber: z.string().nullish(),
+  locationDescription: z.string().nullish(),
   isActive: z.boolean().optional(),
 });
 
