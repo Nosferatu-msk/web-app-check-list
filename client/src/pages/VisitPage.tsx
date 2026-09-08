@@ -530,7 +530,6 @@ export default function VisitPage() {
     const v = await api.getVisit(visit.id);
     setTasks(v.tasks || []);
     setAddModalOpen(false);
-    setProposeEquipment(false);
     newTaskForm.resetFields();
   };
 
@@ -924,7 +923,7 @@ export default function VisitPage() {
       <Modal
         title="Добавление оборудования"
         open={addModalOpen}
-        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setProposeEquipment(false); setSelectedRoom(null); setNewRoomMode(false); setNewRoomTypeCode(null); setNewRoomObjectEquipment([]); setNewRoomSelectedEquipIds([]); }}
+        onCancel={() => { setAddModalOpen(false); newTaskForm.resetFields(); setSelectedRoom(null); setNewRoomMode(false); setNewRoomTypeCode(null); setNewRoomObjectEquipment([]); setNewRoomSelectedEquipIds([]); }}
         footer={null}
         width={600}
       >
