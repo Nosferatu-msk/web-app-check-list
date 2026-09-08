@@ -749,6 +749,11 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
     if (data.brand !== undefined) syncData.brand = data.brand;
     if (data.model !== undefined) syncData.model = data.model;
     if (data.serialNumber !== undefined) syncData.serialNumber = data.serialNumber;
+    // Также синхронизируем из parameters (для счётчиков и др.)
+    if (data.parameters) {
+      if (data.parameters.model) syncData.model = data.parameters.model;
+      if (data.parameters.serial_number) syncData.serialNumber = data.parameters.serial_number;
+    }
     if (Object.keys(syncData).length > 0) {
       await prisma.objectEquipment.update({
         where: { id: task.objectEquipmentId },
