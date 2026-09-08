@@ -411,6 +411,7 @@ router.post('/object-equipment', validate(objectEquipmentSchema), async (req: Au
 });
 
 router.put('/object-equipment/:id', validate(objectEquipmentSchema), async (req: AuthRequest, res: Response) => {
+  console.log('[PUT /object-equipment/:id] Body:', JSON.stringify(req.body, null, 2));
   const data = { ...req.body };
   if (data.roomTypeCode === '') data.roomTypeCode = null;
   const item = await prisma.objectEquipment.update({ where: { id: req.params.id as string }, data });
