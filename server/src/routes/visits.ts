@@ -331,6 +331,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     if (statusList.length > 0) where.status = { in: statusList };
   } else if (status) {
     where.status = status;
+  } else {
+    // По умолчанию исключаем awaiting_assignment (это заявки, не визиты)
+    where.status = { not: 'awaiting_assignment' };
   }
   if (search) {
     where.AND = [
