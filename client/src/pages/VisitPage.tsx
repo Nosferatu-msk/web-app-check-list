@@ -1126,13 +1126,13 @@ export default function VisitPage() {
                       </>
                     )}
 
-                    {/* Оборудование из других помещений */}
+                    {/* Оборудование из других помещений и уровня объекта */}
                     {otherRoomsLoading ? (
                       <div style={{ textAlign: 'center', padding: 16 }}><Spin size="small" /></div>
                     ) : otherRoomsEquipment.length > 0 && (
                       <div style={{ marginTop: 16 }}>
                         <div style={{ fontWeight: 500, marginBottom: 8, color: '#666', fontSize: 13 }}>
-                          <SyncOutlined style={{ marginRight: 6 }} />Оборудование из других помещений ({otherRoomsEquipment.length}):
+                          <SyncOutlined style={{ marginRight: 6 }} />Перенести из других помещений / уровня объекта ({otherRoomsEquipment.length}):
                         </div>
                         <List
                           size="small"
@@ -1140,7 +1140,7 @@ export default function VisitPage() {
                           dataSource={otherRoomsEquipment}
                           renderItem={(eq: any) => {
                             const eqType = eqTypeMap.get(eq.equipmentTypeCode);
-                            const roomName = eq.roomType?.name || eq.roomTypeCode || '—';
+                            const roomName = eq.roomType?.name || eq.roomTypeCode || 'Уровень объекта';
                             return (
                               <List.Item style={{ padding: '8px 12px' }}>
                                 <div style={{ flex: 1 }}>
