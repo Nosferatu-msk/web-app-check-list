@@ -57,10 +57,12 @@ router.get('/check-requests', async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  // Поиск заявок по адресу со статусами awaiting_assignment и planned
+  // Поиск заявок «ИСЖ объекта» по адресу со статусами awaiting_assignment и planned
+  // Заявки на конкретное оборудование не показываются — они привязываются при добавлении оборудования в визит
   const requests = await prisma.importedRequest.findMany({
     where: {
       matchedAddressId: addressId,
+      equipmentType: { code: 'iszh_object' },
       visit: {
         status: { in: ['awaiting_assignment', 'planned'] },
       },
@@ -176,10 +178,13 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
       select: { fullName: true },
     });
 
-    // Поиск всех неprivязанных заявок по адресу (визит в статусе awaiting_assignment / planned)
+    // Поиск заявок «ИСЖ объекта» по адресу (визит в статусе awaiting_assignment / planned)
+    // Заявки на конкретное оборудование НЕ привязываются при создании визита —
+    // они привязываются позже, когда инженер добавит оборудование нужного типа в визит
     const requests = await prisma.importedRequest.findMany({
       where: {
         matchedAddressId: rest.addressId,
+        equipmentType: { code: 'iszh_object' },
         visit: {
           status: { in: ['awaiting_assignment', 'planned'] },
         },
@@ -687,8 +692,62 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
     });
   }
 
+  // Автопривязка заявок на конкретное оборудование по типу добавленной задачи
+  // Ищем заявки на том же адресе с тем же типом оборудования (не iszh_object),
+  // которые ещё не привязаны к визиту
+  const boundRequests: { requestId: string; externalRequestId: string }[] = [];
+  try {
+    const addressId = visit.addressId;
+    const equipmentTypeId = task.equipmentTypeId;
+
+    const matchingRequests = await prisma.importedRequest.findMany({
+      where: {
+        matchedAddressId: addressId,
+        equipmentTypeId,
+        equipmentType: { code: { not: 'iszh_object' } },
+        visit: {
+          status: { in: ['awaiting_assignment', 'planned'] },
+        },
+      },
+      take: 20,
+    });
+
+    for (const request of matchingRequests) {
+      // Пропускаем, если уже привязана к этому визиту
+      const existingLink = await prisma.visitRequest.findUnique({
+        where: {
+          visitId_importedRequestId: {
+            visitId: visit.id,
+            importedRequestId: request.id,
+          },
+        },
+      });
+      if (existingLink) continue;
+
+      await prisma.visitRequest.create({
+        data: { visitId: visit.id, importedRequestId: request.id },
+      });
+      await prisma.importedRequest.update({
+        where: { id: request.id },
+        data: { visitId: visit.id },
+      });
+      await prisma.requestAssignmentLog.create({
+        data: {
+          importedRequestId: request.id,
+          action: 'assigned',
+          engineerId: req.userId,
+          performedBy: req.userId,
+          reason: `Автоматически при добавлении оборудования (задача ${task.id})`,
+        },
+      });
+      boundRequests.push({ requestId: request.id, externalRequestId: request.externalRequestId });
+    }
+  } catch {
+    // Ошибка привязки заявок не должна блокировать создание задачи
+  }
+
   await logAudit({ userId: req.userId, action: 'create', entityType: 'task', entityId: task.id, newValue: data, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
-  res.status(201).json(task);
+  res.status(201).json({ ...task, autoBoundRequests: boundRequests });
 });
 
 router.get('/:visitId/tasks', async (req: AuthRequest, res: Response) => {
