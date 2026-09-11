@@ -19,7 +19,13 @@ QWEN.md
 Инструкция-ТМ.html
 Инструкция-администратор.html
 screenshots/
+# Мобильное приложение
+mobile/.expo/
+mobile/android/
+mobile/ios/
 mobile/ошибки/
+mobile/coverage/
+mobile/debug_*.png
 
 # Инструменты и настройки
 .qwen/
@@ -48,8 +54,6 @@ test-results/
 test-reports/
 playwright-report/
 coverage/
-mobile/coverage/
-mobile/debug_*.png
 
 # Сборка
 dist/
