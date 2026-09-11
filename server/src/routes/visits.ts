@@ -515,6 +515,42 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
+  // Снимаем привязки к заявкам и назначения инженеров перед удалением
+  const visitRequests = await prisma.visitRequest.findMany({
+    where: { visitId: req.params.id as string },
+    select: { importedRequestId: true },
+  });
+
+  if (visitRequests.length > 0) {
+    const requestIds = visitRequests.map(vr => vr.importedRequestId);
+
+    // Удаляем связи VisitRequest
+    await prisma.visitRequest.deleteMany({ where: { visitId: req.params.id as string } });
+
+    // Удаляем назначения инженеров (VisitEngineer)
+    await prisma.visitEngineer.deleteMany({ where: { visitId: req.params.id as string } });
+
+    // Создаём виртуальный визит для освобождённых заявок (как при импорте)
+    const virtualVisit = await prisma.visit.create({
+      data: {
+        addressId: existing.addressId,
+        contractId: existing.contractId,
+        engineerName: '',
+        userId: null,
+        dateStart: existing.dateStart,
+        timeStart: existing.timeStart,
+        season: existing.season,
+        status: 'awaiting_assignment',
+      },
+    });
+
+    // Возвращаем заявки на виртуальный визит
+    await prisma.importedRequest.updateMany({
+      where: { id: { in: requestIds } },
+      data: { visitId: virtualVisit.id },
+    });
+  }
+
   await prisma.visit.update({
     where: { id: req.params.id as string },
     data: {
