@@ -300,7 +300,10 @@ router.get('/object-equipment/other-rooms', async (req: AuthRequest, res: Respon
   const where: any = {
     addressId,
     isActive: true,
-    roomTypeCode: { not: currentRoomTypeCode },
+    OR: [
+      { roomTypeCode: null },
+      { roomTypeCode: { not: currentRoomTypeCode } },
+    ],
   };
 
   if (allowedCodes) {
