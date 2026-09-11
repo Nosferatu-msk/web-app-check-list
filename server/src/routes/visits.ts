@@ -879,7 +879,70 @@ router.delete('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => 
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
+  // Получаем задачу перед удалением для проверки связей с заявками
+  const taskToDelete = await prisma.task.findUnique({ where: { id: req.params.id as string } });
+
   await prisma.task.delete({ where: { id: req.params.id as string } });
+
+  // Проверяем, нужно ли разорвать связи с заявками
+  if (taskToDelete?.equipmentTypeId) {
+    const remainingTasksWithSameType = await prisma.task.count({
+      where: {
+        visitId: req.params.visitId as string,
+        equipmentTypeId: taskToDelete.equipmentTypeId,
+      },
+    });
+
+    // Если нет других задач с таким же типом оборудования, разрываем связи с заявками
+    if (remainingTasksWithSameType === 0) {
+      const visitRequests = await prisma.visitRequest.findMany({
+        where: {
+          visitId: req.params.visitId as string,
+          importedRequest: {
+            equipmentTypeId: taskToDelete.equipmentTypeId,
+          },
+        },
+        include: {
+          importedRequest: true,
+        },
+      });
+
+      if (visitRequests.length > 0) {
+        // Создаём виртуальный визит для освобождённых заявок
+        const virtualVisit = await prisma.visit.create({
+          data: {
+            addressId: visit.addressId,
+            contractId: visit.contractId,
+            engineerName: '',
+            userId: null,
+            dateStart: visit.dateStart,
+            timeStart: visit.timeStart,
+            season: visit.season,
+            status: 'awaiting_assignment',
+          },
+        });
+
+        // Удаляем связи VisitRequest
+        await prisma.visitRequest.deleteMany({
+          where: {
+            visitId: req.params.visitId as string,
+            importedRequest: {
+              equipmentTypeId: taskToDelete.equipmentTypeId,
+            },
+          },
+        });
+
+        // Возвращаем заявки на виртуальный визит
+        await prisma.importedRequest.updateMany({
+          where: {
+            id: { in: visitRequests.map(vr => vr.importedRequestId) },
+          },
+          data: { visitId: virtualVisit.id },
+        });
+      }
+    }
+  }
+
   const remaining = await prisma.task.findMany({ where: { visitId: req.params.visitId as string }, orderBy: { sortOrder: 'asc' } });
   for (let i = 0; i < remaining.length; i++) {
     if (remaining[i].sortOrder !== i + 1) {
