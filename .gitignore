@@ -51,9 +51,16 @@ node_modules/
 
 # Тесты — результаты и отчёты
 test-results/
+test-results-prod/
 test-reports/
 playwright-report/
 coverage/
+e2e/regression/
+e2e/test-results-regression/
+check-logs.mjs
+console.log*
+Отчёт-*.html
+ОТЧЁТ-*.html
 
 # Сборка
 dist/
