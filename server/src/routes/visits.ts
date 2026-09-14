@@ -829,7 +829,15 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   if (req.body.parameters !== undefined) data.parameters = req.body.parameters;
   if (req.body.selectedRecommendationIds !== undefined) data.selectedRecommendationIds = req.body.selectedRecommendationIds;
   if (req.body.additionalRecommendations !== undefined) data.additionalRecommendations = req.body.additionalRecommendations;
-  if (req.body.conclusion !== undefined) data.conclusion = req.body.conclusion;
+  if (req.body.conclusion !== undefined) {
+    // Валидация enum conclusion
+    const validConclusions = ['ok', 'ok_with_notes', 'faulty'];
+    if (req.body.conclusion !== null && !validConclusions.includes(req.body.conclusion)) {
+      res.status(400).json({ error: `Недопустимое значение conclusion. Допустимые: ${validConclusions.join(', ')}` });
+      return;
+    }
+    data.conclusion = req.body.conclusion;
+  }
 
   // Валидация: при замечаниях/неисправности рекомендации обязательны
   if ((data.conclusion === 'ok_with_notes' || data.conclusion === 'faulty') && !data.additionalRecommendations?.trim()) {

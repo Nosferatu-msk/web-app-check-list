@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { z } from 'zod';
+import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import prisma from '../models/prisma.js';
 import { generateAccessToken, generateRefreshToken, authMiddleware, AuthRequest } from '../middleware/auth.js';
@@ -65,7 +66,6 @@ router.post('/refresh', async (req: Request, res: Response) => {
     return;
   }
   try {
-    const jwt = await import('jsonwebtoken');
     const secret = process.env.JWT_SECRET || 'dev-secret';
     const payload = jwt.verify(refreshToken, secret) as { userId: string; role: string };
     const accessToken = generateAccessToken(payload.userId, payload.role);
