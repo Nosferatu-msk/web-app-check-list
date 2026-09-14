@@ -542,12 +542,16 @@ export default function VisitPage() {
     if (!visit?.id) return;
     const completedTasks = tasks.filter(t => t.status === 'completed');
     if (completedTasks.length === 0) { message.warning('Должна быть хотя бы 1 выполненная задача'); return; }
-    if (isOffline()) {
-      await api.completeVisitOffline(visit.id);
-    } else {
-      await api.completeVisit(visit.id);
+    try {
+      if (isOffline()) {
+        await api.completeVisitOffline(visit.id);
+      } else {
+        await api.completeVisit(visit.id);
+      }
+      navigate(`/visit/${visit.id}/report`);
+    } catch (err: any) {
+      message.error(err?.message || 'Не удалось завершить визит');
     }
-    navigate(`/visit/${visit.id}/report`);
   };
 
   const handleDeleteVisit = async () => {
