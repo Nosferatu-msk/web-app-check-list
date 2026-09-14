@@ -1,0 +1,405 @@
+{
+  "date": "2026-09-14T08:28:31.070Z",
+  "server": "https://checkonout.ru",
+  "account": "testic@test.ru",
+  "summary": {
+    "total": 65,
+    "pass": 60,
+    "fail": 5,
+    "warn": 0,
+    "skip": 0,
+    "passRate": "92.3%"
+  },
+  "results": [
+    {
+      "tc": "TC-001",
+      "name": "Вход инженера",
+      "status": "PASS",
+      "details": "role=engineer, vik=true, iszh=true, gpm=false, dgu=false, ibp=false"
+    },
+    {
+      "tc": "TC-003",
+      "name": "Неверный пароль",
+      "status": "PASS",
+      "details": "status=400"
+    },
+    {
+      "tc": "TC-046",
+      "name": "Регистронезависимый логин",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-003a",
+      "name": "Пустой email",
+      "status": "PASS",
+      "details": "status=400"
+    },
+    {
+      "tc": "TC-003b",
+      "name": "Пустой пароль",
+      "status": "PASS",
+      "details": "status=400"
+    },
+    {
+      "tc": "TC-003c",
+      "name": "Невалидный email",
+      "status": "PASS",
+      "details": "status=400"
+    },
+    {
+      "tc": "TC-AUTH-REFRESH",
+      "name": "Refresh token",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "tc": "TC-AUTH-ME",
+      "name": "GET /auth/me",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-006",
+      "name": "Поиск адреса",
+      "status": "PASS",
+      "details": "id=55521c8a-ad47-4234-a571-a7f67a7756fc"
+    },
+    {
+      "tc": "TC-004",
+      "name": "Валидация создания визита",
+      "status": "PASS",
+      "details": "status=400"
+    },
+    {
+      "tc": "TC-005",
+      "name": "Создание визита",
+      "status": "PASS",
+      "details": "id=54ff0edc-cd70-4973-aeb8-d0539493e8de, status=not_started, season=summer"
+    },
+    {
+      "tc": "TC-032",
+      "name": "Список визитов",
+      "status": "PASS",
+      "details": "count=4, total=4"
+    },
+    {
+      "tc": "TC-032.2",
+      "name": "Фильтр по статусу",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-032.5",
+      "name": "Поиск по адресу",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-030",
+      "name": "Редактирование визита",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-063",
+      "name": "Изоляция — чужой визит",
+      "status": "PASS",
+      "details": "status=404"
+    },
+    {
+      "tc": "TC-109",
+      "name": "Инженер → сводные отчёты = 403",
+      "status": "PASS",
+      "details": "status=403"
+    },
+    {
+      "tc": "TC-031",
+      "name": "Soft delete визита",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-007a",
+      "name": "Справочник equipment-types",
+      "status": "PASS",
+      "details": "count=39, splitvn=true"
+    },
+    {
+      "tc": "TC-008",
+      "name": "Создание задачи",
+      "status": "PASS",
+      "details": "id=743ead7a-43d4-4eaf-9cc7-8985d9f9503a, status=not_started"
+    },
+    {
+      "tc": "TC-010",
+      "name": "Получение задачи",
+      "status": "PASS",
+      "details": "status=not_started"
+    },
+    {
+      "tc": "TC-012",
+      "name": "Сохранение параметров",
+      "status": "PASS",
+      "details": "status=200, taskStatus=not_started"
+    },
+    {
+      "tc": "TC-022",
+      "name": "Условная обязательность",
+      "status": "PASS",
+      "details": "status=400 (валидация на клиенте?)"
+    },
+    {
+      "tc": "TC-023",
+      "name": "Без замечаний → OK",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-009",
+      "name": "Удаление задачи",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-024",
+      "name": "Сброс задачи",
+      "status": "PASS",
+      "details": "status=200, newStatus=not_started"
+    },
+    {
+      "tc": "TC-TASKS-LIST",
+      "name": "Список задач визита",
+      "status": "PASS",
+      "details": "count=1"
+    },
+    {
+      "tc": "TC-013",
+      "name": "Загрузка фото ДО",
+      "status": "FAIL",
+      "details": "status=400, body={\"error\":\"Укажите moment: before или after\"}"
+    },
+    {
+      "tc": "TC-015",
+      "name": "Загрузка фото ПОСЛЕ",
+      "status": "FAIL",
+      "details": "status=400"
+    },
+    {
+      "tc": "TC-034",
+      "name": "Виды оборудования",
+      "status": "PASS",
+      "details": "count=39"
+    },
+    {
+      "tc": "TC-REFS-ROOMS",
+      "name": "Типы помещений",
+      "status": "PASS",
+      "details": "count=17"
+    },
+    {
+      "tc": "TC-035",
+      "name": "Рекомендации",
+      "status": "PASS",
+      "details": "count=183"
+    },
+    {
+      "tc": "TC-080",
+      "name": "Оборудование объектов",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-080a",
+      "name": "Комнаты объекта",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-REFS-MFR",
+      "name": "Производители",
+      "status": "PASS",
+      "details": "count=1180"
+    },
+    {
+      "tc": "TC-REFS-MDL",
+      "name": "Модели",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-REFS-ENG",
+      "name": "Инженеры",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-027",
+      "name": "Генерация отчёта",
+      "status": "PASS",
+      "details": "status=200, ct=application/json; charset=utf-8"
+    },
+    {
+      "tc": "TC-028",
+      "name": "Скачивание отчёта",
+      "status": "PASS",
+      "details": "status=200, ct=application/pdf"
+    },
+    {
+      "tc": "TC-029",
+      "name": "Отчёт без авторизации → 401",
+      "status": "PASS",
+      "details": "status=401"
+    },
+    {
+      "tc": "TC-047",
+      "name": "Профиль",
+      "status": "PASS",
+      "details": "name=Тестик"
+    },
+    {
+      "tc": "TC-111",
+      "name": "Изменение специализации",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-111a",
+      "name": "Сброс специализации → валидация",
+      "status": "PASS",
+      "details": "status=400"
+    },
+    {
+      "tc": "TC-142",
+      "name": "Статистика",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-117",
+      "name": "Добавление в избранное",
+      "status": "FAIL",
+      "details": "status=409"
+    },
+    {
+      "tc": "TC-125",
+      "name": "Защита от дублей",
+      "status": "PASS",
+      "details": "status=409 (ожидался 409)"
+    },
+    {
+      "tc": "TC-118",
+      "name": "Список избранного",
+      "status": "PASS",
+      "details": "count=1"
+    },
+    {
+      "tc": "TC-118a",
+      "name": "Удаление из избранного",
+      "status": "FAIL",
+      "details": "status=404"
+    },
+    {
+      "tc": "TC-139",
+      "name": "Объекты профиля",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-092",
+      "name": "Мои предложения",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-233",
+      "name": "Мои заявки",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-296",
+      "name": "Проверка заявок по адресу",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-SEC-01",
+      "name": "Без токена → 401",
+      "status": "PASS",
+      "details": "status=401"
+    },
+    {
+      "tc": "TC-SEC-02",
+      "name": "Фейковый токен → 401",
+      "status": "PASS",
+      "details": "status=401"
+    },
+    {
+      "tc": "TC-SEC-03",
+      "name": "Подмена userId",
+      "status": "PASS",
+      "details": "expected=b5f14770, got=b5f14770"
+    },
+    {
+      "tc": "TC-SEC-04",
+      "name": "Чужой визит → 403/404",
+      "status": "PASS",
+      "details": "status=404"
+    },
+    {
+      "tc": "TC-SEC-05",
+      "name": "Чужая задача → 403/404",
+      "status": "PASS",
+      "details": "status=404"
+    },
+    {
+      "tc": "TC-SEC-06",
+      "name": "Инженер → /admin/users = 403",
+      "status": "PASS",
+      "details": "status=403"
+    },
+    {
+      "tc": "TC-SEC-07",
+      "name": "Инженер → /proposals/admin = 403",
+      "status": "PASS",
+      "details": "status=403"
+    },
+    {
+      "tc": "TC-SEC-08",
+      "name": "Свой профиль — OK",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-214",
+      "name": "Список уведомлений",
+      "status": "PASS",
+      "details": "count=0"
+    },
+    {
+      "tc": "TC-215",
+      "name": "Прочитать все",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-279",
+      "name": "Очистить все",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "tc": "TC-025",
+      "name": "Завершение визита",
+      "status": "FAIL",
+      "details": "status=400, newStatus=undefined"
+    },
+    {
+      "tc": "TC-027b",
+      "name": "Отчёт после завершения",
+      "status": "PASS",
+      "details": "status=200"
+    }
+  ]
+}
