@@ -721,7 +721,8 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
   });
 
   // Автоматически переводим визит в "В работе" при создании задачи
-  if (['not_started', 'planned', 'awaiting_assignment'].includes(visit.status)) {
+  // Если визит был завершён — возвращаем в работу (добавлена новая задача)
+  if (['not_started', 'planned', 'awaiting_assignment', 'completed'].includes(visit.status)) {
     await prisma.visit.update({
       where: { id: visit.id },
       data: { status: 'in_progress' },
