@@ -563,7 +563,7 @@ export default function RequestsPage() {
         key={r.id}
         style={{
           padding: 12, marginBottom: 8, borderRadius: 8,
-          border: isSelected ? '2px solid #1677ff' : '1px solid #f0f0f0',
+          border: isSelected ? '2px solid #0F766E' : '1px solid #f0f0f0',
           background: isSelected ? '#e6f4ff' : '#fff',
         }}
       >
@@ -572,8 +572,8 @@ export default function RequestsPage() {
             onClick={() => toggleSelection(r.id, r)}
             style={{
               width: 22, height: 22, borderRadius: 4, flexShrink: 0, marginTop: 2,
-              border: isSelected ? '2px solid #1677ff' : '2px solid #d9d9d9',
-              background: isSelected ? '#1677ff' : '#fff',
+              border: isSelected ? '2px solid #0F766E' : '2px solid #d9d9d9',
+              background: isSelected ? '#0F766E' : '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
@@ -830,7 +830,7 @@ export default function RequestsPage() {
           justifyContent: 'center', gap: 12, zIndex: 100,
           boxShadow: '0 -2px 8px rgba(0,0,0,0.08)',
         }}>
-          <TeamOutlined style={{ fontSize: 18, color: '#1677ff' }} />
+          <TeamOutlined style={{ fontSize: 18, color: '#0F766E' }} />
           <span style={{ fontWeight: 500 }}>Выбрано: {selectedCount} заявок</span>
           <Button type="primary" icon={<UserAddOutlined />} onClick={() => { setBulkEngineers([]); setBulkAssignOpen(true); }}>
             Назначить инженеров

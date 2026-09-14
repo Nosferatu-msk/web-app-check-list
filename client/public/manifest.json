@@ -2,7 +2,7 @@
   "name": "Цифровой чек-лист инженера",
   "short_name": "Чек-лист",
   "description": "Цифровой чек-лист инженера по техническому обслуживанию оборудования",
-  "theme_color": "#1677ff",
+  "theme_color": "#0F766E",
   "background_color": "#ffffff",
   "display": "standalone",
   "start_url": "/",

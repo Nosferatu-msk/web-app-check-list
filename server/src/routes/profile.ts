@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import prisma from '../models/prisma.js';
 import { logAudit } from '../middleware/audit.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import bcrypt from 'bcryptjs';
 import { sendMail } from '../utils/email.js';
 
@@ -9,7 +10,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // GET /api/profile — get current user profile with specialization
-router.get('/', async (req: AuthRequest, res: Response) => {
+router.get('/', asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.userId as string },
     select: {
@@ -21,10 +22,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   });
   if (!user) { res.status(404).json({ error: 'Пользователь не найден' }); return; }
   res.json(user);
-});
+}));
 
 // PATCH /api/profile/specialization — update specialization
-router.patch('/specialization', async (req: AuthRequest, res: Response) => {
+router.patch('/specialization', asyncHandler(async (req: AuthRequest, res: Response) => {
   const { specializationVik, specializationIszh, specializationGpm, specializationDgu, specializationIbp } = req.body;
 
   if (!specializationVik && !specializationIszh && !specializationGpm && !specializationDgu && !specializationIbp) {
@@ -46,24 +47,23 @@ router.patch('/specialization', async (req: AuthRequest, res: Response) => {
 
   await logAudit({ userId: req.userId, action: 'update', entityType: 'user', entityId: user.id, newValue: { specializationVik: user.specializationVik, specializationIszh: user.specializationIszh, specializationGpm: user.specializationGpm, specializationDgu: user.specializationDgu, specializationIbp: user.specializationIbp }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(user);
-});
+}));
 
 // GET /api/profile/favorites — get favorite objects
-router.get('/favorites', async (req: AuthRequest, res: Response) => {
+router.get('/favorites', asyncHandler(async (req: AuthRequest, res: Response) => {
   const favorites = await prisma.userFavoriteObject.findMany({
     where: { userId: req.userId as string },
     include: { address: true },
     orderBy: { addedAt: 'desc' },
   });
   res.json(favorites);
-});
+}));
 
 // POST /api/profile/favorites — add to favorites
-router.post('/favorites', async (req: AuthRequest, res: Response) => {
+router.post('/favorites', asyncHandler(async (req: AuthRequest, res: Response) => {
   const { objectCode, addressId } = req.body;
   let resolvedCode = objectCode;
 
-  // If addressId is provided instead of objectCode, resolve it
   if (!resolvedCode && addressId) {
     const addr = await prisma.address.findUnique({ where: { id: addressId }, select: { objectCode: true } });
     if (!addr || !addr.objectCode) {
@@ -75,39 +75,44 @@ router.post('/favorites', async (req: AuthRequest, res: Response) => {
 
   if (!resolvedCode) { res.status(400).json({ error: 'Укажите код объекта или ID адреса' }); return; }
 
-  try {
-    const fav = await prisma.userFavoriteObject.create({
-      data: { userId: req.userId as string, objectCode: resolvedCode },
-      include: { address: true },
-    });
-    res.status(201).json(fav);
-  } catch (err: any) {
-    if (err.code === 'P2002') {
-      const existing = await prisma.userFavoriteObject.findUnique({
-        where: { userId_objectCode: { userId: req.userId as string, objectCode: resolvedCode } },
-        include: { address: true },
-      });
-      res.json(existing);
-    } else if (err.code === 'P2003') {
-      res.status(400).json({ error: `Объект с кодом "${resolvedCode}" не найден в справочнике адресов` });
-    } else {
-      throw err;
-    }
+  // Check for existing favorite first
+  const existing = await prisma.userFavoriteObject.findUnique({
+    where: { userId_objectCode: { userId: req.userId as string, objectCode: resolvedCode } },
+    include: { address: true },
+  });
+  if (existing) {
+    res.status(409).json({ error: 'Объект уже в избранном', data: existing });
+    return;
   }
-});
+
+  const fav = await prisma.userFavoriteObject.create({
+    data: { userId: req.userId as string, objectCode: resolvedCode },
+    include: { address: true },
+  });
+  res.status(201).json(fav);
+}));
 
 // DELETE /api/profile/favorites/:objectCode — remove from favorites
-router.delete('/favorites/*', async (req: AuthRequest, res: Response) => {
+router.delete('/favorites/*', asyncHandler(async (req: AuthRequest, res: Response) => {
   const objectCode = req.params[0] as string;
   if (!objectCode) { res.status(400).json({ error: 'Укажите код объекта' }); return; }
+
+  const existing = await prisma.userFavoriteObject.findUnique({
+    where: { userId_objectCode: { userId: req.userId as string, objectCode } },
+  });
+  if (!existing) {
+    res.status(404).json({ error: 'Объект не найден в избранном' });
+    return;
+  }
+
   await prisma.userFavoriteObject.delete({
     where: { userId_objectCode: { userId: req.userId as string, objectCode } },
   });
   res.json({ message: 'Удалено из избранного' });
-});
+}));
 
 // GET /api/profile/stats — quick stats for profile page
-router.get('/stats', async (req: AuthRequest, res: Response) => {
+router.get('/stats', asyncHandler(async (req: AuthRequest, res: Response) => {
   const now = new Date();
   const msk = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
   const startOfMonth = new Date(Date.UTC(msk.getFullYear(), msk.getMonth(), 1) - 3 * 60 * 60 * 1000);
@@ -129,10 +134,10 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
   ]);
 
   res.json({ visitsThisMonth, issuesFound });
-});
+}));
 
 // GET /api/profile/objects — TM's assigned objects
-router.get('/objects', async (req: AuthRequest, res: Response) => {
+router.get('/objects', asyncHandler(async (req: AuthRequest, res: Response) => {
   const tmObjects = await prisma.tmObject.findMany({
     where: { tmId: req.userId as string },
     include: {
@@ -163,10 +168,10 @@ router.get('/objects', async (req: AuthRequest, res: Response) => {
   }));
 
   res.json(result);
-});
+}));
 
 // POST /api/profile/engineers — TM creates engineer linked to themselves
-router.post('/engineers', async (req: AuthRequest, res: Response) => {
+router.post('/engineers', asyncHandler(async (req: AuthRequest, res: Response) => {
   const { fullName, email, specializationVik, specializationIszh, specializationGpm, specializationDgu, specializationIbp } = req.body;
   if (!fullName || !email) {
     res.status(400).json({ error: 'Укажите ФИО и email' });
@@ -198,12 +203,10 @@ router.post('/engineers', async (req: AuthRequest, res: Response) => {
     },
   });
 
-  // Link to TM
   await prisma.tmEngineer.create({
     data: { tmId: req.userId as string, engineerId: engineer.id },
   });
 
-  // Send credentials
   try {
     await sendMail({
       to: normalizedEmail,
@@ -214,6 +217,6 @@ router.post('/engineers', async (req: AuthRequest, res: Response) => {
 
   await logAudit({ userId: req.userId, action: 'create', entityType: 'user', entityId: engineer.id, newValue: { fullName, email: normalizedEmail, role: 'engineer' }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json({ id: engineer.id, fullName: engineer.fullName, email: engineer.email, role: engineer.role });
-});
+}));
 
 export default router;

@@ -66,7 +66,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
   }
   try {
     const jwt = await import('jsonwebtoken');
-    const payload = jwt.verify(refreshToken, process.env.JWT_SECRET || 'dev-secret') as { userId: string; role: string };
+    const secret = process.env.JWT_SECRET || 'dev-secret';
+    const payload = jwt.verify(refreshToken, secret) as { userId: string; role: string };
     const accessToken = generateAccessToken(payload.userId, payload.role);
     const newRefreshToken = generateRefreshToken(payload.userId, payload.role);
     const user = await prisma.user.findUnique({
@@ -78,7 +79,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
       return;
     }
     res.json({ accessToken, refreshToken: newRefreshToken, user });
-  } catch {
+  } catch (err: any) {
+    console.error('Refresh token error:', err.message);
     res.status(401).json({ error: 'Invalid refresh token' });
   }
 });

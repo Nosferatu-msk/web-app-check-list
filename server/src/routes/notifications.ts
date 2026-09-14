@@ -1,12 +1,13 @@
 import { Router, Response } from 'express';
 import prisma from '../models/prisma.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
 router.use(authMiddleware);
 
 // ─── LIST NOTIFICATIONS ──────────────────────────────────────
-router.get('/', async (req: AuthRequest, res: Response) => {
+router.get('/', asyncHandler(async (req: AuthRequest, res: Response) => {
   const unreadOnly = req.query.unread_only === 'true';
   const limit = parseInt(req.query.limit as string) || 20;
   const offset = parseInt(req.query.offset as string) || 0;
@@ -26,10 +27,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   ]);
 
   res.json({ data, totalCount, unreadCount });
-});
+}));
 
 // ─── MARK AS READ ────────────────────────────────────────────
-router.patch('/:id/read', async (req: AuthRequest, res: Response) => {
+router.patch('/:id/read', asyncHandler(async (req: AuthRequest, res: Response) => {
   const notification = await prisma.notification.findUnique({
     where: { id: req.params.id as string },
   });
@@ -49,26 +50,26 @@ router.patch('/:id/read', async (req: AuthRequest, res: Response) => {
   });
 
   res.json(updated);
-});
+}));
 
 // ─── MARK ALL AS READ ────────────────────────────────────────
-router.patch('/read-all', async (req: AuthRequest, res: Response) => {
+router.patch('/read-all', asyncHandler(async (req: AuthRequest, res: Response) => {
   const result = await prisma.notification.updateMany({
     where: { userId: req.userId, isRead: false, isDeleted: false },
     data: { isRead: true },
   });
 
   res.json({ updated: result.count });
-});
+}));
 
 // ─── CLEAR ALL (soft delete) ─────────────────────────────────
-router.post('/clear-all', async (req: AuthRequest, res: Response) => {
+router.post('/clear-all', asyncHandler(async (req: AuthRequest, res: Response) => {
   const result = await prisma.notification.updateMany({
     where: { userId: req.userId, isDeleted: false },
     data: { isDeleted: true, isRead: true },
   });
 
   res.json({ cleared: result.count });
-});
+}));
 
 export default router;

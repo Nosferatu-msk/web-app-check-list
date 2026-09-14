@@ -831,6 +831,12 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   if (req.body.additionalRecommendations !== undefined) data.additionalRecommendations = req.body.additionalRecommendations;
   if (req.body.conclusion !== undefined) data.conclusion = req.body.conclusion;
 
+  // Валидация: при замечаниях/неисправности рекомендации обязательны
+  if ((data.conclusion === 'ok_with_notes' || data.conclusion === 'faulty') && !data.additionalRecommendations?.trim()) {
+    res.status(400).json({ error: 'При наличии замечаний укажите дополнительные рекомендации' });
+    return;
+  }
+
   const task = await prisma.task.update({
     where: { id: req.params.id as string },
     data,
