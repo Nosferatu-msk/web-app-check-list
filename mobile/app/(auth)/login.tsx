@@ -1,73 +1,58 @@
 import { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
-import { TextInput, Button, Text, Surface } from 'react-native-paper';
-import { useAppTheme } from '../../src/hooks/useAppTheme';
+import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, TextInput, Button, HelperText } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function LoginScreen() {
-  const theme = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [secureTextEntry, setSecureTextEntry] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const login = useAuthStore((state) => state.login);
   const router = useRouter();
 
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleLogin = async () => {
+    setError('');
+
     if (!email || !password) {
       setError('Заполните все поля');
       return;
     }
 
-    setLoading(true);
-    setError('');
+    if (!validateEmail(email)) {
+      setError('Неверный формат email');
+      return;
+    }
 
+    setIsLoading(true);
     try {
       await login(email, password);
-      const hasSeenBioSetup = await SecureStore.getItemAsync('bio_setup_done');
-      const currentUser = useAuthStore.getState().user;
-      const isMtr = currentUser?.role === 'engineer_mtr' || currentUser?.role === 'tm_mtr';
-      const targetScreen = isMtr ? '/mtr/visits' : '/(tabs)/visits';
-      if (!hasSeenBioSetup) {
-        await SecureStore.setItemAsync('bio_setup_done', 'true');
-        router.replace('/(auth)/biometric-setup');
-      } else {
-        router.replace(targetScreen);
-      }
+      router.replace('/(tabs)/visits');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Ошибка входа. Проверьте email и пароль.');
+      setError(err.message || 'Неверный логин или пароль');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
     >
-      <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={3}>
-        <View style={styles.header}>
-          <View style={styles.logo}>
-            <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
-          </View>
-          <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.primary }]}>
-            Чек-лист инженера
-          </Text>
-          <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.placeholder }]}>
-            Войдите в систему
-          </Text>
-        </View>
-
-        {error ? (
-          <Text variant="bodyMedium" style={[styles.error, { color: theme.colors.error }]}>
-            {error}
-          </Text>
-        ) : null}
+      <View style={styles.content}>
+        <Text variant="displaySmall" style={styles.title}>
+          Чек-лист инженера
+        </Text>
+        <Text variant="bodyLarge" style={styles.subtitle}>
+          Войдите в свой аккаунт
+        </Text>
 
         <TextInput
           label="Email"
@@ -85,28 +70,27 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           mode="outlined"
-          secureTextEntry={secureTextEntry}
+          secureTextEntry
           autoComplete="password"
           style={styles.input}
-          right={
-            <TextInput.Icon
-              icon={secureTextEntry ? 'eye-off' : 'eye'}
-              onPress={() => setSecureTextEntry(!secureTextEntry)}
-            />
-          }
         />
+
+        {error ? (
+          <HelperText type="error" visible={!!error}>
+            {error}
+          </HelperText>
+        ) : null}
 
         <Button
           mode="contained"
           onPress={handleLogin}
-          loading={loading}
-          disabled={loading}
-          style={[styles.button, { backgroundColor: theme.colors.primary }]}
-          contentStyle={styles.buttonContent}
+          loading={isLoading}
+          disabled={isLoading}
+          style={styles.button}
         >
           Войти
         </Button>
-      </Surface>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -114,53 +98,27 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 400,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logo: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: '#0F766E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  logoImage: {
-    width: 64,
-    height: 64,
+    padding: 24,
   },
   title: {
-    fontWeight: '700',
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 8,
-  },
-  error: {
-    marginBottom: 16,
+    marginBottom: 32,
     textAlign: 'center',
+    opacity: 0.6,
   },
   input: {
     marginBottom: 16,
   },
   button: {
     marginTop: 8,
-  },
-  buttonContent: {
-    height: 48,
+    paddingVertical: 6,
   },
 });

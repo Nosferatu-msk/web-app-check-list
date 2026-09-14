@@ -1,0 +1,868 @@
+<style>
+  :root {
+    --bg: #f8fafc; --surface: #ffffff; --border: #e2e8f0;
+    --text: #0f172a; --text2: #64748b; --primary: #0f766e;
+    --p0: #dc2626; --p1: #ea580c; --p2: #2563eb;
+    --s-xs: #dbeafe; --s-s: #dcfce7; --s-m: #fef9c3; --s-l: #fed7aa; --s-xl: #fecaca;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 28px; margin-bottom: 8px; }
+  h2 { font-size: 22px; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--primary); }
+  h3 { font-size: 18px; margin: 24px 0 12px; color: var(--primary); }
+  .subtitle { color: var(--text2); margin-bottom: 24px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 24px 0; }
+  .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+  .summary-card .num { font-size: 32px; font-weight: 700; color: var(--primary); }
+  .summary-card .label { font-size: 13px; color: var(--text2); }
+  .stage { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin: 16px 0; overflow: hidden; }
+  .stage-header { padding: 16px 20px; background: #f0fdfa; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .stage-header h3 { margin: 0; }
+  .stage-meta { display: flex; gap: 12px; align-items: center; }
+  .stage-goal { padding: 12px 20px; background: #fffbeb; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .stage-goal strong { color: #92400e; }
+  .stage-body { padding: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: #f8fafc; text-align: left; padding: 10px 12px; font-weight: 600; border-bottom: 2px solid var(--border); position: sticky; top: 0; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .badge-p0 { background: #fef2f2; color: var(--p0); }
+  .badge-p1 { background: #fff7ed; color: var(--p1); }
+  .badge-p2 { background: #eff6ff; color: var(--p2); }
+  .size-xs { background: var(--s-xs); color: #1e40af; }
+  .size-s { background: var(--s-s); color: #166534; }
+  .size-m { background: var(--s-m); color: #854d0e; }
+  .size-l { background: var(--s-l); color: #9a3412; }
+  .size-xl { background: var(--s-xl); color: #991b1b; }
+  .task-id { font-family: monospace; font-weight: 600; color: var(--primary); }
+  .acceptance { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .note { font-size: 12px; color: var(--p1); margin-top: 2px; font-style: italic; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .filter-bar { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); cursor: pointer; font-size: 13px; transition: all .15s; }
+  .filter-btn:hover { border-color: var(--primary); }
+  .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .total-tasks { font-size: 14px; color: var(--text2); margin-left: auto; }
+  .approach { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
+  .approach h3 { color: #1e40af; margin: 0 0 8px; }
+  .approach ul { margin: 0; padding-left: 20px; }
+  .approach li { margin: 4px 0; }
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    table { font-size: 12px; }
+    th, td { padding: 8px 6px; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<h1>📋 Декомпозиция — Мобильное приложение Android</h1>
+<p class="subtitle">Поэтапный ввод функционала · React Native (Expo) · 5 этапов</p>
+
+<div class="approach">
+  <h3>🎯 Подход: поэтапный ввод функционала</h3>
+  <ul>
+    <li><strong>Каждый этап — самостоятельный релиз</strong> (APK для установки на телефон)</li>
+    <li><strong>Одновременная работа PWA + mobile под одним пользователем невозможна</strong> — новый вход разлогинивает другие сессии</li>
+    <li><strong>На ранних этапах — без офлайн-синхронизации</strong> (только online-режим, TanStack Query кэш)</li>
+    <li><strong>Сначала просмотр, потом редактирование</strong> — убедимся, что данные приходят корректно</li>
+    <li><strong>Тестирование на Xiaomi Redmi Note 10 Pro</strong> (393px, Android)</li>
+  </ul>
+</div>
+
+<div class="summary">
+  <div class="summary-card"><div class="num">5</div><div class="label">Этапов</div></div>
+  <div class="summary-card"><div class="num">~50</div><div class="label">Задач</div></div>
+  <div class="summary-card"><div class="num">2-3</div><div class="label">Недели до 1-го APK</div></div>
+  <div class="summary-card"><div class="num">Online</div><div class="label">Режим ранних этапов</div></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge size-xs">XS</span> &lt;4ч</div>
+  <div class="legend-item"><span class="badge size-s">S</span> 4-8ч</div>
+  <div class="legend-item"><span class="badge size-m">M</span> 1-2 дня</div>
+  <div class="legend-item"><span class="badge size-l">L</span> 3-5 дней</div>
+  <div class="legend-item"><span class="badge size-xl">XL</span> 1-2 недели</div>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" onclick="filterStage('all')">Все этапы</button>
+  <button class="filter-btn" onclick="filterStage('e1')">Этап 1</button>
+  <button class="filter-btn" onclick="filterStage('e2')">Этап 2</button>
+  <button class="filter-btn" onclick="filterStage('e3')">Этап 3</button>
+  <button class="filter-btn" onclick="filterStage('e4')">Этап 4</button>
+  <button class="filter-btn" onclick="filterStage('e5')">Этап 5</button>
+  <span class="total-tasks" id="taskCount"></span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ЭТАП 1: Авторизация + Профиль                       -->
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Этап 1 — Авторизация и профиль</h2>
+<div class="stage" data-stage="e1">
+  <div class="stage-header">
+    <h3>Настройка проекта, вход, биометрия, PIN, профиль</h3>
+    <div class="stage-meta"><span class="badge size-l">15 задач</span><span class="badge badge-p0">~2-3 недели</span></div>
+  </div>
+  <div class="stage-goal">
+    <strong>Цель:</strong> APK, который можно установить на телефон. Инженер входит по логину/паролю, настраивает биометрию и PIN, видит свой профиль. Автоблокировка при неактивности. Визиты пока не загружаются.
+  </div>
+  <div class="stage-body">
+    <table>
+      <tr><th style="width:80px">ID</th><th>Задача</th><th style="width:50px">Разм.</th><th style="width:120px">Зависимости</th></tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-01</span></td>
+        <td><strong>Инициализация Expo проекта</strong>
+          <div class="acceptance">npx create-expo-app (Expo SDK 52+, TypeScript). Expo Router (file-based routing). Структура: app/, src/, shared/ (symlink или копия shared/types). tsconfig, eslint, prettier. Тест: приложение запускается на Xiaomi через USB (Metro bundler).</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>—</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-02</span></td>
+        <td><strong>Подключение shared/types</strong>
+          <div class="acceptance">Алиас @shared/ → shared/types/index.ts. Проверить: все enum-лейблы (VisitStatus, TaskStatus, Season и т.д.) и интерфейсы импортируются без ошибок.</div>
+        </td>
+        <td><span class="badge size-xs">XS</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-03</span></td>
+        <td><strong>React Native Paper: тема</strong>
+          <div class="acceptance">PaperProvider + тема по палитре из спецификации (§5.0). Светлая/тёмная. useColorScheme для автопереключения. ThemeStore (Zustand) для ручного override.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-04</span></td>
+        <td><strong>API-клиент (axios + interceptors)</strong>
+          <div class="acceptance">axios instance с baseURL (production: домен сервера). Interceptor: добавляет Authorization header из Secure Store. Interceptor: при 401 → refresh token → retry. Обработка network errors. Тест: запрос к /api/auth/login с тестовым инженером.</div>
+          <div class="note">Без offline-очереди — только online-режим</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-05</span></td>
+        <td><strong>Secure Store: хранение токенов</strong>
+          <div class="acceptance">expo-secure-store: accessToken, refreshToken. Функции: getToken(), setTokens(), removeTokens(). Тест: после закрытия и reopening приложения — токен на месте.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-06</span></td>
+        <td><strong>AuthStore (Zustand)</strong>
+          <div class="acceptance">Состояние: user, isAuthenticated, isLoading. Actions: login(email, password) → POST /api/auth/login → сохранить токены. logout() → очистить Secure Store. refreshAccessToken() → POST /api/auth/refresh. При старте: проверить наличие токена → auto-login.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E1-04, E1-05</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-07</span></td>
+        <td><strong>Экран логина</strong>
+          <div class="acceptance">app/(auth)/login.tsx: поля email + password, кнопка «Войти». Валидация email. Обработка ошибок: «Неверный логин или пароль», «Нет подключения к серверу». Loading state. После входа → переход на табы.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E1-06</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-08</span></td>
+        <td><strong>Expo Router: layout + табы</strong>
+          <div class="acceptance">app/_layout.tsx (Stack с auth guard). app/(tabs)/_layout.tsx (Tab Navigator: Визиты / Заявки / Профиль). Tab bar: bottom: 42px, height: 63px, иконки + текст. Заглушки для Визиты и Заявки («Скоро»). Профиль — рабочий.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E1-03, E1-06</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-09</span></td>
+        <td><strong>Биометрия: настройка и вход</strong>
+          <div class="acceptance">app/(auth)/biometric-setup.tsx: предложение после первого входа. expo-local-authentication: isAvailable(), authenticate(). Флаг «биометрия включена» в Secure Store. При запуске: если флаг → предложить биометрию → auto-login без пароля.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E1-07</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-10</span></td>
+        <td><strong>PIN-код: настройка и fallback</strong>
+          <div class="acceptance">app/(auth)/pin-setup.tsx: ввод 4-6 цифр, подтверждение. PinPad компонент. PIN в Secure Store. app/(auth)/unlock.tsx: экран разблокировки — биометрия или PIN. При ошибке PIN → shake-анимация, попытка счётчик.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E1-09</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-11</span></td>
+        <td><strong>Auto-lock (5 минут)</strong>
+          <div class="acceptance">useAutoLock hook: AppState listener. При background → таймер 5 мин. При возврате → если истёк → unlock.tsx (биометрия/PIN). Сессия не теряется — данные и открытый экран сохраняются.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E1-10</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-12</span></td>
+        <td><strong>Экран профиля</strong>
+          <div class="acceptance">app/(tabs)/profile.tsx: карточка (аватар-инициал, ФИО, email, роль, специализация). Статистика: всего/завершённых/активных визитов (GET /api/profile). Секция «Безопасность»: биометрия toggle, PIN-код «Изменить». Настройки: тема (Светлая/Тёмная/Системная). Кнопка «Выйти».</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E1-08, E1-06</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-13</span></td>
+        <td><strong>Выход из аккаунта</strong>
+          <div class="acceptance">Подтверждение через диалог. Очистка Secure Store (токены, PIN, биометрия флаг). Редирект на login.tsx. Сброс AuthStore.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E1-12</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-14</span></td>
+        <td><strong>Sentry (crash reporting)</strong>
+          <div class="acceptance">@sentry/react-native: init, DSN. Breadcrumbs. Запрет логирования токенов/паролей. Тест: намеренный crash → проверка в Sentry dashboard.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e1">
+        <td><span class="task-id">E1-15</span></td>
+        <td><strong>EAS Build: первая сборка APK</strong>
+          <div class="acceptance">eas.json: development profile. eas build -p android --profile development. Установка APK на Xiaomi через USB. Тест: приложение запускается, вход работает, профиль отображается.</div>
+          <div class="note">Первый релизный APK — можно тестировать на телефоне</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E1-12, E1-14</td>
+      </tr>
+
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ЭТАП 2: Визиты (read-only)                          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Этап 2 — Визиты: просмотр (read-only)</h2>
+<div class="stage" data-stage="e2">
+  <div class="stage-header">
+    <h3>Загрузка визитов с сервера, просмотр деталей, обновление</h3>
+    <div class="stage-meta"><span class="badge size-l">12 задач</span><span class="badge badge-p1">~2-3 недели</span></div>
+  </div>
+  <div class="stage-goal">
+    <strong>Цель:</strong> Инженер видит свои визиты, может открыть детали, посмотреть задачи и параметры. Данные загружаются с сервера (online). Pull-to-refresh для обновления. Если инженер что-то изменил в PWA — изменения отражаются после обновления.
+  </div>
+  <div class="stage-body">
+    <table>
+      <tr><th style="width:80px">ID</th><th>Задача</th><th style="width:50px">Разм.</th><th style="width:120px">Зависимости</th></tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-01</span></td>
+        <td><strong>TanStack Query: настройка</strong>
+          <div class="acceptance">QueryClientProvider, defaultOptions (staleTime: 30с, retry: 2). Хуки: useVisits(), useVisit(id), useProfile(). Интеграция с API-клиентом.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E1-04</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-02</span></td>
+        <td><strong>NetInfo: онлайн/оффлайн статус</strong>
+          <div class="acceptance">@react-native-community/netinfo: hook useNetworkState(). Zustand стор isOnline. SyncIndicator (4 состояния). Баннер «Нет интернета» при offline.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-03</span></td>
+        <td><strong>SyncIndicator компонент</strong>
+          <div class="acceptance">Pill в правом верхнем углу. 4 состояния: Синхронизировано (зелёный), Обновление... (синий, спиннер), Ошибка (красный), Оффлайн (серый).</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E2-02</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-04</span></td>
+        <td><strong>VisitCard компонент</strong>
+          <div class="acceptance">Адрес (крупно, 15sp/600), бейджи заявки/договора, дата, статус (цветной бейдж), прогресс-бар N/M задач, специализация (тег). Кликабельна целиком (touch target ≥ 48dp).</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E1-03</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-05</span></td>
+        <td><strong>VisitCardSkeleton компонент</strong>
+          <div class="acceptance">Skeleton повторяет форму VisitCard. Анимация пульсации. Показывать при ожидании > 300 мс, скрывать при < 200 мс.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E2-04</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-06</span></td>
+        <td><strong>Экран списка визитов</strong>
+          <div class="acceptance">app/(tabs)/visits.tsx: табы Активные / Завершённые (SegmentedButtons), бейджи-счётчики. FlatList с виртуализацией. Pull-to-refresh (GET /api/visits). Сортировка по дате (новые сверху). Skeleton при загрузке. Empty state: «Нет визитов».</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E2-01, E2-04, E2-05</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-07</span></td>
+        <td><strong>Детальная страница визита (read-only)</strong>
+          <div class="acceptance">app/visit/[visitId]/index.tsx: карточка визита (адрес, статус, прогресс, сезон, инженер). Список задач: иконка оборудования, название, помещение, статус-бейдж. Цветовая индикация: серый/синий/зелёный. Группировка климатического оборудования (group_climate).</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E2-06</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-08</span></td>
+        <td><strong>Детальная страница задачи (read-only)</strong>
+          <div class="acceptance">app/visit/[visitId]/task/[taskId].tsx: форма параметров (13 типов оборудования, динамическая). Все поля — read-only. Заключение, рекомендации, примечание. Отображение фото before/after (thumbnail).</div>
+        </td>
+        <td><span class="badge size-xl">XL</span></td>
+        <td>E2-07</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-09</span></td>
+        <td><strong>Просмотр фото (full-screen)</strong>
+          <div class="acceptance">Тап на thumbnail → полноэкранный просмотр. Zoom (pinch). Свайп между фото. Кнопка «Закрыть».</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E2-08</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-10</span></td>
+        <td><strong>Иконки оборудования и помещений</strong>
+          <div class="acceptance">MaterialCommunityIcons: уникальные иконки для каждого типа оборудования (rsch → mdi-electric-switch, vent → mdi-fan и т.д.). Иконки помещений (серверная → mdi-server и т.д.). По спецификации §5.13.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E2-07</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-11</span></td>
+        <td><strong>Обновление данных при возврате</strong>
+          <div class="acceptance">AppState listener: при возврате в приложение → refetch визитов (TanStack Query). Pull-to-refresh: ручной refetch. Индикатор «Обновлено только что».</div>
+          <div class="note">Если инженер изменил визит в PWA → после pull-to-refresh изменения отобразятся</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E2-06, E2-02</td>
+      </tr>
+
+      <tr data-stage="e2">
+        <td><span class="task-id">E2-12</span></td>
+        <td><strong>Тестирование read-only визитов</strong>
+          <div class="acceptance">Тест на Xiaomi: вход → список визитов → открытие визита → открытие задачи → просмотр фото. Pull-to-refresh. Изменение визита в PWA → обновление в мобильном. Разлогинивание при входе с другого устройства.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E2-11</td>
+      </tr>
+
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ЭТАП 3: Редактирование визитов                      -->
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Этап 3 — Редактирование и создание визитов</h2>
+<div class="stage" data-stage="e3">
+  <div class="stage-header">
+    <h3>Создание визитов, заполнение параметров, камера, отчёты</h3>
+    <div class="stage-meta"><span class="badge size-l">16 задач</span><span class="badge badge-p0">~4-5 недель</span></div>
+  </div>
+  <div class="stage-goal">
+    <strong>Цель:</strong> Инженер может создавать визиты, заполнять параметры, делать фото, формировать отчёты — всё через мобильное приложение. Данные сохраняются на сервере (online). Видны в PWA.
+  </div>
+  <div class="stage-body">
+    <table>
+      <tr><th style="width:80px">ID</th><th>Задача</th><th style="width:50px">Разм.</th><th style="width:120px">Зависимости</th></tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-01</span></td>
+        <td><strong>Создание визита: выбор адреса</strong>
+          <div class="acceptance">app/visit/new.tsx: полнотекстовый поиск адреса (GET /api/refs/addresses?q=...). Автодополнение. Выбор из списка. Геолокация: expo-location → координаты + точность (🟢<50м, 🟡50-200м, 🔴>200м). Кнопка «Обновить координаты».</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E2-01</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-02</span></td>
+        <td><strong>Добавление оборудования (2 шага)</strong>
+          <div class="acceptance">app/visit/[visitId]/add-equipment.tsx. Шаг 1: room cards с иконками, поиск помещения. Кнопка «Ввести вручную». Шаг 2: чекбоксы оборудования, фильтрация по специализации. Ручной ввод: warning-баннер, поля (тип, помещение, бренд, модель, серийный номер).</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E2-07</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-03</span></td>
+        <td><strong>Формы параметров (edit mode)</strong>
+          <div class="acceptance">Переключить E2-08 из read-only в edit. Динамическая форма по типу оборудования (13 типов). keyboardType="numeric" для числовых. Валидация при потере фокуса. Автосохранение: PUT /api/visits/:id/tasks/:id каждые 30 сек (при online).</div>
+        </td>
+        <td><span class="badge size-xl">XL</span></td>
+        <td>E2-08</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-04</span></td>
+        <td><strong>Заключение и рекомендации (edit)</strong>
+          <div class="acceptance">SegmentedButtons: «Исправно» / «Замечания» / «Неисправно». Чекбоксы рекомендаций из справочника (GET /api/refs/recommendations, фильтрация по типу). Поле «Примечание» обязательно при замечаниях. Голосовой ввод (expo-speech-recognition).</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E3-03</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-05</span></td>
+        <td><strong>Групповая задача (group_climate)</strong>
+          <div class="acceptance">Объединение внутренних блоков VRV/МСС/СС. Подстрока: «Клиентский зал · 3 ед. (VRV, МСС, СС)». Форма параметров для группы.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E3-03</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-06</span></td>
+        <td><strong>Нативная камера (expo-camera)</strong>
+          <div class="acceptance">Полноэкранный preview. Переключение фронтальная/тыловая. Фонарик (toggle). Фокус по тапу. Pinch-to-zoom. Запрос разрешения только при первом нажатии. Обработка ошибок: «Нет разрешения → Открыть настройки», «Камера занята», «Нет места».</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-07</span></td>
+        <td><strong>Сжатие и сохранение фото</strong>
+          <div class="acceptance">expo-image-manipulator: 1280px, JPEG 0.6-0.7 (~100-200 КБ). Именование: {№}_{equipment_code}_{room_code}_{moment}.jpg. Сохранение в File System. Предпросмотр + переснять.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E3-06</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-08</span></td>
+        <td><strong>Экран фотофиксации (before/after)</strong>
+          <div class="acceptance">app/visit/[visitId]/task/[taskId]/photos.tsx: фото ДО и ПОСЛЕ. Кнопки «Сделать фото» / «Выбрать из галереи» (fallback). Предупреждение 152-ФЗ при первом использовании (флаг в Secure Store). Галерея: проверка EXIF-даты (не старше 24ч).</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E3-07</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-09</span></td>
+        <td><strong>Загрузка фото на сервер</strong>
+          <div class="acceptance">POST /api/photos (multipart/form-data). Прогресс загрузки. После загрузки — привязка к задаче. Обновление списка фото в UI.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E3-07, E1-04</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-10</span></td>
+        <td><strong>Завершение визита</strong>
+          <div class="acceptance">Кнопка «Завершить визит». Валидация: все задачи completed, обязательные фото загружены, рекомендации при замечаниях. PUT /api/visits/:id (status → completed). Подтверждение через диалог.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E3-03, E3-08</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-11</span></td>
+        <td><strong>Удаление визита + сброс задачи</strong>
+          <div class="acceptance">Удаление: кнопка (danger outlined), диалог подтверждения, DELETE /api/visits/:id. Сброс задачи: очистка параметров/рекомендаций/заключения текущей задачи, подтверждение.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E3-03</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-12</span></td>
+        <td><strong>Просмотр PDF-отчёта</strong>
+          <div class="acceptance">react-native-pdf: GET /api/reports/:visitId → отображение PDF. Zoom, скролл. Loading state.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E3-10</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-13</span></td>
+        <td><strong>Share API: отправка отчёта</strong>
+          <div class="acceptance">expo-sharing: ZIP (PDF + фото). Выбор: email, мессенджер, облако. Формат: OTCHET_{address}_{date}.zip.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E3-12</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-14</span></td>
+        <td><strong>Индикатор сохранения</strong>
+          <div class="acceptance">На экране задачи: «✓ Сохранено HH:MM:SS» (зелёный) / «Сохранение...» (жёлтый) / «Ошибка сохранения» (красный). При online — прямая отправка на сервер.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E3-03</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-15</span></td>
+        <td><strong>Тестирование создания визитов</strong>
+          <div class="acceptance">Полный цикл: создание визита → добавление оборудования → заполнение параметров → фото → завершение → отчёт. Проверка: визит виден в PWA. Изменение в PWA → видно в мобильном.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E3-13</td>
+      </tr>
+
+      <tr data-stage="e3">
+        <td><span class="task-id">E3-16</span></td>
+        <td><strong>Тёмная тема: полная проверка</strong>
+          <div class="acceptance">Проверить все экраны (визиты, задачи, камера, отчёты) в тёмной теме. Контраст ≥ 4.5:1. Исправить проблемы.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E3-15</td>
+      </tr>
+
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ЭТАП 4: Заявки, Push, Оффлайн                       -->
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Этап 4 — Заявки, Push-уведомления, Офлайн-режим</h2>
+<div class="stage" data-stage="e4">
+  <div class="stage-header">
+    <h3>Заявки, FCM, офлайн-работа, синхронизация</h3>
+    <div class="stage-meta"><span class="badge size-l">14 задач</span><span class="badge badge-p0">~4-5 недель</span></div>
+  </div>
+  <div class="stage-goal">
+    <strong>Цель:</strong> Полноценная работа: заявки, push-уведомления, офлайн-режим с синхронизацией. Инженер может работать в подвалах без интернета — данные синхронизируются при появлении сети.
+  </div>
+  <div class="stage-body">
+    <table>
+      <tr><th style="width:80px">ID</th><th>Задача</th><th style="width:50px">Разм.</th><th style="width:120px">Зависимости</th></tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-01</span></td>
+        <td><strong>Экран заявок</strong>
+          <div class="acceptance">app/(tabs)/requests.tsx: табы Все / Новые / В работе / Завершённые, бейджи-счётчики. Карточка заявки: №, адрес, вид оборудования, статус, кнопки «Начать визит» / «Продолжить визит». GET /api/requests.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E2-01</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-02</span></td>
+        <td><strong>Создание визита из заявки</strong>
+          <div class="acceptance">Кнопка «Начать визит» → создание визита по адресу заявки. Привязка VisitRequest. Переход к визиту.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E4-01, E3-01</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-03</span></td>
+        <td><strong>Сервер: POST /api/sync/batch</strong>
+          <div class="acceptance">Пакетная синхронизация: массив мутаций (до 50). Идемпотентность по client_mutation_id. Транзакционность. Тест: отправка 10 мутаций → все обработаны.</div>
+          <div class="note">Серверная задача — должна быть готова до E4-05</div>
+        </td>
+        <td><span class="badge size-xl">XL</span></td>
+        <td>—</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-04</span></td>
+        <td><strong>SQLite: схема для офлайн</strong>
+          <div class="acceptance">expo-sqlite: таблицы visits, tasks, photos, sync_queue, cached_addresses, cached_equipment, cached_rooms. Индексы. Миграции (schema_versions). Инициализация при первом запуске.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E1-01</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-05</span></td>
+        <td><strong>Sync Engine: очередь мутаций</strong>
+          <div class="acceptance">Запись в sync_queue при каждом действии. client_mutation_id (UUID). Статусы: pending → in_progress → completed/failed. Retry: до 5 раз, exponential backoff. Автосинхронизация при появлении сети (NetInfo listener).</div>
+        </td>
+        <td><span class="badge size-xl">XL</span></td>
+        <td>E4-04, E4-03</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-06</span></td>
+        <td><strong>Офлайн: создание визита без сети</strong>
+          <div class="acceptance">Создание → SQLite (dirty=1) + sync_queue. В списке — пометка «Не синхронизировано». При появлении сети → автоматическая отправка.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E4-05, E3-01</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-07</span></td>
+        <td><strong>Офлайн: редактирование параметров</strong>
+          <div class="acceptance">Изменение → SQLite (dirty=1) + sync_queue. Автосохранение в SQLite каждые 30 сек. При появлении сети → отправка мутации.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E4-05, E3-03</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-08</span></td>
+        <td><strong>Офлайн: загрузка фото</strong>
+          <div class="acceptance">Фото → File System + sync_queue. При появлении сети → POST /api/photos. Прогресс загрузки. Индикатор: «3 из 12 синхронизировано».</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E4-05, E3-09</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-09</span></td>
+        <td><strong>Кеширование справочников</strong>
+          <div class="acceptance">Первое получение → SQLite (cached_addresses, cached_equipment). Только назначенные инженеру. При офлайн → использовать кеш.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E4-04</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-10</span></td>
+        <td><strong>Conflict Resolver</strong>
+          <div class="acceptance">Last-write-wins для параметров (пометка при < 60 сек). Server-wins для статусов. Экран разрешения конфликтов: локальное vs серверное значение.</div>
+        </td>
+        <td><span class="badge size-xl">XL</span></td>
+        <td>E4-05</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-11</span></td>
+        <td><strong>FCM: push-уведомления</strong>
+          <div class="acceptance">Firebase Project. expo-notifications: getPushTokenAsync(). POST /api/push/register. Обработка: foreground → баннер, background → системное. Deep link при тапе → визит/заявка.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E1-06</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-12</span></td>
+        <td><strong>In-app уведомления + настройка</strong>
+          <div class="acceptance">Баннер «Новая заявка назначена». Toast «Визит сохранён локально». Настройки: вкл/выкл, звук, вибрация. NotificationBell с бейджем.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E4-11</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-13</span></td>
+        <td><strong>Тесты: мультиплатформенность</strong>
+          <div class="acceptance">PWA + мобильное под одним пользователем (по очереди — разлогинивает). Конфликты: PWA ↔ мобильное. ТМ корректирует через веб → обновление в мобильном.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E4-10</td>
+      </tr>
+
+      <tr data-stage="e4">
+        <td><span class="task-id">E4-14</span></td>
+        <td><strong>Тесты: офлайн-режим</strong>
+          <div class="acceptance">Создание визита в авиарежиме → включение сети → синхронизация. Заполнение параметров офлайн → синхронизация. Фото офлайн → загрузка при появлении сети. Проверка: нет потери данных.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E4-08</td>
+      </tr>
+
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ЭТАП 5: МТР, полировка, публикация                  -->
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Этап 5 — МТР, полировка, публикация</h2>
+<div class="stage" data-stage="e5">
+  <div class="stage-header">
+    <h3>Модуль МТР, роль ТМ, оптимизация, Google Play</h3>
+    <div class="stage-meta"><span class="badge size-l">10 задач</span><span class="badge badge-p1">~3-4 недели</span></div>
+  </div>
+  <div class="stage-goal">
+    <strong>Цель:</strong> Полноценное приложение со всеми модулями. Оптимизация производительности. Публикация в Google Play (closed testing → production).
+  </div>
+  <div class="stage-body">
+    <table>
+      <tr><th style="width:80px">ID</th><th>Задача</th><th style="width:50px">Разм.</th><th style="width:120px">Зависимости</th></tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-01</span></td>
+        <td><strong>МТР: список и создание визитов</strong>
+          <div class="acceptance">app/mtr/visits.tsx + app/mtr/new.tsx. Аналогично ТО, но для МТР. Карточка: адрес, тип работ, статус. Создание: выбор адреса + тип работ.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E2-06, E3-01</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-02</span></td>
+        <td><strong>МТР: детальный визит + работы</strong>
+          <div class="acceptance">app/mtr/[id].tsx: список работ, формы выполнения, фото. Отличие от ТО: работы вместо параметров оборудования. Синхронизация (online + offline).</div>
+        </td>
+        <td><span class="badge size-xl">XL</span></td>
+        <td>E5-01, E3-03</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-03</span></td>
+        <td><strong>Роль ТМ: просмотр визитов и заявок</strong>
+          <div class="acceptance">ТМ видит визиты подчинённых инженеров + заявки территории. Фильтрация по инженеру, периоду, статусу. Только просмотр. Отчёты.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E2-06, E4-01</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-04</span></td>
+        <td><strong>Оптимизация производительности</strong>
+          <div class="acceptance">FlatList: windowSize, maxToRenderPerBatch. Lazy loading фото (thumbnail → full). React.memo для тяжёлых компонентов. SQLite-индексы. Тест: 100 визитов → рендер < 500 мс.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E2-06</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-05</span></td>
+        <td><strong>Управление хранилищем</strong>
+          <div class="acceptance">Очистка завершённых визитов старше 90 дней. Удаление загруженных фото из File System. Максимальный кеш: 50 МБ. Настройка в профиле.</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>E4-04</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-06</span></td>
+        <td><strong>Дельта-синхронизация справочников</strong>
+          <div class="acceptance">GET /api/refs/*?updated_since=<date>. Обновление только изменённых записей. last_sync_timestamp в SQLite.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E4-09</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-07</span></td>
+        <td><strong>Тестирование на устройствах</strong>
+          <div class="acceptance">Xiaomi Redmi Note 10 Pro (393px, 6 ГБ) — основной. Samsung Galaxy A (360-412px, 4 ГБ). Бюджетный Android Go (360px, 2 ГБ) — тест производительности. Тест на 3G throttling.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E5-04</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-08</span></td>
+        <td><strong>Google Play: подготовка и публикация</strong>
+          <div class="acceptance">Google Play Developer ($25). EAS Build → AAB. Иконка 512×512, скриншоты (4+). Описание. Internal testing → closed testing → production publish.</div>
+        </td>
+        <td><span class="badge size-l">L</span></td>
+        <td>E5-07</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-09</span></td>
+        <td><strong>Sentry tuning + мониторинг</strong>
+          <div class="acceptance">Sampling: traces 20%, errors 100%. Custom tags: role, version. Алерты: crash-free rate < 95%. Метрики: sync success rate, avg sync time.</div>
+        </td>
+        <td><span class="badge size-s">S</span></td>
+        <td>E1-14</td>
+      </tr>
+
+      <tr data-stage="e5">
+        <td><span class="task-id">E5-10</span></td>
+        <td><strong>API-версионирование (сервер)</strong>
+          <div class="acceptance">X-API-Version header. Поддержка N-1 версии. При несовместимой → экран «Обновите приложение».</div>
+        </td>
+        <td><span class="badge size-m">M</span></td>
+        <td>—</td>
+      </tr>
+
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- СВОДКА                                              -->
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Сводка по этапам</h2>
+<div class="stage">
+  <div class="stage-body">
+    <table>
+      <tr><th>Этап</th><th>Задач</th><th>Оценка</th><th>Результат</th><th>Зависимости</th></tr>
+      <tr><td><strong>Этап 1</strong> — Авторизация + Профиль</td><td>15</td><td>2-3 недели</td><td>APK: вход, биометрия, PIN, профиль</td><td>—</td></tr>
+      <tr><td><strong>Этап 2</strong> — Визиты (read-only)</td><td>12</td><td>2-3 недели</td><td>Просмотр визитов, задач, фото</td><td>Этап 1</td></tr>
+      <tr><td><strong>Этап 3</strong> — Редактирование визитов</td><td>16</td><td>4-5 недель</td><td>Создание, параметры, камера, отчёты</td><td>Этап 2</td></tr>
+      <tr><td><strong>Этап 4</strong> — Заявки, Push, Офлайн</td><td>14</td><td>4-5 недель</td><td>Полноценная работа с синхронизацией</td><td>Этап 3 + сервер (batch-sync)</td></tr>
+      <tr><td><strong>Этап 5</strong> — МТР, полировка, релиз</td><td>10</td><td>3-4 недели</td><td>Google Play, все модули</td><td>Этап 4</td></tr>
+      <tr style="font-weight:700; background:#f0fdfa"><td>ИТОГО</td><td>67</td><td>~15-20 недель</td><td></td><td></td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>Ключевые отличия от предыдущей декомпозиции</h2>
+<div class="stage">
+  <div class="stage-body" style="padding: 20px;">
+    <table>
+      <tr><th>Аспект</th><th>Было (v1)</th><th>Стало (v2)</th></tr>
+      <tr><td>Офлайн-синхронизация</td><td>С Этапа 4 (batch-sync, SQLite, conflict resolution)</td><td>Только с Этапа 4 — на ранних этапах online-only</td></tr>
+      <tr><td>Визиты</td><td>Сразу создание + редактирование</td><td>Сначала read-only (Этап 2), потом редактирование (Этап 3)</td></tr>
+      <tr><td>Первый APK</td><td>После 3-4 недель (с визитами)</td><td>После 2-3 недель (авторизация + профиль)</td></tr>
+      <tr><td>Batch-sync endpoint</td><td>P0, нужен до Этапа 4</td><td>Нужен только для Этапа 4 (офлайн)</td></tr>
+      <tr><td>Всего задач</td><td>87</td><td>67</td></tr>
+      <tr><td>PWA + mobile одновременно</td><td>Возможно</td><td>Невозможно — новый вход разлогинивает</td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>Серверные задачи (по этапам)</h2>
+<div class="stage">
+  <div class="stage-body" style="padding: 20px;">
+    <table>
+      <tr><th>ID</th><th>Задача</th><th>Когда нужна</th></tr>
+      <tr><td><span class="task-id">SRV-01</span></td><td><strong>POST /api/sync/batch</strong> — пакетная синхронизация</td><td>До Этапа 4 (офлайн)</td></tr>
+      <tr><td><span class="task-id">SRV-02</span></td><td><strong>GET /api/refs/*?updated_since=</strong> — delta-синхронизация</td><td>До Этапа 5</td></tr>
+      <tr><td><span class="task-id">SRV-03</span></td><td><strong>POST /api/push/register</strong> — регистрация FCM-токена</td><td>До Этапа 4 (push)</td></tr>
+      <tr><td><span class="task-id">SRV-04</span></td><td><strong>API-версионирование</strong> — X-API-Version header</td><td>До публикации</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterStage(stage) {
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  event.target.classList.add('active');
+  var count = 0;
+  document.querySelectorAll('tr[data-stage]').forEach(function(row) {
+    if (stage === 'all' || row.dataset.stage === stage) {
+      row.style.display = '';
+      count++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  document.getElementById('taskCount').textContent = 'Показано: ' + count + ' задач';
+}
+document.getElementById('taskCount').textContent = 'Показано: 67 задач';
+</script>

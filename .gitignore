@@ -19,13 +19,6 @@ QWEN.md
 Инструкция-ТМ.html
 Инструкция-администратор.html
 screenshots/
-# Мобильное приложение
-mobile/.expo/
-mobile/android/
-mobile/ios/
-mobile/ошибки/
-mobile/coverage/
-mobile/debug_*.png
 
 # Инструменты и настройки
 .qwen/
@@ -76,6 +69,11 @@ build/
 # Загруженные файлы
 uploads/
 reports/
+
+# Мобильное приложение
+mobile/.expo/
+mobile/android/
+mobile/ios/
 
 # OS
 .DS_Store

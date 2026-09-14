@@ -1,7 +1,6 @@
 {
   "cli": {
-    "version": ">= 5.9.0",
-    "appVersionSource": "remote"
+    "version": ">= 12.0.0"
   },
   "build": {
     "development": {
@@ -19,15 +18,14 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle",
-        "autoIncrement": true
+        "buildType": "app-bundle"
       }
     }
   },
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "./google-services.json",
+        "serviceAccountKeyPath": "./google-service-account.json",
         "track": "internal"
       }
     }

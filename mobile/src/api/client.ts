@@ -1,61 +1,48 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = 'https://checkonout.ru/api';
+// TODO: Заменить на production URL
+const BASE_URL = 'http://10.0.2.2:3001/api'; // Android emulator
+// const BASE_URL = 'http://localhost:3001/api'; // iOS simulator
+// const BASE_URL = 'https://your-domain.com/api'; // Production
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
+export const api = axios.create({
+  baseURL: BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptor для добавления токена
+// Interceptor: добавление Authorization header
 api.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  // TODO: Получить токен из Secure Store
+  // const token = await SecureStore.getItemAsync('accessToken');
+  // if (token) {
+  //   config.headers.Authorization = `Bearer ${token}`;
+  // }
   return config;
 });
 
-// Interceptor для обновления токена при 401
+// Interceptor: обработка 401 (refresh token)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = await SecureStore.getItemAsync('refreshToken');
-        if (!refreshToken) {
-          throw new Error('No refresh token');
-        }
-
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
-
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-
-        await SecureStore.setItemAsync('accessToken', accessToken);
-        await SecureStore.setItemAsync('refreshToken', newRefreshToken);
-
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh token истёк — очищаем и редиректим на логин
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-        return Promise.reject(refreshError);
-      }
+    if (error.response?.status === 401) {
+      // TODO: Попытаться обновить токен
+      // const refreshToken = await SecureStore.getItemAsync('refreshToken');
+      // if (refreshToken) {
+      //   try {
+      //     const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
+      //     const { accessToken } = response.data;
+      //     await SecureStore.setItemAsync('accessToken', accessToken);
+      //     error.config.headers.Authorization = `Bearer ${accessToken}`;
+      //     return api(error.config);
+      //   } catch (refreshError) {
+      //     // Refresh failed, logout
+      //     useAuthStore.getState().logout();
+      //   }
+      // }
     }
-
     return Promise.reject(error);
   }
 );
-
-export default api;

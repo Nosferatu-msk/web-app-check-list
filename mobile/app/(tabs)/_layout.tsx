@@ -1,32 +1,27 @@
-import { Tabs, usePathname } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { NAV_BAR_HEIGHT } from '../../src/constants/layout';
-import { useVisits } from '../../src/api/queries';
-import { useAppTheme } from '../../src/hooks/useAppTheme';
+import { useColorScheme } from 'react-native';
+import { theme } from '../../src/theme';
 
 export default function TabsLayout() {
-  const { data: activeVisits } = useVisits('active');
-  const activeCount = activeVisits?.length || 0;
-  const theme = useAppTheme();
+  const colorScheme = useColorScheme();
+  const currentTheme = colorScheme === 'dark' ? theme.dark : theme.light;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.placeholder,
-        tabBarActiveBackgroundColor: theme.colors.surface,
-        tabBarInactiveBackgroundColor: theme.colors.surface,
+        tabBarActiveTintColor: currentTheme.colors.primary,
+        tabBarInactiveTintColor: currentTheme.colors.secondary,
         tabBarStyle: {
           position: 'absolute',
-          bottom: NAV_BAR_HEIGHT,
+          bottom: 42,
           height: 63,
-          backgroundColor: theme.colors.surface,
+          backgroundColor: currentTheme.colors.surface,
           borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
-          elevation: 0,
+          borderTopColor: currentTheme.colors.outline,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: '600',
         },
         headerShown: false,
@@ -39,8 +34,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="clipboard-check" size={size} color={color} />
           ),
-          tabBarBadge: activeCount > 0 ? activeCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: theme.colors.primary, fontSize: 11, fontWeight: '700' },
         }}
       />
       <Tabs.Screen
@@ -48,7 +41,7 @@ export default function TabsLayout() {
         options={{
           title: 'Заявки',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="file-document-outline" size={size} color={color} />
+            <MaterialCommunityIcons name="file-document" size={size} color={color} />
           ),
         }}
       />

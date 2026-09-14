@@ -1,136 +1,53 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
-import api from '../api/client';
+import { api } from '../api/client';
 
 interface User {
   id: string;
-  fullName: string;
   email: string;
+  fullName?: string;
   role: string;
 }
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  needsUnlock: boolean; // true = показать экран разблокировки (PIN/биометрия)
   login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  initialize: () => Promise<void>;
-  unlock: () => Promise<void>;
+  logout: () => void;
+  setUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  accessToken: null,
   isAuthenticated: false,
-  isLoading: true,
-  needsUnlock: false,
+  isLoading: false,
 
   login: async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { user, accessToken, refreshToken } = response.data;
-
-    await SecureStore.setItemAsync('refreshToken', refreshToken);
-    await SecureStore.setItemAsync('accessToken', accessToken);
-
-    set({
-      user,
-      accessToken,
-      isAuthenticated: true,
-      isLoading: false,
-      needsUnlock: false,
-    });
-  },
-
-  logout: async () => {
-    await SecureStore.deleteItemAsync('refreshToken');
-    await SecureStore.deleteItemAsync('accessToken');
-
-    set({
-      user: null,
-      accessToken: null,
-      isAuthenticated: false,
-      isLoading: false,
-      needsUnlock: false,
-    });
-  },
-
-  initialize: async () => {
+    set({ isLoading: true });
     try {
-      const accessToken = await SecureStore.getItemAsync('accessToken');
-      const refreshToken = await SecureStore.getItemAsync('refreshToken');
-      
-      // Если есть refresh token — пользователь ранее входил, нужен экран разблокировки
-      if (refreshToken && !accessToken) {
-        set({ isLoading: false, needsUnlock: true });
-        return;
-      }
+      const response = await api.post('/auth/login', { email, password });
+      const { user, accessToken, refreshToken } = response.data;
 
-      if (refreshToken && accessToken) {
-        // Проверяем валидность токена через API
-        try {
-          const response = await api.get('/profile', {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          
-          set({
-            user: response.data,
-            accessToken,
-            isAuthenticated: true,
-            isLoading: false,
-            needsUnlock: false,
-          });
-        } catch (apiError) {
-          // Токен истёк, но refresh token есть — показать экран разблокировки
-          // Не очищаем refresh token — он нужен для получения нового access token
-          await SecureStore.deleteItemAsync('accessToken');
-          set({ isLoading: false, needsUnlock: true });
-        }
-      } else {
-        // Нет токенов — нужен вход
-        set({ isLoading: false, needsUnlock: false });
-      }
-    } catch (error) {
-      await SecureStore.deleteItemAsync('refreshToken');
-      await SecureStore.deleteItemAsync('accessToken');
-      set({ isLoading: false, needsUnlock: false });
+      // TODO: Сохранить токены в Secure Store
+      // await SecureStore.setItemAsync('accessToken', accessToken);
+      // await SecureStore.setItemAsync('refreshToken', refreshToken);
+
+      set({ user, isAuthenticated: true, isLoading: false });
+    } catch (error: any) {
+      set({ isLoading: false });
+      throw new Error(error.response?.data?.message || 'Ошибка авторизации');
     }
   },
 
-  unlock: async () => {
-    // Получить новый access token через refresh token
-    try {
-      const refreshToken = await SecureStore.getItemAsync('refreshToken');
-      if (!refreshToken) {
-        throw new Error('No refresh token');
-      }
+  logout: () => {
+    // TODO: Очистить токены из Secure Store
+    // await SecureStore.deleteItemAsync('accessToken');
+    // await SecureStore.deleteItemAsync('refreshToken');
 
-      const response = await api.post('/auth/refresh', { refreshToken });
-      const { user, accessToken, refreshToken: newRefreshToken } = response.data;
+    set({ user: null, isAuthenticated: false });
+  },
 
-      await SecureStore.setItemAsync('accessToken', accessToken);
-      await SecureStore.setItemAsync('refreshToken', newRefreshToken);
-
-      set({
-        user,
-        accessToken,
-        isAuthenticated: true,
-        isLoading: false,
-        needsUnlock: false,
-      });
-    } catch (error) {
-      // Refresh token истёк — нужен полный вход
-      await SecureStore.deleteItemAsync('refreshToken');
-      await SecureStore.deleteItemAsync('accessToken');
-      set({
-        user: null,
-        accessToken: null,
-        isAuthenticated: false,
-        isLoading: false,
-        needsUnlock: false,
-      });
-    }
+  setUser: (user: User) => {
+    set({ user });
   },
 }));
