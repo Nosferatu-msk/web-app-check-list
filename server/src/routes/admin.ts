@@ -4,6 +4,7 @@ import prisma from '../models/prisma.js';
 import { authMiddleware, adminOnly, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { logAudit } from '../middleware/audit.js';
+import { generateSerialNumber, isMeterEquipment } from '../utils/serialNumber.js';
 
 const router = Router();
 router.use(authMiddleware, adminOnly);
@@ -128,12 +129,22 @@ router.get('/room-types', async (_req: AuthRequest, res: Response) => {
 });
 
 router.post('/room-types', validate(roomTypeSchema), async (req: AuthRequest, res: Response) => {
+  const existing = await prisma.roomType.findFirst({ where: { name: req.body.name } });
+  if (existing) {
+    return res.status(400).json({ error: `Тип помещения "${req.body.name}" уже существует` });
+  }
   const item = await prisma.roomType.create({ data: req.body });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'room_type', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json(item);
 });
 
 router.put('/room-types/:id', validate(roomTypeSchema), async (req: AuthRequest, res: Response) => {
+  const existing = await prisma.roomType.findFirst({
+    where: { name: req.body.name, id: { not: req.params.id as string } },
+  });
+  if (existing) {
+    return res.status(400).json({ error: `Тип помещения "${req.body.name}" уже существует` });
+  }
   const item = await prisma.roomType.update({ where: { id: req.params.id as string }, data: req.body });
   await logAudit({ userId: req.userId, action: 'update', entityType: 'room_type', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json(item);
@@ -405,6 +416,20 @@ router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
 router.post('/object-equipment', validate(objectEquipmentSchema), async (req: AuthRequest, res: Response) => {
   const data = { ...req.body };
   if (data.roomTypeCode === '') data.roomTypeCode = null;
+
+  // Валидация serialNumber для счётчиков
+  if (isMeterEquipment(data.equipmentTypeCode)) {
+    if (!data.serialNumber || data.serialNumber.trim() === '') {
+      return res.status(400).json({ error: 'Серийный номер обязателен для приборов учёта' });
+    }
+  } else if (!data.serialNumber || data.serialNumber.trim() === '') {
+    // Автогенерация serialNumber для не-счётчиков
+    const generatedSN = await generateSerialNumber(data.addressId, data.equipmentTypeCode);
+    if (generatedSN) {
+      data.serialNumber = generatedSN;
+    }
+  }
+
   const item = await prisma.objectEquipment.create({ data });
   await logAudit({ userId: req.userId, action: 'create', entityType: 'object_equipment', entityId: item.id, newValue: req.body, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.status(201).json(item);

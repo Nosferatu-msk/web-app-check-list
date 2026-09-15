@@ -386,7 +386,7 @@ function ModelAutocomplete({ equipmentTypeId, value, onChange }: { equipmentType
       const results = await api.searchModels({ equipment_type_id: equipmentTypeId, query });
       setOptions(results.map((m: any) => ({
         value: m.fullModelName || m.modelName,
-        label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+        label: m.fullModelName || `${m.modelName} (${m.manufacturer?.name || ''})`,
       })));
     } catch {
       setOptions([]);

@@ -491,6 +491,17 @@ export default function VisitPage() {
       message.warning('Укажите тип помещения или комментарий');
       return;
     }
+
+    // Валидация serialNumber для счётчиков
+    const eqType = equipmentTypes.find(e => e.id === values.equipmentTypeId);
+    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gws', 'meter_gas'];
+    if (eqType && METER_CODES.includes(eqType.code)) {
+      if (!values.serialNumber || values.serialNumber.trim() === '') {
+        message.warning('Серийный номер обязателен для приборов учёта');
+        return;
+      }
+    }
+
     const taskData = {
       equipmentTypeId: values.equipmentTypeId,
       roomTypeId: values.roomTypeId || '',
@@ -1281,7 +1292,7 @@ export default function VisitPage() {
                         const results = await api.searchModels({ equipment_type_id: eqTypeId, query: q });
                         setModelOptions(results.map((m: any) => ({
                           value: m.fullModelName || m.modelName,
-                          label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+                          label: m.fullModelName || `${m.modelName} (${m.manufacturer?.name || ''})`,
                         })));
                       } catch { setModelOptions([]); }
                     }}
@@ -1290,7 +1301,7 @@ export default function VisitPage() {
                   />
                 </Form.Item>
                 <Form.Item name="serialNumber" label="Серийный номер">
-                  <Input placeholder="Необязательно" />
+                  <Input placeholder="Обязательно для счётчиков, иначе сгенерируется автоматически" />
                 </Form.Item>
                 <Form.Item>
                   <Checkbox

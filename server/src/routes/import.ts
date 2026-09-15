@@ -8,6 +8,7 @@ import { authMiddleware, adminOnly, AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 import iconv from 'iconv-lite';
 import { sendMail } from '../utils/email.js';
+import { generateSerialNumber, isMeterEquipment } from '../utils/serialNumber.js';
 
 const router = Router();
 router.use(authMiddleware, adminOnly);
@@ -276,8 +277,11 @@ router.post('/room-types', upload.single('file'), async (req: AuthRequest, res: 
       const name = r.name || r['название'];
       if (!code || !name) { result.errors.push({ row: i + 2, message: 'Не заполнены code или name' }); continue; }
 
-      const existing = await prisma.roomType.findUnique({ where: { code } });
-      if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
+      const existingByCode = await prisma.roomType.findUnique({ where: { code } });
+      if (existingByCode) { result.duplicates++; dupRows.push(i + 2); continue; }
+
+      const existingByName = await prisma.roomType.findFirst({ where: { name } });
+      if (existingByName) { result.duplicates++; dupRows.push(i + 2); continue; }
 
       if (isValidateMode(req)) continue;
 
@@ -604,8 +608,22 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         roomTypeCode = rtCode;
       }
 
-      const serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
+      let serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
       const locationDescription = r.location_description || r.locationDescription || r['местоположение'] || null;
+
+      // Валидация serialNumber для счётчиков
+      if (isMeterEquipment(eqTypeCode)) {
+        if (!serialNumber || serialNumber.trim() === '') {
+          result.errors.push({ row: i + 2, message: 'Серийный номер обязателен для приборов учёта' });
+          continue;
+        }
+      } else if (!serialNumber || serialNumber.trim() === '') {
+        // Автогенерация serialNumber для не-счётчиков
+        const generatedSN = await generateSerialNumber(addressId, eqTypeCode);
+        if (generatedSN) {
+          serialNumber = generatedSN;
+        }
+      }
 
       // Проверка дубликатов по обоим уникальным ограничениям
       // Ключи должны точно соответствовать структуре БД (с учётом NULL)

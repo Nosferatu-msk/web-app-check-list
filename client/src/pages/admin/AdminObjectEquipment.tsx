@@ -229,7 +229,7 @@ export default function AdminObjectEquipment() {
                   const results = await api.searchModels({ equipment_type_id: eqType?.id || '', query: q });
                   setModelOptions(results.map((m: any) => ({
                     value: m.fullModelName || m.modelName,
-                    label: `${m.fullModelName || m.modelName} (${m.manufacturer?.name || ''})`,
+                    label: m.fullModelName || `${m.modelName} (${m.manufacturer?.name || ''})`,
                   })));
                 } catch { setModelOptions([]); }
               }}

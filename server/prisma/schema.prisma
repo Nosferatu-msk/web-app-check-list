@@ -168,6 +168,7 @@ model RoomType {
 
   tasks Task[]
 
+  @@unique([name])
   @@map("room_types")
 }
 

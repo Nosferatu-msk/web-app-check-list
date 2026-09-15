@@ -4,6 +4,7 @@ import prisma from '../models/prisma.js';
 import { authMiddleware, adminOnly, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { logAudit } from '../middleware/audit.js';
+import { generateSerialNumber, isMeterEquipment } from '../utils/serialNumber.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -466,6 +467,21 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
     }
   } else {
     // new_equipment — создаём object_equipment
+    let serialNumber = proposal.serialNumber;
+
+    // Валидация serialNumber для счётчиков
+    if (isMeterEquipment(proposal.equipmentTypeCode)) {
+      if (!serialNumber || serialNumber.trim() === '') {
+        return res.status(400).json({ error: 'Серийный номер обязателен для приборов учёта' });
+      }
+    } else if (!serialNumber || serialNumber.trim() === '') {
+      // Автогенерация serialNumber для не-счётчиков
+      const generatedSN = await generateSerialNumber(proposal.addressId, proposal.equipmentTypeCode);
+      if (generatedSN) {
+        serialNumber = generatedSN;
+      }
+    }
+
     const created = await prisma.objectEquipment.create({
       data: {
         addressId: proposal.addressId,
@@ -473,7 +489,7 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
         roomTypeCode: proposal.roomTypeCode,
         brand: proposal.brand,
         model: proposal.model,
-        serialNumber: proposal.serialNumber,
+        serialNumber,
         locationDescription: proposal.locationDescription,
         confirmationStatus: 'confirmed',
         createdBy: proposal.proposedById,
@@ -664,6 +680,21 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
             },
           });
         } else {
+          let serialNumber = proposal.serialNumber;
+
+          // Валидация serialNumber для счётчиков
+          if (isMeterEquipment(proposal.equipmentTypeCode)) {
+            if (!serialNumber || serialNumber.trim() === '') {
+              return res.status(400).json({ error: 'Серийный номер обязателен для приборов учёта' });
+            }
+          } else if (!serialNumber || serialNumber.trim() === '') {
+            // Автогенерация serialNumber для не-счётчиков
+            const generatedSN = await generateSerialNumber(proposal.addressId, proposal.equipmentTypeCode);
+            if (generatedSN) {
+              serialNumber = generatedSN;
+            }
+          }
+
           const created = await prisma.objectEquipment.create({
             data: {
               addressId: proposal.addressId,
@@ -671,7 +702,7 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
               roomTypeCode: proposal.roomTypeCode,
               brand: proposal.brand,
               model: proposal.model,
-              serialNumber: proposal.serialNumber,
+              serialNumber,
               locationDescription: proposal.locationDescription,
               confirmationStatus: 'confirmed',
               createdBy: proposal.proposedById,
