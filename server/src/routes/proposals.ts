@@ -418,6 +418,18 @@ router.get('/admin', adminOnly, async (req: AuthRequest, res: Response) => {
     },
   });
 
+  // Получаем типы оборудования для маппинга кодов в названия
+  const equipmentTypes = await prisma.equipmentType.findMany({
+    select: { code: true, name: true },
+  });
+  const eqTypeMap = new Map(equipmentTypes.map(et => [et.code, et.name]));
+
+  // Добавляем название типа оборудования в каждое предложение
+  const proposalsWithTypeName = proposals.map(p => ({
+    ...p,
+    equipmentTypeName: eqTypeMap.get(p.equipmentTypeCode) || p.equipmentTypeCode,
+  }));
+
   // Подсчёт summary
   const pendingCount = await prisma.equipmentProposal.count({ where: { status: 'pending' } });
   const threeDays = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
@@ -429,7 +441,7 @@ router.get('/admin', adminOnly, async (req: AuthRequest, res: Response) => {
   });
 
   res.json({
-    data: proposals,
+    data: proposalsWithTypeName,
     summary: {
       total: proposals.length,
       pending: pendingCount,

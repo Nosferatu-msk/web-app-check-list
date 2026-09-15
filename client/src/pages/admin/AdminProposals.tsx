@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Button, Select, Space, App, Popconfirm, Tag, Input, Checkbox, Card, Row, Col, Empty, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, SortAscendingOutlined, SortDescendingOutlined, EnvironmentOutlined, ToolOutlined, UserOutlined, HomeOutlined, PlusOutlined, SyncOutlined, EditOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, SortAscendingOutlined, SortDescendingOutlined, EnvironmentOutlined, ToolOutlined, UserOutlined, HomeOutlined, PlusOutlined, SyncOutlined, EditOutlined, ArrowRightOutlined, AppstoreOutlined, TagOutlined, BarcodeOutlined, NumberOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 import { REQUEST_TYPE_LABELS } from '@shared/types';
 import type { RequestType } from '@shared/types';
@@ -174,13 +174,37 @@ export default function AdminProposals() {
               </span>
             </div>
 
+            {/* Вид оборудования */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-              <ToolOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <div>{[r.brand, r.model].filter(Boolean).join(' ') || r.equipmentTypeCode || '—'}</div>
-                {r.serialNumber && <div style={{ fontSize: 12, color: '#888' }}>SN: {r.serialNumber}</div>}
-              </div>
+              <AppstoreOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
+              <span style={{ color: '#0F766E', fontWeight: 500 }}>
+                {r.equipmentTypeName || r.equipmentTypeCode || '—'}
+              </span>
             </div>
+
+            {/* Производитель */}
+            {r.brand && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <TagOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
+                <span style={{ color: '#555' }}>{r.brand}</span>
+              </div>
+            )}
+
+            {/* Модель */}
+            {r.model && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <BarcodeOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
+                <span style={{ color: '#555' }}>{r.model}</span>
+              </div>
+            )}
+
+            {/* Серийный номер */}
+            {r.serialNumber && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <NumberOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
+                <span style={{ color: '#555', fontFamily: 'monospace', fontSize: 12 }}>{r.serialNumber}</span>
+              </div>
+            )}
 
             {r.requestType === 'room_change' && r.oldRoomTypeCode && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
