@@ -1,0 +1,38 @@
+diff --git a/node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle b/node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
+index 4ec4514..63a697b 100644
+--- a/node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
++++ b/node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
+@@ -76,32 +76,7 @@ ext.useDefaultAndroidSdkVersions = {
+ }
+ 
+ ext.useExpoPublishing = {
+-  if (!project.plugins.hasPlugin('maven-publish')) {
+-    apply plugin: 'maven-publish'
+-  }
+-
+-  project.android {
+-    publishing {
+-      singleVariant("release") {
+-        withSourcesJar()
+-      }
+-    }
+-  }
+-
+-  project.afterEvaluate {
+-    publishing {
+-      publications {
+-        release(MavenPublication) {
+-          from components.release
+-        }
+-      }
+-      repositories {
+-        maven {
+-          url = mavenLocal().url
+-        }
+-      }
+-    }
+-  }
++  // Patched: skip publishing to avoid 'release' component error
+ }
+ 
+ ext.useCoreDependencies = {

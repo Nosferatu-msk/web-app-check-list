@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gws', 'meter_gas'];
+const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
 
 /**
  * Генерирует serialNumber для оборудования по правилу:
@@ -31,16 +31,31 @@ export async function generateSerialNumber(
     return null;
   }
 
-  // Считаем существующее оборудование с serialNumber для этого типа на объекте
-  const existingCount = await prisma.objectEquipment.count({
+  // Получаем все существующие serialNumber для этого типа на объекте
+  const existingEquipment = await prisma.objectEquipment.findMany({
     where: {
       addressId,
       equipmentTypeCode,
       serialNumber: { not: null },
     },
+    select: { serialNumber: true },
   });
 
-  const seqNumber = existingCount + 1;
+  // Находим максимальный порядковый номер
+  let maxSeqNumber = 0;
+  const prefix = `${address.objectCode}/${equipmentTypeCode}/`;
+  
+  for (const eq of existingEquipment) {
+    if (eq.serialNumber && eq.serialNumber.startsWith(prefix)) {
+      const seqPart = eq.serialNumber.substring(prefix.length);
+      const seqNum = parseInt(seqPart, 10);
+      if (!isNaN(seqNum) && seqNum > maxSeqNumber) {
+        maxSeqNumber = seqNum;
+      }
+    }
+  }
+
+  const seqNumber = maxSeqNumber + 1;
   return `${address.objectCode}/${equipmentTypeCode}/${seqNumber}`;
 }
 

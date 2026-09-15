@@ -494,7 +494,7 @@ export default function VisitPage() {
 
     // Валидация serialNumber для счётчиков
     const eqType = equipmentTypes.find(e => e.id === values.equipmentTypeId);
-    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gws', 'meter_gas'];
+    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
     if (eqType && METER_CODES.includes(eqType.code)) {
       if (!values.serialNumber || values.serialNumber.trim() === '') {
         message.warning('Серийный номер обязателен для приборов учёта');
@@ -1256,7 +1256,7 @@ export default function VisitPage() {
                     options={equipmentTypes.map(e => ({ label: e.name, value: e.id }))}
                     onChange={async (value) => {
                       const eqType = equipmentTypes.find(e => e.id === value);
-                      const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gws', 'meter_gas'];
+                      const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
                       const isMeter = eqType && METER_CODES.includes(eqType.code);
                       
                       // Для счётчиков очищаем serialNumber
@@ -1327,7 +1327,7 @@ export default function VisitPage() {
                   {({ getFieldValue }) => {
                     const eqTypeId = getFieldValue('equipmentTypeId');
                     const eqType = equipmentTypes.find(e => e.id === eqTypeId);
-                    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gws', 'meter_gas'];
+                    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
                     const isMeter = eqType && METER_CODES.includes(eqType.code);
                     
                     return (
