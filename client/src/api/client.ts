@@ -609,6 +609,11 @@ export const api = {
     return request<any[]>(`/refs/models/search?${qs}`);
   },
 
+  generateSerialNumber: async (addressId: string, equipmentTypeCode: string) => {
+    const qs = new URLSearchParams({ address_id: addressId, equipment_type_code: equipmentTypeCode });
+    return request<{ serialNumber: string | null; isMeter: boolean }>(`/refs/generate-serial-number?${qs}`);
+  },
+
   getManufacturersList: async () =>
     request<any[]>('/refs/manufacturers'),
 

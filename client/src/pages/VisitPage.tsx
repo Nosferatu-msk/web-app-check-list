@@ -1251,7 +1251,30 @@ export default function VisitPage() {
             children: (
               <Form form={newTaskForm} layout="vertical" onFinish={handleAddNewTask}>
                 <Form.Item name="equipmentTypeId" label="Вид оборудования" rules={[{ required: true, message: 'Выберите вид оборудования' }]}>
-                  <Select placeholder="Выберите..." options={equipmentTypes.map(e => ({ label: e.name, value: e.id }))} />
+                  <Select 
+                    placeholder="Выберите..." 
+                    options={equipmentTypes.map(e => ({ label: e.name, value: e.id }))}
+                    onChange={async (value) => {
+                      const eqType = equipmentTypes.find(e => e.id === value);
+                      const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gws', 'meter_gas'];
+                      const isMeter = eqType && METER_CODES.includes(eqType.code);
+                      
+                      // Для счётчиков очищаем serialNumber
+                      if (isMeter) {
+                        newTaskForm.setFieldsValue({ serialNumber: '' });
+                      } else if (visit?.addressId && eqType) {
+                        // Для не-счётчиков генерируем и предзаполняем
+                        try {
+                          const result = await api.generateSerialNumber(visit.addressId, eqType.code);
+                          if (result.serialNumber) {
+                            newTaskForm.setFieldsValue({ serialNumber: result.serialNumber });
+                          }
+                        } catch {
+                          // Игнорируем ошибки генерации
+                        }
+                      }
+                    }}
+                  />
                 </Form.Item>
                 <Form.Item name="roomTypeId" label="Тип помещения">
                   <Select placeholder="Выберите..." allowClear options={roomTypes.map(r => ({ label: r.name, value: r.id }))} />
@@ -1300,8 +1323,30 @@ export default function VisitPage() {
                     allowClear
                   />
                 </Form.Item>
-                <Form.Item name="serialNumber" label="Серийный номер">
-                  <Input placeholder="Обязательно для счётчиков, иначе сгенерируется автоматически" />
+                <Form.Item noStyle dependencies={['equipmentTypeId']}>
+                  {({ getFieldValue }) => {
+                    const eqTypeId = getFieldValue('equipmentTypeId');
+                    const eqType = equipmentTypes.find(e => e.id === eqTypeId);
+                    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gws', 'meter_gas'];
+                    const isMeter = eqType && METER_CODES.includes(eqType.code);
+                    
+                    return (
+                      <Form.Item 
+                        name="serialNumber" 
+                        label="Серийный номер"
+                        rules={[{ 
+                          required: isMeter, 
+                          message: 'Серийный номер обязателен для приборов учёта' 
+                        }]}
+                        extra={!isMeter ? 'Если не указать, будет сгенерирован автоматически' : undefined}
+                      >
+                        <Input 
+                          placeholder={isMeter ? 'Введите серийный номер' : 'Обязательно для счётчиков, иначе сгенерируется автоматически'}
+                          style={isMeter ? { borderColor: undefined } : undefined}
+                        />
+                      </Form.Item>
+                    );
+                  }}
                 </Form.Item>
                 <Form.Item>
                   <Checkbox

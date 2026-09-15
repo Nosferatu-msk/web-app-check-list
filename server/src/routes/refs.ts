@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../models/prisma.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { generateSerialNumber, isMeterEquipment } from '../utils/serialNumber.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -416,6 +417,24 @@ router.get('/models/search', async (req: AuthRequest, res: Response) => {
   });
 
   res.json(data);
+});
+
+// GET /api/refs/generate-serial-number?address_id=...&equipment_type_code=...
+router.get('/generate-serial-number', async (req: AuthRequest, res: Response) => {
+  const addressId = req.query.address_id as string;
+  const equipmentTypeCode = req.query.equipment_type_code as string;
+
+  if (!addressId || !equipmentTypeCode) {
+    return res.status(400).json({ error: 'Требуется address_id и equipment_type_code' });
+  }
+
+  // Для счётчиков не генерируем
+  if (isMeterEquipment(equipmentTypeCode)) {
+    return res.json({ serialNumber: null, isMeter: true });
+  }
+
+  const serialNumber = await generateSerialNumber(addressId, equipmentTypeCode);
+  res.json({ serialNumber, isMeter: false });
 });
 
 export default router;
