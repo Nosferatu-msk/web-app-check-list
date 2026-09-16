@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, List, Empty, AutoComplete, Dropdown, Steps, Card } from 'antd';
+import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, Segmented, List, Empty, AutoComplete, Dropdown, Steps, Card } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -942,7 +942,8 @@ export default function VisitPage() {
         footer={null}
         width={600}
       >
-        <Tabs activeKey={addModalTab} onChange={setAddModalTab} items={[
+        {(() => {
+          const tabItems = [
           {
             key: 'room',
             label: 'Уровень помещения',
@@ -1363,7 +1364,30 @@ export default function VisitPage() {
               </Form>
             ),
           },
-        ]} />
+          ];
+
+          if (isMobile) {
+            return (
+              <>
+                <Segmented
+                  block
+                  value={addModalTab}
+                  onChange={(val) => setAddModalTab(val as string)}
+                  options={tabItems.map(t => ({
+                    value: t.key,
+                    label: t.key === 'new'
+                      ? <span><PlusOutlined /> Новое</span>
+                      : t.key === 'room' ? 'Помещение' : 'Объект'
+                  }))}
+                  style={{ marginBottom: 12 }}
+                />
+                {tabItems.find(t => t.key === addModalTab)?.children}
+              </>
+            );
+          }
+
+          return <Tabs activeKey={addModalTab} onChange={setAddModalTab} items={tabItems} />;
+        })()}
       </Modal>
     </div>
   );
