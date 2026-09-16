@@ -52,9 +52,6 @@ export default function VisitPage() {
   const [roomEquipment, setRoomEquipment] = useState<any[]>([]);
   const [roomEquipLoading, setRoomEquipLoading] = useState(false);
   const [selectedRoomEquipIds, setSelectedRoomEquipIds] = useState<string[]>([]);
-  const [objectEquipment, setObjectEquipment] = useState<any[]>([]);
-  const [objectEquipLoading, setObjectEquipLoading] = useState(false);
-  const [selectedObjectEquipIds, setSelectedObjectEquipIds] = useState<string[]>([]);
   const [addingEquipment, setAddingEquipment] = useState(false);
   const [proposeEquipment, setProposeEquipment] = useState(true);
   const [newTaskForm] = Form.useForm();
@@ -256,17 +253,6 @@ export default function VisitPage() {
     setRoomEquipLoading(false);
   }, [filterBySpec]);
 
-  const loadObjectEquipment = useCallback(async (addressId: string, visitId: string) => {
-    setObjectEquipLoading(true);
-    try {
-      const eq = await api.getObjectEquipment(addressId, { exclude_visit_id: visitId, binding_level: 'object' });
-      const filtered = filterBySpec(eq);
-      setObjectEquipment(filtered);
-      setSelectedObjectEquipIds(filtered.map((e: any) => e.id));
-    } catch { /* ignore */ }
-    setObjectEquipLoading(false);
-  }, [filterBySpec]);
-
   const loadOtherRoomsEquipment = useCallback(async (addressId: string, currentRoomTypeCode: string, visitId: string) => {
     setOtherRoomsLoading(true);
     try {
@@ -320,13 +306,12 @@ export default function VisitPage() {
       // Обновляем списки
       if (visit?.addressId && visit?.id) {
         await loadEquipmentRooms(visit.addressId, visit.id);
-        await loadObjectEquipment(visit.addressId, visit.id);
       }
     } catch (err: any) {
       message.error(err.message || 'Ошибка переноса');
     }
     setNewRoomTransferring(false);
-  }, [newRoomTypeCode, newRoomSelectedEquipIds, rmTypeMap, message, visit, loadEquipmentRooms, loadObjectEquipment]);
+  }, [newRoomTypeCode, newRoomSelectedEquipIds, rmTypeMap, message, visit, loadEquipmentRooms]);
 
   const handleSelectNewRoomType = useCallback(async (roomTypeCode: string) => {
     setNewRoomTypeCode(roomTypeCode);
@@ -377,12 +362,9 @@ export default function VisitPage() {
     setSelectedRoom(null);
     setRoomEquipment([]);
     setSelectedRoomEquipIds([]);
-    setObjectEquipment([]);
-    setSelectedObjectEquipIds([]);
     setOtherRoomsEquipment([]);
     await loadEquipmentRooms(currentVisit.id, currentVisit.addressId);
-    await loadObjectEquipment(currentVisit.addressId, currentVisit.id);
-  }, [visit, form, navigate, loadEquipmentRooms, loadObjectEquipment, message]);
+  }, [visit, form, navigate, loadEquipmentRooms, message]);
 
   const handleSelectRoom = useCallback(async (roomCode: string) => {
     setSelectedRoom(roomCode);
@@ -1190,66 +1172,6 @@ export default function VisitPage() {
             ),
           },
           {
-            key: 'object',
-            label: 'Уровень объекта',
-            children: objectEquipLoading ? (
-              <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
-            ) : objectEquipment.length === 0 ? (
-              <Empty description="Нет оборудования на уровне объекта" />
-            ) : (
-              <>
-                <div style={{ marginBottom: 8 }}>
-                  <Checkbox
-                    checked={selectedObjectEquipIds.length === objectEquipment.length}
-                    onChange={(e) => setSelectedObjectEquipIds(e.target.checked ? objectEquipment.map(eq => eq.id) : [])}
-                  >
-                    Выбрать все ({objectEquipment.length})
-                  </Checkbox>
-                </div>
-                <List
-                  dataSource={objectEquipment}
-                  renderItem={(eq: any) => {
-                    const eqType = eqTypeMap.get(eq.equipmentTypeCode);
-                    const checked = selectedObjectEquipIds.includes(eq.id);
-                    return (
-                      <List.Item
-                        style={{ cursor: 'pointer', padding: '8px 4px' }}
-                        onClick={() => {
-                          if (checked) setSelectedObjectEquipIds(selectedObjectEquipIds.filter(id => id !== eq.id));
-                          else setSelectedObjectEquipIds([...selectedObjectEquipIds, eq.id]);
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                          <Checkbox checked={checked} />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 500 }}>
-                              {eqType?.name || eq.equipmentTypeCode}
-                              {eq.brand && <span style={{ color: '#666', fontWeight: 400 }}> · {eq.brand} {eq.model || ''}</span>}
-                            </div>
-                            <div style={{ fontSize: 12, color: '#888' }}>
-                              {eq.serialNumber && <span>SN: {eq.serialNumber}</span>}
-                              {eq.locationDescription && <span>{eq.locationDescription}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </List.Item>
-                    );
-                  }}
-                />
-                <Button
-                  type="primary"
-                  block
-                  style={{ marginTop: 12 }}
-                  disabled={selectedObjectEquipIds.length === 0}
-                  loading={addingEquipment}
-                  onClick={() => handleAddEquipmentBatch(selectedObjectEquipIds, objectEquipment)}
-                >
-                  Добавить {selectedObjectEquipIds.length > 0 ? `(${selectedObjectEquipIds.length})` : ''}
-                </Button>
-              </>
-            ),
-          },
-          {
             key: 'new',
             label: <span><PlusOutlined /> Добавить новое</span>,
             children: (
@@ -1377,7 +1299,7 @@ export default function VisitPage() {
                     value: t.key,
                     label: t.key === 'new'
                       ? <span><PlusOutlined /> Новое</span>
-                      : t.key === 'room' ? 'Помещение' : 'Объект'
+                      : 'Помещение'
                   }))}
                   style={{ marginBottom: 12 }}
                 />
