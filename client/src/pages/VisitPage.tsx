@@ -510,10 +510,12 @@ export default function VisitPage() {
       model: values.model || '',
       serialNumber: values.serialNumber || '',
     };
+    let createdTaskId: string | undefined;
     if (isOffline()) {
       await api.createTaskOffline(visit.id, taskData);
     } else {
-      await api.createTask(visit.id, taskData);
+      const createdTask = await api.createTask(visit.id, taskData);
+      createdTaskId = createdTask?.id;
     }
 
     if (proposeEquipment && !isOffline()) {
@@ -528,6 +530,7 @@ export default function VisitPage() {
           model: values.model || '',
           serialNumber: values.serialNumber || '',
           locationDescription: values.comment || '',
+          taskId: createdTaskId,
         });
         message.success('Предложение отправлено администратору');
       } catch {

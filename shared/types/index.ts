@@ -361,6 +361,7 @@ export interface EquipmentProposal {
   rejectionReason?: string;
   pendingUntil?: string;
   objectEquipmentId?: string;
+  taskId?: string;
   createdAt: string;
   updatedAt: string;
   address?: Address;

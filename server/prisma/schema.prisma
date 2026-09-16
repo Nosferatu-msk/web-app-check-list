@@ -254,6 +254,7 @@ model Task {
   objectEquipment ObjectEquipment?    @relation(fields: [objectEquipmentId], references: [id])
   photos          Photo[]
   equipmentItems  TaskEquipmentItem[]
+  equipmentProposals EquipmentProposal[]
 
   @@index([visitId, status])
   @@map("tasks")
@@ -479,12 +480,15 @@ model EquipmentProposal {
   pendingUntil      DateTime?        @map("pending_until")
   objectEquipmentId String?          @map("object_equipment_id")
   objectEquipment   ObjectEquipment? @relation(fields: [objectEquipmentId], references: [id])
+  taskId            String?          @map("task_id")
+  task              Task?            @relation(fields: [taskId], references: [id])
 
   @@index([addressId])
   @@index([status])
   @@index([requestType])
   @@index([pendingUntil])
   @@index([objectEquipmentId, status])
+  @@index([taskId])
   @@map("equipment_proposals")
 }
 

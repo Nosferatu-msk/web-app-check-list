@@ -60,6 +60,7 @@ const createProposalSchema = z.object({
   model: z.string().optional().or(z.literal('')),
   serialNumber: z.string().optional(),
   locationDescription: z.string().optional(),
+  taskId: z.string().uuid().optional(),
   newManufacturer: z.object({
     name: z.string().min(1),
     country: z.string().optional(),
@@ -71,7 +72,7 @@ const createProposalSchema = z.object({
 });
 
 router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: Response) => {
-  const { addressId, equipmentTypeCode, roomTypeCode, brand, model, serialNumber, locationDescription, newManufacturer, newModel } = req.body;
+  const { addressId, equipmentTypeCode, roomTypeCode, brand, model, serialNumber, locationDescription, taskId, newManufacturer, newModel } = req.body;
 
   // Обработка нового производителя
   if (newManufacturer) {
@@ -128,6 +129,7 @@ router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: R
       status: 'pending',
       requestType: 'new_equipment',
       pendingUntil,
+      taskId: taskId || null,
     },
     include: {
       address: true,
@@ -856,6 +858,16 @@ router.get('/:id/meter-photos', adminOnly, async (req: AuthRequest, res: Respons
     return;
   }
 
+  // Если есть taskId — ищем фото напрямую по задаче
+  if (proposal.taskId) {
+    const photos = await prisma.photo.findMany({
+      where: { taskId: proposal.taskId },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(photos);
+    return;
+  }
+
   // Если есть objectEquipmentId — ищем фото через TaskEquipmentItem
   if (proposal.objectEquipmentId) {
     const taskItems = await prisma.taskEquipmentItem.findMany({
@@ -876,8 +888,7 @@ router.get('/:id/meter-photos', adminOnly, async (req: AuthRequest, res: Respons
     }
   }
 
-  // Если objectEquipmentId нет — ищем задачи без привязки к оборудованию
-  // Это задачи, где инженер не выбрал существующее оборудование
+  // Fallback для старых proposals без taskId — ищем задачи без привязки к оборудованию
   const equipmentType = await prisma.equipmentType.findUnique({
     where: { code: proposal.equipmentTypeCode },
     select: { id: true },
@@ -888,7 +899,7 @@ router.get('/:id/meter-photos', adminOnly, async (req: AuthRequest, res: Respons
       where: {
         visit: { addressId: proposal.addressId },
         equipmentTypeId: equipmentType.id,
-        objectEquipmentId: null, // Только задачи без привязки к оборудованию
+        objectEquipmentId: null,
       },
       select: { id: true },
     });
