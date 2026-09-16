@@ -283,13 +283,18 @@ router.patch('/:id', validate(updateProposalSchema), async (req: AuthRequest, re
     res.status(404).json({ error: 'Предложение не найдено' });
     return;
   }
-  if (proposal.proposedById !== req.userId) {
-    res.status(403).json({ error: 'Можно редактировать только свои предложения' });
-    return;
-  }
-  if (proposal.status !== 'pending') {
-    res.status(400).json({ error: 'Можно редактировать только ожидающие предложения' });
-    return;
+
+  // Проверяем права: админ может редактировать любые, инженер — только свои pending
+  const isAdmin = req.userRole === 'admin';
+  if (!isAdmin) {
+    if (proposal.proposedById !== req.userId) {
+      res.status(403).json({ error: 'Можно редактировать только свои предложения' });
+      return;
+    }
+    if (proposal.status !== 'pending') {
+      res.status(400).json({ error: 'Можно редактировать только ожидающие предложения' });
+      return;
+    }
   }
 
   // Если это room_change и изменился roomTypeCode — обновить и object_equipment
@@ -297,6 +302,14 @@ router.patch('/:id', validate(updateProposalSchema), async (req: AuthRequest, re
     await prisma.objectEquipment.update({
       where: { id: proposal.objectEquipmentId! },
       data: { roomTypeCode: req.body.roomTypeCode },
+    });
+  }
+
+  // Если изменился serialNumber и есть objectEquipment — обновить и его
+  if (req.body.serialNumber !== undefined && req.body.serialNumber !== proposal.serialNumber && proposal.objectEquipmentId) {
+    await prisma.objectEquipment.update({
+      where: { id: proposal.objectEquipmentId },
+      data: { serialNumber: req.body.serialNumber },
     });
   }
 
@@ -822,6 +835,77 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
   });
 
   res.json(results);
+});
+
+// ─── GET METER PHOTOS (admin) ────────────────────────────────
+// Получить фото для прибора учёта по proposal ID
+router.get('/:id/meter-photos', adminOnly, async (req: AuthRequest, res: Response) => {
+  const proposal = await prisma.equipmentProposal.findUnique({
+    where: { id: req.params.id as string },
+    include: { objectEquipment: true },
+  });
+
+  if (!proposal) {
+    res.status(404).json({ error: 'Предложение не найдено' });
+    return;
+  }
+
+  // Проверяем, что это прибор учёта
+  if (!isMeterEquipment(proposal.equipmentTypeCode)) {
+    res.status(400).json({ error: 'Фото доступны только для приборов учёта' });
+    return;
+  }
+
+  // Если есть objectEquipmentId — ищем фото через TaskEquipmentItem
+  if (proposal.objectEquipmentId) {
+    const taskItems = await prisma.taskEquipmentItem.findMany({
+      where: { objectEquipmentId: proposal.objectEquipmentId },
+      select: { id: true },
+    });
+
+    const taskItemIds = taskItems.map(ti => ti.id);
+
+    if (taskItemIds.length > 0) {
+      const photos = await prisma.photo.findMany({
+        where: { taskEquipmentItemId: { in: taskItemIds } },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.json(photos);
+      return;
+    }
+  }
+
+  // Если objectEquipmentId нет или нет taskItems — ищем через задачи по адресу
+  // Находим EquipmentType по коду, затем задачи с этим типом на данном адресе
+  const equipmentType = await prisma.equipmentType.findUnique({
+    where: { code: proposal.equipmentTypeCode },
+    select: { id: true },
+  });
+
+  if (equipmentType) {
+    const tasks = await prisma.task.findMany({
+      where: {
+        visit: { addressId: proposal.addressId },
+        equipmentTypeId: equipmentType.id,
+      },
+      select: { id: true },
+    });
+
+    const taskIds = tasks.map(t => t.id);
+
+    if (taskIds.length > 0) {
+      const photos = await prisma.photo.findMany({
+        where: { taskId: { in: taskIds } },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.json(photos);
+      return;
+    }
+  }
+
+  res.json([]);
 });
 
 export default router;

@@ -1,10 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Button, Select, Space, App, Popconfirm, Tag, Input, Checkbox, Card, Row, Col, Empty, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, SortAscendingOutlined, SortDescendingOutlined, EnvironmentOutlined, ToolOutlined, UserOutlined, HomeOutlined, PlusOutlined, SyncOutlined, EditOutlined, ArrowRightOutlined, AppstoreOutlined, TagOutlined, BarcodeOutlined, NumberOutlined } from '@ant-design/icons';
+import { Button, Select, Space, App, Popconfirm, Tag, Input, Checkbox, Card, Row, Col, Empty, Tooltip, Modal } from 'antd';
+import { CheckOutlined, CloseOutlined, SortAscendingOutlined, SortDescendingOutlined, EnvironmentOutlined, ToolOutlined, UserOutlined, HomeOutlined, PlusOutlined, SyncOutlined, EditOutlined, ArrowRightOutlined, AppstoreOutlined, TagOutlined, BarcodeOutlined, NumberOutlined, DownloadOutlined, CameraOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 import { REQUEST_TYPE_LABELS } from '@shared/types';
 import type { RequestType } from '@shared/types';
 import dayjs from 'dayjs';
+
+// Коды приборов учёта
+const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
+const isMeterEquipment = (code: string) => METER_CODES.includes(code);
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
   pending: { color: 'processing', label: 'Ожидает' },
@@ -32,6 +36,11 @@ export default function AdminProposals() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [rejectModalId, setRejectModalId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [editingSerialId, setEditingSerialId] = useState<string | null>(null);
+  const [editSerialValue, setEditSerialValue] = useState('');
+  const [meterPhotos, setMeterPhotos] = useState<any[]>([]);
+  const [meterPhotosModal, setMeterPhotosModal] = useState<string | null>(null);
+  const [meterPhotosLoading, setMeterPhotosLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -109,6 +118,40 @@ export default function AdminProposals() {
     } catch (err: any) {
       message.error(err.message || 'Ошибка массовой операции');
     }
+  };
+
+  const handleSaveSerial = async (id: string) => {
+    try {
+      await api.updateProposal(id, { serialNumber: editSerialValue || null });
+      message.success('Серийный номер обновлён');
+      setEditingSerialId(null);
+      setEditSerialValue('');
+      load();
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка обновления');
+    }
+  };
+
+  const handleLoadMeterPhotos = async (proposalId: string) => {
+    setMeterPhotosModal(proposalId);
+    setMeterPhotosLoading(true);
+    try {
+      const photos = await api.getMeterPhotos(proposalId);
+      setMeterPhotos(photos);
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка загрузки фото');
+      setMeterPhotos([]);
+    }
+    setMeterPhotosLoading(false);
+  };
+
+  const handleDownloadPhoto = (photo: any) => {
+    const link = document.createElement('a');
+    link.href = `/api/photos/${photo.id}/file`;
+    link.download = photo.fileName || 'photo.jpg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const toggleSelect = (id: string) => {
@@ -198,11 +241,53 @@ export default function AdminProposals() {
               </div>
             )}
 
-            {/* Серийный номер */}
-            {r.serialNumber && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                <NumberOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
-                <span style={{ color: '#555', fontFamily: 'monospace', fontSize: 12 }}>{r.serialNumber}</span>
+            {/* Серийный номер — всегда показываем */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+              <NumberOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
+              {editingSerialId === r.id ? (
+                <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+                  <Input
+                    size="small"
+                    value={editSerialValue}
+                    onChange={(e) => setEditSerialValue(e.target.value)}
+                    placeholder="Серийный номер"
+                    style={{ fontFamily: 'monospace', fontSize: 12 }}
+                    autoFocus
+                  />
+                  <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => handleSaveSerial(r.id)} />
+                  <Button size="small" icon={<CloseOutlined />} onClick={() => { setEditingSerialId(null); setEditSerialValue(''); }} />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                  <span style={{ color: r.serialNumber ? '#555' : '#ccc', fontFamily: 'monospace', fontSize: 12 }}>
+                    {r.serialNumber || 'не указан'}
+                  </span>
+                  <Tooltip title="Редактировать серийный номер">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined style={{ fontSize: 12 }} />}
+                      onClick={() => { setEditingSerialId(r.id); setEditSerialValue(r.serialNumber || ''); }}
+                      style={{ padding: 0, minWidth: 'auto', color: '#888' }}
+                    />
+                  </Tooltip>
+                </div>
+              )}
+            </div>
+
+            {/* Фото для приборов учёта */}
+            {isMeterEquipment(r.equipmentTypeCode) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CameraOutlined style={{ color: '#888', flexShrink: 0 }} />
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  onClick={() => handleLoadMeterPhotos(r.id)}
+                  style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                >
+                  Фото прибора учёта
+                </Button>
               </div>
             )}
 
@@ -393,6 +478,47 @@ export default function AdminProposals() {
           </div>
         </div>
       )}
+
+      {/* Модалка фото прибора учёта */}
+      <Modal
+        title="Фото прибора учёта"
+        open={!!meterPhotosModal}
+        onCancel={() => { setMeterPhotosModal(null); setMeterPhotos([]); }}
+        footer={null}
+        width={600}
+      >
+        {meterPhotosLoading ? (
+          <div style={{ textAlign: 'center', padding: 24 }}>Загрузка фото...</div>
+        ) : meterPhotos.length === 0 ? (
+          <Empty description="Фото отсутствуют" />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {meterPhotos.map((photo) => (
+              <div key={photo.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 8, border: '1px solid #f0f0f0', borderRadius: 8 }}>
+                <img
+                  src={`/api/photos/${photo.id}/file`}
+                  alt={photo.fileName}
+                  style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4 }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: '#555' }}>{photo.fileName}</div>
+                  <div style={{ fontSize: 11, color: '#999' }}>
+                    {photo.moment === 'before' ? 'До' : 'После'} • {dayjs(photo.createdAt).format('DD.MM.YYYY HH:mm')}
+                  </div>
+                </div>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  onClick={() => handleDownloadPhoto(photo)}
+                >
+                  Скачать
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -270,6 +270,8 @@ export const api = {
     request<any>(`/proposals/admin/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) }),
   batchProposals: (data: { ids: string[]; action: 'approve' | 'reject'; reason?: string }) =>
     request<any>('/proposals/admin/batch', { method: 'PUT', body: JSON.stringify(data) }),
+  getMeterPhotos: (proposalId: string) =>
+    request<any[]>(`/proposals/${proposalId}/meter-photos`),
 
   // Object equipment
   getOtherRoomsEquipment: (params: { address_id: string; current_room_type_code: string; exclude_visit_id?: string }) => {
