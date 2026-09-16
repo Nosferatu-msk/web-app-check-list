@@ -6,14 +6,16 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": false,
     "outDir": "dist",
-    "rootDir": ".",
-    "baseUrl": ".",
-    "paths": {
-      "@helpers/*": ["helpers/*"],
-      "@config/*": ["config/*"]
-    }
+    "rootDir": "."
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "reports"]
+  "include": [
+    "tests/**/*.ts",
+    "helpers/**/*.ts",
+    "config/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "reports", "test-results"]
 }
