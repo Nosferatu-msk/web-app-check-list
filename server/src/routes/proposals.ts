@@ -529,20 +529,26 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
       data: { objectEquipmentId: created.id },
     });
 
-    // Привязываем задачу к созданному equipment (если найдём匹配)
-    const matchingTask = await prisma.task.findFirst({
-      where: {
-        visit: { addressId: proposal.addressId },
-        equipmentType: { code: proposal.equipmentTypeCode },
-        objectEquipmentId: null,
-        OR: [
-          ...(proposal.brand ? [{ brand: proposal.brand }] : []),
-          ...(proposal.model ? [{ model: proposal.model }] : []),
-          ...(proposal.serialNumber ? [{ serialNumber: proposal.serialNumber }] : []),
-          ...(proposal.model ? [{ parameters: { path: ['model'], equals: proposal.model } }] : []),
-        ],
-      },
-    });
+    // Привязываем задачу к созданному equipment
+    // Сначала ищем по прямому taskId из proposal, иначе — по косвенным признакам
+    let matchingTask = proposal.taskId
+      ? await prisma.task.findFirst({ where: { id: proposal.taskId, objectEquipmentId: null } })
+      : null;
+    if (!matchingTask) {
+      matchingTask = await prisma.task.findFirst({
+        where: {
+          visit: { addressId: proposal.addressId },
+          equipmentType: { code: proposal.equipmentTypeCode },
+          objectEquipmentId: null,
+          OR: [
+            ...(proposal.brand ? [{ brand: proposal.brand }] : []),
+            ...(proposal.model ? [{ model: proposal.model }] : []),
+            ...(proposal.serialNumber ? [{ serialNumber: proposal.serialNumber }] : []),
+            ...(proposal.model ? [{ parameters: { path: ['model'], equals: proposal.model } }] : []),
+          ],
+        },
+      });
+    }
     if (matchingTask) {
       await prisma.task.update({
         where: { id: matchingTask.id },
@@ -740,19 +746,25 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
             data: { objectEquipmentId: created.id },
           });
           // Привязываем задачу к созданному equipment
-          const matchingTask = await prisma.task.findFirst({
-            where: {
-              visit: { addressId: proposal.addressId },
-              equipmentType: { code: proposal.equipmentTypeCode },
-              objectEquipmentId: null,
-              OR: [
-                ...(proposal.brand ? [{ brand: proposal.brand }] : []),
-                ...(proposal.model ? [{ model: proposal.model }] : []),
-                ...(proposal.serialNumber ? [{ serialNumber: proposal.serialNumber }] : []),
-                ...(proposal.model ? [{ parameters: { path: ['model'], equals: proposal.model } }] : []),
-              ],
-            },
-          });
+          // Сначала ищем по прямому taskId из proposal, иначе — по косвенным признакам
+          let matchingTask = proposal.taskId
+            ? await prisma.task.findFirst({ where: { id: proposal.taskId, objectEquipmentId: null } })
+            : null;
+          if (!matchingTask) {
+            matchingTask = await prisma.task.findFirst({
+              where: {
+                visit: { addressId: proposal.addressId },
+                equipmentType: { code: proposal.equipmentTypeCode },
+                objectEquipmentId: null,
+                OR: [
+                  ...(proposal.brand ? [{ brand: proposal.brand }] : []),
+                  ...(proposal.model ? [{ model: proposal.model }] : []),
+                  ...(proposal.serialNumber ? [{ serialNumber: proposal.serialNumber }] : []),
+                  ...(proposal.model ? [{ parameters: { path: ['model'], equals: proposal.model } }] : []),
+                ],
+              },
+            });
+          }
           if (matchingTask) {
             await prisma.task.update({
               where: { id: matchingTask.id },

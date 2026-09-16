@@ -473,9 +473,9 @@ export default function TaskPage() {
       }
       const mergedParams = { ...defaults, ...rest };
 
-      // Автозаполнение полей счётчиков из связанного оборудования
+      // Автозаполнение полей счётчиков из данных задачи или связанного оборудования
       const autofilled = new Set<string>();
-      if (METER_CODES.includes(eqCode) && t.objectEquipmentId) {
+      if (METER_CODES.includes(eqCode) && (t.objectEquipmentId || t.brand || t.model || t.serialNumber)) {
         if (!mergedParams.model && (t.brand || t.model)) {
           mergedParams.model = [t.brand, t.model].filter(Boolean).join(' ').trim();
           autofilled.add('model');
