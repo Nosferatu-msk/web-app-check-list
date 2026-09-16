@@ -107,15 +107,16 @@ export default function PhotoPage() {
     }
     setUploading(true);
     try {
-      // Вычисляем хеш файла для проверки дубликатов
+      // Сначала сжимаем, потом вычисляем хеш — чтобы хеш совпадал с тем, что сохранит сервер
+      const compressed = await compressImage(file);
       const { computeFileHash } = await import('@/utils/fileHash');
-      const hash = await computeFileHash(file);
+      const hash = await computeFileHash(compressed);
 
       // Проверяем, не загружено ли уже это фото в другом визите/задаче
       if (!isOffline()) {
         const duplicateCheck = await api.checkPhotoDuplicate(hash);
         if (duplicateCheck.isDuplicate) {
-          // Показываем предупреждение, но не блокируем загрузку
+          setUploading(false);
           const info = duplicateCheck.type === 'mtr'
             ? `визит МТР ${duplicateCheck.requestNumber} (${duplicateCheck.address})`
             : `визит на ${duplicateCheck.address}${duplicateCheck.equipmentType ? `, оборудование: ${duplicateCheck.equipmentType}` : ''}`;
@@ -125,27 +126,23 @@ export default function PhotoPage() {
             okText: 'Загрузить',
             cancelText: 'Отмена',
             onOk: async () => {
-              await performUpload(file, moment, hash);
-            },
-            onCancel: () => {
-              setUploading(false);
+              await performUploadCompressed(compressed, moment);
             },
           });
           return;
         }
       }
 
-      await performUpload(file, moment, hash);
+      await performUploadCompressed(compressed, moment);
     } catch (err: any) {
       message.error(err.message);
       setUploading(false);
     }
   };
 
-  const performUpload = async (file: File, moment: 'before' | 'after', hash?: string) => {
+  const performUploadCompressed = async (compressed: File, moment: 'before' | 'after') => {
     if (!taskId || !visitId) return;
     try {
-      const compressed = await compressImage(file);
       if (isOffline()) {
         await api.uploadPhotoOffline(taskId, compressed, moment);
       } else {
@@ -159,7 +156,7 @@ export default function PhotoPage() {
         try { urls[photo.id] = await api.getPhotoBlobUrl(photo.id); } catch { /* */ }
       }
       setPhotoUrls(urls);
-      setLastUploadedFile({ name: file.name, size: file.size });
+      setLastUploadedFile({ name: compressed.name, size: compressed.size });
 
       // Check if task is now complete (all photos uploaded)
       const photosRequired = task?.equipmentType?.photosRequired || 1;

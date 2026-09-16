@@ -100,7 +100,10 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
       await prisma.photo.delete({ where: { id: existing.id } });
     }
 
-    // Проверка дубликатов: фото такого же размера не должно быть загружено для другой единицы в этой задаче
+    // Вычисляем хеш файла для проверки дубликатов
+    const hash = computeFileHash(newPath);
+
+    // Проверка дубликатов: фото с таким же хешем не должно быть загружено для другой единицы в этой задаче
     const siblingItems = await prisma.taskEquipmentItem.findMany({
       where: { taskId: item.taskId, id: { not: itemId } },
       select: { id: true },
@@ -110,19 +113,15 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
       const duplicatePhoto = await prisma.photo.findFirst({
         where: {
           taskEquipmentItemId: { in: siblingItemIds },
-          moment,
-          fileSize: req.file.size,
+          hash,
         },
       });
       if (duplicatePhoto) {
-        try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+        try { fs.unlinkSync(newPath); } catch { /* ignore */ }
         res.status(409).json({ error: 'Это фото уже загружено для другой единицы оборудования. Используйте другой файл.' });
         return;
       }
     }
-
-    // Вычисляем хеш файла для проверки дубликатов
-    const hash = computeFileHash(newPath);
 
     const photo = await prisma.photo.create({
       data: {
@@ -308,6 +307,22 @@ router.post('/:taskId/photos', upload.single('photo'), handleMulterError, async 
 
     // Вычисляем хеш файла для проверки дубликатов
     const hash = computeFileHash(newPath);
+
+    // Проверка дубликатов: фото с таким же хешем не должно быть загружено для другой задачи в этом визите
+    const visitTaskIds = visitTasks.filter(t => t.id !== taskId).map(t => t.id);
+    if (visitTaskIds.length > 0) {
+      const duplicatePhoto = await prisma.photo.findFirst({
+        where: {
+          taskId: { in: visitTaskIds },
+          hash,
+        },
+      });
+      if (duplicatePhoto) {
+        try { fs.unlinkSync(newPath); } catch { /* ignore */ }
+        res.status(409).json({ error: 'Это фото уже загружено для другой задачи в этом визите. Используйте другой файл.' });
+        return;
+      }
+    }
 
     const photo = await prisma.photo.create({
       data: { taskId, fileName, filePath: newPath, moment, fileSize: req.file.size, mimeType: req.file.mimetype, hash },

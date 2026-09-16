@@ -94,13 +94,15 @@ export default function ItemPhotoPage() {
     if (!itemId) return;
     setUploading(true);
     try {
-      // Вычисляем хеш файла для проверки дубликатов
+      // Сначала сжимаем, потом вычисляем хеш — чтобы хеш совпадал с тем, что сохранит сервер
+      const compressed = await compressImage(file);
       const { computeFileHash } = await import('@/utils/fileHash');
-      const hash = await computeFileHash(file);
+      const hash = await computeFileHash(compressed);
 
       // Проверяем, не загружено ли уже это фото в другом визите/задаче
       const duplicateCheck = await api.checkPhotoDuplicate(hash);
       if (duplicateCheck.isDuplicate) {
+        setUploading(false);
         const info = duplicateCheck.type === 'mtr'
           ? `визит МТР ${duplicateCheck.requestNumber} (${duplicateCheck.address})`
           : `визит на ${duplicateCheck.address}${duplicateCheck.equipmentType ? `, оборудование: ${duplicateCheck.equipmentType}` : ''}`;
@@ -110,26 +112,22 @@ export default function ItemPhotoPage() {
           okText: 'Загрузить',
           cancelText: 'Отмена',
           onOk: async () => {
-            await performUpload(file, moment);
-          },
-          onCancel: () => {
-            setUploading(false);
+            await performUploadCompressed(compressed, moment);
           },
         });
         return;
       }
 
-      await performUpload(file, moment);
+      await performUploadCompressed(compressed, moment);
     } catch (err: any) {
       message.error(err.message);
       setUploading(false);
     }
   };
 
-  const performUpload = async (file: File, moment: 'before' | 'after') => {
+  const performUploadCompressed = async (compressed: File, moment: 'before' | 'after') => {
     if (!itemId) return;
     try {
-      const compressed = await compressImage(file);
       await api.uploadItemPhoto(itemId, compressed, moment);
       await loadData();
       message.success('Фото загружено');
