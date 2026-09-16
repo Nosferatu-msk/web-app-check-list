@@ -41,6 +41,7 @@ export default function AdminProposals() {
   const [meterPhotos, setMeterPhotos] = useState<any[]>([]);
   const [meterPhotosModal, setMeterPhotosModal] = useState<string | null>(null);
   const [meterPhotosLoading, setMeterPhotosLoading] = useState(false);
+  const [photoBlobUrls, setPhotoBlobUrls] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -138,6 +139,22 @@ export default function AdminProposals() {
     try {
       const photos = await api.getMeterPhotos(proposalId);
       setMeterPhotos(photos);
+
+      // Загружаем фото через fetch с авторизацией для создания blob URLs
+      const token = localStorage.getItem('accessToken');
+      const blobUrls: Record<string, string> = {};
+      for (const photo of photos) {
+        try {
+          const res = await fetch(`/api/photos/${photo.id}/file`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (res.ok) {
+            const blob = await res.blob();
+            blobUrls[photo.id] = URL.createObjectURL(blob);
+          }
+        } catch { /* ignore */ }
+      }
+      setPhotoBlobUrls(blobUrls);
     } catch (err: any) {
       message.error(err.message || 'Ошибка загрузки фото');
       setMeterPhotos([]);
@@ -145,13 +162,28 @@ export default function AdminProposals() {
     setMeterPhotosLoading(false);
   };
 
-  const handleDownloadPhoto = (photo: any) => {
-    const link = document.createElement('a');
-    link.href = `/api/photos/${photo.id}/file`;
-    link.download = photo.fileName || 'photo.jpg';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadPhoto = async (photo: any) => {
+    const token = localStorage.getItem('accessToken');
+    try {
+      const res = await fetch(`/api/photos/${photo.id}/file`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = photo.fileName || 'photo.jpg';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        message.error('Ошибка загрузки фото');
+      }
+    } catch {
+      message.error('Ошибка загрузки фото');
+    }
   };
 
   const toggleSelect = (id: string) => {
@@ -483,7 +515,13 @@ export default function AdminProposals() {
       <Modal
         title="Фото прибора учёта"
         open={!!meterPhotosModal}
-        onCancel={() => { setMeterPhotosModal(null); setMeterPhotos([]); }}
+        onCancel={() => {
+          setMeterPhotosModal(null);
+          setMeterPhotos([]);
+          // Освобождаем blob URLs
+          Object.values(photoBlobUrls).forEach(url => URL.revokeObjectURL(url));
+          setPhotoBlobUrls({});
+        }}
         footer={null}
         width={600}
       >
@@ -495,11 +533,17 @@ export default function AdminProposals() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {meterPhotos.map((photo) => (
               <div key={photo.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 8, border: '1px solid #f0f0f0', borderRadius: 8 }}>
-                <img
-                  src={`/api/photos/${photo.id}/file`}
-                  alt={photo.fileName}
-                  style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4 }}
-                />
+                {photoBlobUrls[photo.id] ? (
+                  <img
+                    src={photoBlobUrls[photo.id]}
+                    alt={photo.fileName}
+                    style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4 }}
+                  />
+                ) : (
+                  <div style={{ width: 80, height: 80, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CameraOutlined style={{ color: '#ccc', fontSize: 24 }} />
+                  </div>
+                )}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, color: '#555' }}>{photo.fileName}</div>
                   <div style={{ fontSize: 11, color: '#999' }}>
