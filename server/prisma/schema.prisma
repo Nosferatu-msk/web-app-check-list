@@ -269,6 +269,7 @@ model Photo {
   moment              PhotoMoment
   fileSize            Int?        @map("file_size")
   mimeType            String?     @map("mime_type")
+  hash                String?
   mtrVisitId          String?     @map("mtr_visit_id")
   createdAt           DateTime    @default(now()) @map("created_at")
 
@@ -281,6 +282,7 @@ model Photo {
   @@index([taskId, moment])
   @@index([taskEquipmentItemId, moment])
   @@index([mtrVisitId])
+  @@index([hash])
   @@map("photos")
 }
 

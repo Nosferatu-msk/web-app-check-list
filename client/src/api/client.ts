@@ -148,6 +148,8 @@ export const api = {
     const blob = await api.downloadFile(`${API_BASE}/photos/${photoId}/file`);
     return URL.createObjectURL(blob);
   },
+  checkPhotoDuplicate: (hash: string) =>
+    request<any>('/photos/check-duplicate', { method: 'POST', body: JSON.stringify({ hash }) }),
 
   // Reports
   generateReport: (visitId: string) =>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Card, Space, App, Spin } from 'antd';
+import { Button, Card, Space, App, Spin, Modal } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PictureOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 
@@ -93,6 +93,41 @@ export default function ItemPhotoPage() {
   const handleUpload = async (file: File, moment: 'before' | 'after') => {
     if (!itemId) return;
     setUploading(true);
+    try {
+      // Вычисляем хеш файла для проверки дубликатов
+      const { computeFileHash } = await import('@/utils/fileHash');
+      const hash = await computeFileHash(file);
+
+      // Проверяем, не загружено ли уже это фото в другом визите/задаче
+      const duplicateCheck = await api.checkPhotoDuplicate(hash);
+      if (duplicateCheck.isDuplicate) {
+        const info = duplicateCheck.type === 'mtr'
+          ? `визит МТР ${duplicateCheck.requestNumber} (${duplicateCheck.address})`
+          : `визит на ${duplicateCheck.address}${duplicateCheck.equipmentType ? `, оборудование: ${duplicateCheck.equipmentType}` : ''}`;
+        Modal.confirm({
+          title: 'Это фото уже используется',
+          content: `Данный файл уже загружен инженером ${duplicateCheck.engineer || 'неизвестно'} в ${info}. Вы уверены, что хотите загрузить его снова?`,
+          okText: 'Загрузить',
+          cancelText: 'Отмена',
+          onOk: async () => {
+            await performUpload(file, moment);
+          },
+          onCancel: () => {
+            setUploading(false);
+          },
+        });
+        return;
+      }
+
+      await performUpload(file, moment);
+    } catch (err: any) {
+      message.error(err.message);
+      setUploading(false);
+    }
+  };
+
+  const performUpload = async (file: File, moment: 'before' | 'after') => {
+    if (!itemId) return;
     try {
       const compressed = await compressImage(file);
       await api.uploadItemPhoto(itemId, compressed, moment);

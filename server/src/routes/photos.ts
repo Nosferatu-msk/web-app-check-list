@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import prisma from '../models/prisma.js';
 import { logAudit } from '../middleware/audit.js';
@@ -11,6 +12,14 @@ router.use(authMiddleware);
 
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+// Функция вычисления SHA-256 хеша файла
+function computeFileHash(filePath: string): string {
+  const fileBuffer = fs.readFileSync(filePath);
+  const hashSum = crypto.createHash('sha256');
+  hashSum.update(fileBuffer);
+  return hashSum.digest('hex');
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
@@ -112,6 +121,9 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
       }
     }
 
+    // Вычисляем хеш файла для проверки дубликатов
+    const hash = computeFileHash(newPath);
+
     const photo = await prisma.photo.create({
       data: {
         taskEquipmentItemId: itemId,
@@ -120,6 +132,7 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
         moment,
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
+        hash,
       },
     });
 
@@ -177,6 +190,9 @@ router.post('/mtr-visits/:visitId/photos', upload.single('photo'), handleMulterE
     const newPath = path.join(path.dirname(oldPath), fileName);
     fs.renameSync(oldPath, newPath);
 
+    // Вычисляем хеш файла для проверки дубликатов
+    const hash = computeFileHash(newPath);
+
     const photo = await prisma.photo.create({
       data: {
         mtrVisitId: visitId,
@@ -185,6 +201,7 @@ router.post('/mtr-visits/:visitId/photos', upload.single('photo'), handleMulterE
         moment,
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
+        hash,
       },
     });
 
@@ -289,8 +306,11 @@ router.post('/:taskId/photos', upload.single('photo'), handleMulterError, async 
       await prisma.photo.delete({ where: { id: existing.id } });
     }
 
+    // Вычисляем хеш файла для проверки дубликатов
+    const hash = computeFileHash(newPath);
+
     const photo = await prisma.photo.create({
-      data: { taskId, fileName, filePath: newPath, moment, fileSize: req.file.size, mimeType: req.file.mimetype },
+      data: { taskId, fileName, filePath: newPath, moment, fileSize: req.file.size, mimeType: req.file.mimetype, hash },
     });
 
     if (task.status === 'not_started') {
@@ -327,6 +347,88 @@ router.get('/:id/file', async (req: AuthRequest, res: Response) => {
   if (!photo) { res.status(404).json({ error: 'Фото не найдено' }); return; }
   if (!fs.existsSync(photo.filePath)) { res.status(404).json({ error: 'Файл не найден' }); return; }
   res.sendFile(path.resolve(photo.filePath));
+});
+
+// POST /api/photos/check-duplicate — проверка дубликата фото по хешу
+router.post('/check-duplicate', async (req: AuthRequest, res: Response) => {
+  const { hash } = req.body;
+  if (!hash) {
+    res.status(400).json({ error: 'Укажите hash файла' });
+    return;
+  }
+
+  // Ищем фото с таким же хешем
+  const existingPhoto = await prisma.photo.findFirst({
+    where: { hash },
+    include: {
+      task: {
+        include: {
+          visit: {
+            include: { address: true, user: { select: { fullName: true } } },
+          },
+          equipmentType: true,
+          objectEquipment: true,
+        },
+      },
+      taskEquipmentItem: {
+        include: {
+          objectEquipment: true,
+        },
+      },
+      mtrVisit: {
+        include: {
+          address: true,
+          engineer: { select: { fullName: true } },
+        },
+      },
+    },
+  });
+
+  if (!existingPhoto) {
+    res.json({ isDuplicate: false });
+    return;
+  }
+
+  // Формируем информацию о существующем фото
+  let info: any = {
+    isDuplicate: true,
+    photoId: existingPhoto.id,
+    fileName: existingPhoto.fileName,
+    createdAt: existingPhoto.createdAt,
+  };
+
+  if (existingPhoto.task) {
+    info.type = 'visit';
+    info.visitId = existingPhoto.task.visit.id;
+    info.address = existingPhoto.task.visit.address.fullAddress;
+    info.engineer = existingPhoto.task.visit.user?.fullName;
+    info.equipmentType = existingPhoto.task.equipmentType?.name;
+    info.serialNumber = existingPhoto.task.objectEquipment?.serialNumber;
+  } else if (existingPhoto.taskEquipmentItem) {
+    info.type = 'visit';
+    const task = await prisma.task.findUnique({
+      where: { id: existingPhoto.taskEquipmentItem.taskId },
+      include: {
+        visit: { include: { address: true, user: { select: { fullName: true } } } },
+        equipmentType: true,
+      },
+    });
+    if (task) {
+      info.visitId = task.visit.id;
+      info.address = task.visit.address.fullAddress;
+      info.engineer = task.visit.user?.fullName;
+      info.equipmentType = task.equipmentType?.name;
+      info.serialNumber = existingPhoto.taskEquipmentItem.objectEquipment?.serialNumber;
+    }
+  } else if (existingPhoto.mtrVisit) {
+    info.type = 'mtr';
+    info.mtrVisitId = existingPhoto.mtrVisit.id;
+    info.address = existingPhoto.mtrVisit.address.fullAddress;
+    info.engineer = existingPhoto.mtrVisit.engineer?.fullName;
+    info.requestNumber = existingPhoto.mtrVisit.requestNumber;
+  }
+
+  res.json(info);
 });
 
 export default router;
