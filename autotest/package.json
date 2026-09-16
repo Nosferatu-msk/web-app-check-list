@@ -1,0 +1,28 @@
+{
+  "name": "web-app-autotest",
+  "version": "1.0.0",
+  "description": "Universal web application automated testing module",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --grep @ui",
+    "test:api": "npx playwright test --grep @api",
+    "test:critical": "npx playwright test --grep @critical",
+    "test:high": "npx playwright test --grep @high",
+    "report": "npx playwright test --reporter=./helpers/md-reporter.ts",
+    "report:html": "npx playwright test --reporter=html",
+    "test:auth": "npx playwright test tests/auth/",
+    "test:visits": "npx playwright test tests/visits/",
+    "test:admin": "npx playwright test tests/admin/",
+    "generate": "npx tsx scripts/generate-tests.ts",
+    "generate:check": "npx tsx scripts/generate-tests.ts --dry-run"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
+}
