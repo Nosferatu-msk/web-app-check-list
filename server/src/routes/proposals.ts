@@ -876,8 +876,8 @@ router.get('/:id/meter-photos', adminOnly, async (req: AuthRequest, res: Respons
     }
   }
 
-  // Если objectEquipmentId нет или нет taskItems — ищем через задачи по адресу
-  // Находим EquipmentType по коду, затем задачи с этим типом на данном адресе
+  // Если objectEquipmentId нет — ищем задачи без привязки к оборудованию
+  // Это задачи, где инженер не выбрал существующее оборудование
   const equipmentType = await prisma.equipmentType.findUnique({
     where: { code: proposal.equipmentTypeCode },
     select: { id: true },
@@ -888,6 +888,7 @@ router.get('/:id/meter-photos', adminOnly, async (req: AuthRequest, res: Respons
       where: {
         visit: { addressId: proposal.addressId },
         equipmentTypeId: equipmentType.id,
+        objectEquipmentId: null, // Только задачи без привязки к оборудованию
       },
       select: { id: true },
     });
