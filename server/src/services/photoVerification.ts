@@ -169,6 +169,7 @@ async function checkPhash(
     let compareWhere: any = {
       id: { not: photo.id },
       phash: { not: null },
+      moment: photo.moment,
       createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     };
 
@@ -176,14 +177,12 @@ async function checkPhash(
       // Групповая задача — сравниваем по objectEquipmentId за последние 30 дней (все визиты)
       compareWhere.taskEquipmentItem = { objectEquipmentId };
     } else if (photo.taskId && equipmentTypeId) {
-      // Индивидуальная задача — сравниваем по equipmentTypeId + addressId за последние 30 дней (все визиты)
+      // Индивидуальная задача — сравниваем по equipmentTypeId за последние 30 дней (все визиты, все адреса)
+      // Это ловит случаи когда инженер загружает одно и то же фото на разных объектах
       compareWhere.task = {
         visitId: { not: photo.task.visitId },
         equipmentTypeId,
-        visit: {
-          addressId: photo.task.visit.addressId,
-          isDeleted: false,
-        },
+        visit: { isDeleted: false },
       };
     } else {
       return null;
