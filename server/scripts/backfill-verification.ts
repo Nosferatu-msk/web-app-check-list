@@ -6,7 +6,9 @@
  * или phash IS NULL, и запускает verifyPhoto.
  */
 import { PrismaClient } from '@prisma/client';
-import { verifyPhoto } from '../src/services/photoVerification.js';
+
+// Динамический импорт — работает и из scripts/ (через tsx) и из dist/
+const { verifyPhoto } = await import('../dist/services/photoVerification.js');
 
 const prisma = new PrismaClient();
 
