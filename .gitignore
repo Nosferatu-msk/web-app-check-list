@@ -18,6 +18,7 @@ QWEN.md
 Инструкция-инженер.html
 Инструкция-ТМ.html
 Инструкция-администратор.html
+АНТИФРОД-АЛГОРИТМ.md
 screenshots/
 
 # Инструменты и настройки
@@ -38,6 +39,7 @@ screenshots/
 autotest/
 copy_key.py
 check_server*.py
+deploy-*.mjs
 
 # Зависимости
 node_modules/
