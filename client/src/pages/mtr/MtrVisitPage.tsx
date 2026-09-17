@@ -269,11 +269,17 @@ export default function MtrVisitPage() {
     setSaving(false);
   };
 
-  const handlePhotoUpload = async (file: File, moment: 'before' | 'after') => {
+  const handlePhotoUpload = async (file: File, moment: 'before' | 'after', source: 'camera' | 'gallery' = 'camera') => {
     if (!visit) return;
     const setUploading = moment === 'before' ? setUploadingBefore : setUploadingAfter;
     setUploading(true);
     try {
+      // Антифрод: захват метаданных
+      const capturedAt = new Date().toISOString();
+      const { capturePosition } = await import('../../utils/captureGeo');
+      const gps = source === 'camera' ? await capturePosition() : null;
+      const meta = { capturedAt, gpsLat: gps?.lat, gpsLng: gps?.lng, photoSource: source };
+
       // Удаляем существующее фото этого момента, если есть (лимит 1 шт.)
       const existingPhotos = (visit.photos || []).filter((p) => p.moment === moment);
       for (const old of existingPhotos) {
@@ -282,7 +288,7 @@ export default function MtrVisitPage() {
         } catch { /* ignore — could be local-only */ }
       }
       const visitId = (visit as any)._localId || visit.id;
-      const result = await api.mtrUploadPhotoOffline(visitId, file, moment);
+      const result = await api.mtrUploadPhotoOffline(visitId, file, moment, meta);
       if ((result as any)._offline) {
         message.success((moment === 'before' ? 'Фото «до»' : 'Фото «после»') + ' сохранено локально');
       } else {
@@ -560,7 +566,7 @@ export default function MtrVisitPage() {
           style={{ display: 'none' }}
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) handlePhotoUpload(file, 'before');
+            if (file) handlePhotoUpload(file, 'before', 'camera');
             e.target.value = '';
           }}
         />
@@ -683,7 +689,7 @@ export default function MtrVisitPage() {
           style={{ display: 'none' }}
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) handlePhotoUpload(file, 'after');
+            if (file) handlePhotoUpload(file, 'after', 'camera');
             e.target.value = '';
           }}
         />

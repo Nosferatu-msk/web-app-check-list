@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import prisma from '../models/prisma.js';
 import { logAudit } from '../middleware/audit.js';
+import { verifyPhoto } from '../services/photoVerification.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -123,6 +124,12 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
       }
     }
 
+    // Антифрод: метаданные от клиента
+    const capturedAt = req.body.capturedAt ? new Date(req.body.capturedAt as string) : null;
+    const gpsLat = req.body.gpsLat ? parseFloat(req.body.gpsLat as string) : null;
+    const gpsLng = req.body.gpsLng ? parseFloat(req.body.gpsLng as string) : null;
+    const photoSource = (req.body.photoSource as string) || null;
+
     const photo = await prisma.photo.create({
       data: {
         taskEquipmentItemId: itemId,
@@ -132,8 +139,15 @@ router.post('/items/:itemId/photos', upload.single('photo'), handleMulterError, 
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         hash,
+        capturedAt,
+        gpsLat,
+        gpsLng,
+        photoSource,
       },
     });
+
+    // Асинхронная верификация (не блокирует ответ)
+    verifyPhoto(photo.id).catch(err => console.error('[photos] verifyPhoto error:', err));
 
     if (!item.status) {
       await prisma.taskEquipmentItem.update({
@@ -192,6 +206,12 @@ router.post('/mtr-visits/:visitId/photos', upload.single('photo'), handleMulterE
     // Вычисляем хеш файла для проверки дубликатов
     const hash = computeFileHash(newPath);
 
+    // Антифрод: метаданные от клиента
+    const capturedAt = req.body.capturedAt ? new Date(req.body.capturedAt as string) : null;
+    const gpsLat = req.body.gpsLat ? parseFloat(req.body.gpsLat as string) : null;
+    const gpsLng = req.body.gpsLng ? parseFloat(req.body.gpsLng as string) : null;
+    const photoSource = (req.body.photoSource as string) || null;
+
     const photo = await prisma.photo.create({
       data: {
         mtrVisitId: visitId,
@@ -201,8 +221,15 @@ router.post('/mtr-visits/:visitId/photos', upload.single('photo'), handleMulterE
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         hash,
+        capturedAt,
+        gpsLat,
+        gpsLng,
+        photoSource,
       },
     });
+
+    // Асинхронная верификация (не блокирует ответ)
+    verifyPhoto(photo.id).catch(err => console.error('[photos] verifyPhoto error:', err));
 
     await logAudit({
       userId: req.userId,
@@ -324,9 +351,22 @@ router.post('/:taskId/photos', upload.single('photo'), handleMulterError, async 
       }
     }
 
+    // Антифрод: метаданные от клиента
+    const capturedAt = req.body.capturedAt ? new Date(req.body.capturedAt as string) : null;
+    const gpsLat = req.body.gpsLat ? parseFloat(req.body.gpsLat as string) : null;
+    const gpsLng = req.body.gpsLng ? parseFloat(req.body.gpsLng as string) : null;
+    const photoSource = (req.body.photoSource as string) || null;
+
     const photo = await prisma.photo.create({
-      data: { taskId, fileName, filePath: newPath, moment, fileSize: req.file.size, mimeType: req.file.mimetype, hash },
+      data: {
+        taskId, fileName, filePath: newPath, moment,
+        fileSize: req.file.size, mimeType: req.file.mimetype, hash,
+        capturedAt, gpsLat, gpsLng, photoSource,
+      },
     });
+
+    // Асинхронная верификация (не блокирует ответ)
+    verifyPhoto(photo.id).catch(err => console.error('[photos] verifyPhoto error:', err));
 
     if (task.status === 'not_started') {
       await prisma.task.update({ where: { id: taskId }, data: { status: 'in_progress' } });

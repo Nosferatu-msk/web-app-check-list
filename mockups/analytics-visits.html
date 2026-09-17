@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Макет: Аналитика визитов</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F8FAFC; color: #0F172A;
+  }
+
+  /* ===== Переключатель макетов ===== */
+  .mockup-switcher {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: #0F172A; padding: 10px 20px; display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .mockup-switcher span { color: #fff; font-weight: 600; font-size: 13px; }
+  .mockup-switcher button {
+    padding: 5px 14px; border-radius: 6px; border: 1px solid #334155; background: transparent;
+    color: #94A3B8; cursor: pointer; font-size: 12px; transition: all .2s;
+  }
+  .mockup-switcher button.active { background: #0F766E; color: #fff; border-color: #0F766E; }
+  .mockup-switcher button:hover:not(.active) { background: #1E293B; }
+
+  .mockup-container { margin-top: 50px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ===== Desktop frame ===== */
+  .desktop-frame {
+    max-width: 1400px; margin: 20px auto; background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;
+  }
+
+  /* ===== Mobile frame ===== */
+  .mobile-frame {
+    max-width: 393px; margin: 20px auto; background: #fff; border-radius: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.12); overflow: hidden; min-height: 700px;
+  }
+
+  /* ===== Page header (desktop) ===== */
+  .page-header {
+    padding: 20px 24px; border-bottom: 1px solid #E2E8F0;
+    display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .page-header h1 { font-size: 20px; font-weight: 600; color: #0F172A; display: flex; align-items: center; gap: 8px; }
+  .page-header h1 .icon { color: #0F766E; font-size: 22px; }
+  .page-header p { font-size: 13px; color: #475569; margin-top: 2px; }
+
+  /* ===== KPI cards ===== */
+  .kpi-row {
+    padding: 16px 24px; display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .kpi-card {
+    flex: 1; min-width: 140px; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid #E2E8F0; background: #fff;
+  }
+  .kpi-card .num { font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .kpi-card .label { font-size: 12px; color: #475569; margin-top: 2px; }
+  .kpi-card.total .num { color: #0F172A; }
+  .kpi-card.critical .num { color: #DC2626; }
+  .kpi-card.warning .num { color: #D97706; }
+  .kpi-card.clean .num { color: #059669; }
+
+  /* ===== Filters bar ===== */
+  .filters-bar {
+    padding: 12px 24px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    border-bottom: 1px solid #F1F5F9; background: #F8FAFC;
+  }
+  .filter-input {
+    padding: 6px 12px 6px 32px; border: 1px solid #E2E8F0; border-radius: 6px;
+    font-size: 13px; background: #fff; color: #0F172A; width: 200px;
+    position: relative;
+  }
+  .filter-input-wrap {
+    position: relative; display: inline-flex; align-items: center;
+  }
+  .filter-input-wrap .search-icon {
+    position: absolute; left: 10px; color: #94A3B8; font-size: 14px; pointer-events: none;
+  }
+  .filter-input-wrap input {
+    padding: 6px 12px 6px 32px; border: 1px solid #E2E8F0; border-radius: 6px;
+    font-size: 13px; background: #fff; color: #0F172A; width: 200px;
+  }
+  .filter-input-wrap input:focus { border-color: #0F766E; outline: none; box-shadow: 0 0 0 2px rgba(15,118,110,.1); }
+  .filter-select {
+    padding: 6px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 13px;
+    background: #fff; color: #0F172A; cursor: pointer;
+  }
+  .filter-select:focus { border-color: #0F766E; outline: none; }
+  .filter-label { font-size: 13px; color: #475569; white-space: nowrap; }
+
+  /* ===== Visit list ===== */
+  .visit-list { padding: 0 24px 24px; }
+  .visit-item {
+    border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px 16px;
+    margin-bottom: 8px; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; gap: 14px;
+    border-left: 3px solid #DC2626; position: relative;
+    background: #fff;
+  }
+  .visit-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .visit-item.severity-warning { border-left-color: #D97706; }
+  .visit-item.severity-mixed { border-left-color: #DC2626; }
+
+  .visit-item .date-col { min-width: 48px; }
+  .visit-item .date-day { font-size: 18px; font-weight: 600; color: #0F172A; line-height: 1; }
+  .visit-item .date-month { font-size: 11px; color: #475569; }
+  .visit-item .info-col { flex: 1; }
+  .visit-item .engineer-name { font-size: 14px; font-weight: 500; color: #0F172A; }
+  .visit-item .address-line { font-size: 13px; color: #475569; margin-top: 2px; }
+  .visit-item .visit-code { font-size: 11px; color: #0369A1; background: #E0F2FE; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+
+  .visit-item .badges-col { display: flex; gap: 6px; align-items: center; }
+  .anomaly-badge {
+    padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .anomaly-badge.critical { background: #FEE2E2; color: #DC2626; }
+  .anomaly-badge.warning { background: #FEF3C7; color: #92400E; }
+
+  .visit-item .arrow { color: #94A3B8; font-size: 16px; }
+
+  /* ===== Export button ===== */
+  .export-btn {
+    margin: 0 24px 20px; padding: 7px 16px; border-radius: 6px; border: 1px solid #E2E8F0;
+    background: #fff; font-size: 13px; cursor: pointer; color: #475569; transition: all .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .export-btn:hover { border-color: #0F766E; color: #0F766E; }
+
+  /* ===== Mobile header ===== */
+  .mobile-header {
+    display: flex; align-items: center; padding: 8px 16px;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    border-bottom: 1px solid #f0f0f0; background: #fff; min-height: 44px;
+  }
+  .mobile-header .back-btn {
+    width: 44px; height: 44px; border-radius: 8px; border: none; background: transparent;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #0F172A;
+  }
+  .mobile-header h2 { font-size: 16px; font-weight: 600; margin-left: 4px; color: #0F172A; }
+
+  /* ===== Mobile filters (chips) ===== */
+  .mobile-filters {
+    padding: 10px 16px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid #F1F5F9;
+  }
+  .mobile-filters::-webkit-scrollbar { display: none; }
+  .mobile-chip {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid #E2E8F0;
+    font-size: 12px; white-space: nowrap; background: #fff; cursor: pointer; color: #475569;
+  }
+  .mobile-chip.active { background: #0F766E; color: #fff; border-color: #0F766E; }
+
+  /* ===== Mobile summary ===== */
+  .mobile-summary { padding: 12px 16px; display: flex; gap: 8px; }
+  .mobile-summary .kpi-card { padding: 10px 12px; min-width: 0; }
+  .mobile-summary .kpi-card .num { font-size: 20px; }
+  .mobile-summary .kpi-card .label { font-size: 11px; }
+
+  /* ===== Mobile visit list ===== */
+  .mobile-visit-list { padding: 0 16px 16px; }
+  .mobile-visit-item {
+    border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 14px;
+    margin-bottom: 8px; cursor: pointer; border-left: 3px solid #DC2626; background: #fff;
+  }
+  .mobile-visit-item:active { background: #F8FAFC; }
+  .mobile-visit-item.severity-warning { border-left-color: #D97706; }
+  .mobile-visit-top { display: flex; justify-content: space-between; align-items: center; }
+  .mobile-visit-engineer { font-size: 14px; font-weight: 500; color: #0F172A; }
+  .mobile-visit-date { font-size: 12px; color: #475569; }
+  .mobile-visit-address { font-size: 13px; color: #475569; margin-top: 2px; }
+  .mobile-visit-code { font-size: 11px; color: #0369A1; background: #E0F2FE; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+  .mobile-visit-badges { margin-top: 6px; display: flex; gap: 6px; }
+
+  /* ===== DETAIL PAGE ===== */
+  .detail-header { padding: 20px 24px; border-bottom: 1px solid #E2E8F0; }
+  .detail-breadcrumb {
+    font-size: 13px; color: #0F766E; cursor: pointer; margin-bottom: 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .detail-breadcrumb:hover { text-decoration: underline; }
+  .detail-header h1 { font-size: 18px; font-weight: 600; color: #0F172A; }
+  .detail-meta { display: flex; gap: 20px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .detail-meta span { font-size: 13px; color: #475569; }
+  .detail-meta strong { color: #0F172A; font-weight: 500; }
+
+  /* Status tags */
+  .status-tag {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+    border-radius: 6px; font-size: 11px; font-weight: 500;
+  }
+  .status-tag.open { background: #FEE2E2; color: #DC2626; }
+  .status-tag.confirmed { background: #D1FAE5; color: #059669; }
+  .status-tag.dismissed { background: #F1F5F9; color: #475569; }
+  .status-tag.visit-status { background: #E0F2FE; color: #0369A1; }
+
+  /* ===== Anomaly section ===== */
+  .anomaly-section { padding: 20px 24px; }
+  .anomaly-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #F1F5F9;
+  }
+  .anomaly-section-header h3 { font-size: 15px; font-weight: 600; color: #0F172A; display: flex; align-items: center; gap: 8px; }
+  .anomaly-count-badge {
+    background: #FEE2E2; color: #DC2626; padding: 2px 8px; border-radius: 6px;
+    font-size: 12px; font-weight: 600;
+  }
+  .select-all-wrap { display: flex; align-items: center; gap: 6px; }
+  .select-all-wrap label { font-size: 13px; color: #475569; cursor: pointer; }
+
+  /* Checkbox */
+  .custom-checkbox {
+    width: 16px; height: 16px; border: 1px solid #E2E8F0; border-radius: 4px;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    background: #fff; flex-shrink: 0; transition: all .15s;
+  }
+  .custom-checkbox.checked { background: #0F766E; border-color: #0F766E; }
+  .custom-checkbox.checked::after { content: '✓'; color: #fff; font-size: 11px; font-weight: 700; }
+
+  /* Anomaly card */
+  .anomaly-card {
+    border: 1px solid #E2E8F0; border-radius: 10px; margin-bottom: 10px; overflow: hidden;
+    display: flex; align-items: stretch;
+  }
+  .anomaly-card.critical { border-left: 3px solid #DC2626; }
+  .anomaly-card.warning { border-left: 3px solid #D97706; }
+  .anomaly-card.selected { border-color: #0F766E; background: #F0FDFA; }
+
+  .anomaly-checkbox-col {
+    padding: 16px 12px; display: flex; align-items: center; justify-content: center;
+    border-right: 1px solid #F1F5F9;
+  }
+
+  .anomaly-card-main { flex: 1; }
+  .anomaly-card-header {
+    padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+    background: #F8FAFC; border-bottom: 1px solid #F1F5F9;
+  }
+  .anomaly-card-header .task-info { font-size: 13px; font-weight: 500; color: #0F172A; flex: 1; }
+  .severity-tag {
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  }
+  .severity-tag.critical { background: #FEE2E2; color: #DC2626; }
+  .severity-tag.warning { background: #FEF3C7; color: #92400E; }
+
+  .anomaly-card-body {
+    padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start;
+  }
+  .anomaly-photo {
+    width: 110px; height: 82px; border-radius: 8px; background: #F1F5F9;
+    display: flex; align-items: center; justify-content: center;
+    color: #94A3B8; font-size: 11px; flex-shrink: 0; overflow: hidden;
+    border: 1px solid #E2E8F0;
+  }
+  .anomaly-photo-inner { text-align: center; }
+  .anomaly-photo-inner .cam-icon { font-size: 28px; margin-bottom: 2px; display: block; }
+  .anomaly-details { flex: 1; }
+  .anomaly-row { display: flex; gap: 8px; margin-bottom: 5px; font-size: 13px; }
+  .anomaly-row .lbl { color: #475569; min-width: 110px; }
+  .anomaly-row .val { color: #0F172A; font-weight: 500; }
+  .anomaly-row .val.danger { color: #DC2626; }
+  .anomaly-row .val.warn { color: #D97706; }
+  .anomaly-row .val.ok { color: #059669; }
+
+  .compare-btn {
+    margin-top: 6px; padding: 4px 10px; border-radius: 6px; border: 1px solid #0F766E;
+    background: transparent; color: #0F766E; font-size: 12px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .compare-btn:hover { background: #0F766E; color: #fff; }
+
+  /* ===== Detail actions ===== */
+  .detail-actions {
+    padding: 16px 24px; border-top: 1px solid #E2E8F0;
+    display: flex; gap: 10px; flex-wrap: wrap; background: #F8FAFC;
+    align-items: center;
+  }
+  .detail-actions .selected-info {
+    font-size: 13px; color: #475569; margin-right: auto;
+  }
+  .detail-actions .selected-info strong { color: #0F172A; }
+  .action-btn {
+    padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all .15s; border: 1px solid; display: inline-flex;
+    align-items: center; gap: 6px;
+  }
+  .action-btn.primary { background: #0F766E; color: #fff; border-color: #0F766E; }
+  .action-btn.primary:hover { background: #0D6B63; }
+  .action-btn.primary:disabled { background: #94A3B8; border-color: #94A3B8; cursor: not-allowed; }
+  .action-btn.success { background: #059669; color: #fff; border-color: #059669; }
+  .action-btn.success:hover { background: #047857; }
+  .action-btn.danger-outline { background: #fff; color: #DC2626; border-color: #DC2626; }
+  .action-btn.danger-outline:hover { background: #FEF2F2; }
+  .action-btn.neutral { background: #fff; color: #475569; border-color: #E2E8F0; }
+  .action-btn.neutral:hover { border-color: #94A3B8; }
+
+  /* ===== Comparison modal ===== */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.45); z-index: 2000; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-content {
+    background: #fff; border-radius: 12px; padding: 24px; max-width: 680px; width: 90%;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .modal-content h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #0F172A; }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .compare-item { text-align: center; }
+  .compare-item .photo-box {
+    width: 100%; height: 170px; background: #F1F5F9; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 12px;
+    border: 1px solid #E2E8F0;
+  }
+  .compare-item .photo-box.original { border: 2px solid #DC2626; }
+  .compare-item .meta { font-size: 12px; color: #475569; margin-top: 8px; text-align: left; }
+  .compare-item .meta strong { color: #0F172A; }
+  .compare-alert {
+    margin-top: 12px; padding: 10px 14px; background: #FEF2F2; border-radius: 8px;
+    font-size: 13px; color: #DC2626; border: 1px solid #FECACA;
+  }
+  .modal-footer { margin-top: 16px; text-align: right; }
+  .modal-close-btn {
+    padding: 7px 20px; border-radius: 6px; border: 1px solid #E2E8F0;
+    background: #fff; cursor: pointer; font-size: 13px; color: #475569;
+  }
+  .modal-close-btn:hover { background: #F8FAFC; }
+
+  /* ===== Mobile detail ===== */
+  .mobile-detail-meta {
+    padding: 12px 16px; background: #F8FAFC; border-bottom: 1px solid #F1F5F9;
+  }
+  .mobile-detail-meta p { font-size: 13px; color: #475569; margin-bottom: 3px; }
+  .mobile-detail-meta strong { color: #0F172A; }
+
+  .mobile-select-bar {
+    padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #F1F5F9; background: #fff;
+  }
+  .mobile-select-bar .info { font-size: 13px; color: #475569; }
+  .mobile-select-bar .info strong { color: #0F172A; }
+
+  .mobile-anomaly-list { padding: 12px 16px; }
+  .mobile-anomaly-card {
+    border: 1px solid #E2E8F0; border-radius: 10px; margin-bottom: 10px; overflow: hidden;
+  }
+  .mobile-anomaly-card.critical { border-left: 3px solid #DC2626; }
+  .mobile-anomaly-card.warning { border-left: 3px solid #D97706; }
+  .mobile-anomaly-card.selected { border-color: #0F766E; background: #F0FDFA; }
+  .mobile-anomaly-header {
+    padding: 10px 12px; background: #F8FAFC; border-bottom: 1px solid #F1F5F9;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mobile-anomaly-header .chk { margin-right: 4px; }
+  .mobile-anomaly-header .title { font-size: 13px; font-weight: 500; flex: 1; color: #0F172A; }
+  .mobile-anomaly-body { padding: 10px 12px; }
+  .mobile-anomaly-body .detail-row { font-size: 12px; color: #475569; margin-bottom: 3px; }
+  .mobile-anomaly-body .detail-row .val { font-weight: 500; color: #0F172A; }
+
+  .mobile-actions {
+    padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;
+    border-top: 1px solid #E2E8F0;
+  }
+  .mobile-actions .action-btn { width: 100%; justify-content: center; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .desktop-frame { margin: 12px; border-radius: 8px; }
+    .filters-bar { padding: 10px 16px; }
+    .kpi-row { padding: 12px 16px; }
+    .visit-list { padding: 0 16px 16px; }
+    .visit-item { padding: 12px 14px; flex-wrap: wrap; }
+    .anomaly-card-body { flex-direction: column; }
+    .anomaly-photo { width: 100%; height: 130px; }
+    .compare-grid { grid-template-columns: 1fr; }
+    .detail-actions { flex-direction: column; }
+    .detail-actions .selected-info { margin-right: 0; margin-bottom: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Переключатель макетов -->
+<div class="mockup-switcher">
+  <span>Макет:</span>
+  <button class="active" onclick="showScreen('list-desktop', this)">Список — ПК</button>
+  <button onclick="showScreen('list-mobile', this)">Список — Моб.</button>
+  <button onclick="showScreen('detail-desktop', this)">Детали — ПК</button>
+  <button onclick="showScreen('detail-mobile', this)">Детали — Моб.</button>
+</div>
+
+<div class="mockup-container">
+
+<!-- ======================== -->
+<!-- СПИСОК — ДЕСКТОП         -->
+<!-- ======================== -->
+<div id="list-desktop" class="screen active">
+  <div class="desktop-frame">
+    <div class="page-header">
+      <div>
+        <h1><span class="icon">📊</span> Аналитика визитов</h1>
+        <p>Визиты с отклонениями по результатам автоматических проверок</p>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi-card total">
+        <div class="num">89</div>
+        <div class="label">Визитов за период</div>
+      </div>
+      <div class="kpi-card critical">
+        <div class="num">7</div>
+        <div class="label">Критические отклонения</div>
+      </div>
+      <div class="kpi-card warning">
+        <div class="num">12</div>
+        <div class="label">Предупреждения</div>
+      </div>
+      <div class="kpi-card clean">
+        <div class="num">70</div>
+        <div class="label">Без отклонений</div>
+      </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filters-bar">
+      <div class="filter-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Поиск по инженеру или адресу...">
+      </div>
+      <span class="filter-label">Период:</span>
+      <select class="filter-select">
+        <option>Последние 7 дней</option>
+        <option selected>Последние 30 дней</option>
+        <option>Последние 90 дней</option>
+      </select>
+      <span class="filter-label">Инженер:</span>
+      <select class="filter-select">
+        <option>Все инженеры</option>
+        <option>Петров А.С.</option>
+        <option>Сидоров И.В.</option>
+        <option>Иванов П.П.</option>
+      </select>
+      <span class="filter-label">Тип:</span>
+      <select class="filter-select">
+        <option>Все типы</option>
+        <option>Совпадение фото (pHash)</option>
+        <option>Вне окна визита</option>
+        <option>GPS не совпадает</option>
+        <option>Фото из галереи</option>
+      </select>
+    </div>
+
+    <!-- Список визитов -->
+    <div class="visit-list">
+      <div class="visit-item severity-mixed" onclick="showScreen('detail-desktop', document.querySelectorAll('.mockup-switcher button')[2])">
+        <div class="date-col"><div class="date-day">15</div><div class="date-month">сен</div></div>
+        <div class="info-col">
+          <div class="engineer-name">Петров А.С.</div>
+          <div class="address-line">ТЦ «Аврора», ул. Ленина 42</div>
+          <span class="visit-code">RU/77/423</span>
+        </div>
+        <div class="badges-col">
+          <span class="anomaly-badge critical">● 2</span>
+          <span class="anomaly-badge warning">● 1</span>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+
+      <div class="visit-item">
+        <div class="date-col"><div class="date-day">14</div><div class="date-month">сен</div></div>
+        <div class="info-col">
+          <div class="engineer-name">Сидоров И.В.</div>
+          <div class="address-line">БЦ «Меридиан», пр. Мира 15</div>
+          <span class="visit-code">RU/42/108</span>
+        </div>
+        <div class="badges-col">
+          <span class="anomaly-badge critical">● 1</span>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+
+      <div class="visit-item severity-warning">
+        <div class="date-col"><div class="date-day">13</div><div class="date-month">сен</div></div>
+        <div class="info-col">
+          <div class="engineer-name">Иванов П.П.</div>
+          <div class="address-line">Офис «Северный», ул. Садовая 7</div>
+          <span class="visit-code">RU/15/033</span>
+        </div>
+        <div class="badges-col">
+          <span class="anomaly-badge warning">● 3</span>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+
+      <div class="visit-item severity-mixed">
+        <div class="date-col"><div class="date-day">12</div><div class="date-month">сен</div></div>
+        <div class="info-col">
+          <div class="engineer-name">Козлов Д.М.</div>
+          <div class="address-line">ТРЦ «Галерея», Невский 120</div>
+          <span class="visit-code">RU/77/501</span>
+        </div>
+        <div class="badges-col">
+          <span class="anomaly-badge critical">● 1</span>
+          <span class="anomaly-badge warning">● 2</span>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+
+      <div class="visit-item severity-warning">
+        <div class="date-col"><div class="date-day">11</div><div class="date-month">сен</div></div>
+        <div class="info-col">
+          <div class="engineer-name">Петров А.С.</div>
+          <div class="address-line">Склад «Южный», ул. Промышленная 18</div>
+          <span class="visit-code">RU/33/210</span>
+        </div>
+        <div class="badges-col">
+          <span class="anomaly-badge warning">● 1</span>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+
+      <div class="visit-item">
+        <div class="date-col"><div class="date-day">10</div><div class="date-month">сен</div></div>
+        <div class="info-col">
+          <div class="engineer-name">Сидоров И.В.</div>
+          <div class="address-line">Магазин «Центральный», ул. Пушкина 3</div>
+          <span class="visit-code">RU/55/077</span>
+        </div>
+        <div class="badges-col">
+          <span class="anomaly-badge critical">● 2</span>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+    </div>
+
+    <button class="export-btn">📥 Экспорт в CSV</button>
+  </div>
+</div>
+
+<!-- ======================== -->
+<!-- СПИСОК — МОБИЛЬНЫЙ       -->
+<!-- ======================== -->
+<div id="list-mobile" class="screen">
+  <div class="mobile-frame">
+    <div class="mobile-header">
+      <button class="back-btn">←</button>
+      <h2>Аналитика</h2>
+    </div>
+
+    <div class="mobile-filters">
+      <span class="mobile-chip active">Все</span>
+      <span class="mobile-chip">Критические</span>
+      <span class="mobile-chip">Предупреждения</span>
+      <span class="mobile-chip">Инженер ▾</span>
+      <span class="mobile-chip">30 дней ▾</span>
+    </div>
+
+    <div class="mobile-summary">
+      <div class="kpi-card total"><div class="num">89</div><div class="label">Визитов</div></div>
+      <div class="kpi-card critical"><div class="num">7</div><div class="label">Крит.</div></div>
+      <div class="kpi-card warning"><div class="num">12</div><div class="label">Предупр.</div></div>
+      <div class="kpi-card clean"><div class="num">70</div><div class="label">ОК</div></div>
+    </div>
+
+    <div class="mobile-visit-list">
+      <div class="mobile-visit-item" onclick="showScreen('detail-mobile', document.querySelectorAll('.mockup-switcher button')[3])">
+        <div class="mobile-visit-top">
+          <span class="mobile-visit-engineer">Петров А.С.</span>
+          <span class="mobile-visit-date">15 сен</span>
+        </div>
+        <div class="mobile-visit-address">ТЦ «Аврора», ул. Ленина 42</div>
+        <span class="mobile-visit-code">RU/77/423</span>
+        <div class="mobile-visit-badges">
+          <span class="anomaly-badge critical">● 2</span>
+          <span class="anomaly-badge warning">● 1</span>
+        </div>
+      </div>
+
+      <div class="mobile-visit-item">
+        <div class="mobile-visit-top">
+          <span class="mobile-visit-engineer">Сидоров И.В.</span>
+          <span class="mobile-visit-date">14 сен</span>
+        </div>
+        <div class="mobile-visit-address">БЦ «Меридиан», пр. Мира 15</div>
+        <span class="mobile-visit-code">RU/42/108</span>
+        <div class="mobile-visit-badges">
+          <span class="anomaly-badge critical">● 1</span>
+        </div>
+      </div>
+
+      <div class="mobile-visit-item severity-warning">
+        <div class="mobile-visit-top">
+          <span class="mobile-visit-engineer">Иванов П.П.</span>
+          <span class="mobile-visit-date">13 сен</span>
+        </div>
+        <div class="mobile-visit-address">Офис «Северный», ул. Садовая 7</div>
+        <span class="mobile-visit-code">RU/15/033</span>
+        <div class="mobile-visit-badges">
+          <span class="anomaly-badge warning">● 3</span>
+        </div>
+      </div>
+
+      <div class="mobile-visit-item">
+        <div class="mobile-visit-top">
+          <span class="mobile-visit-engineer">Козлов Д.М.</span>
+          <span class="mobile-visit-date">12 сен</span>
+        </div>
+        <div class="mobile-visit-address">ТРЦ «Галерея», Невский 120</div>
+        <span class="mobile-visit-code">RU/77/501</span>
+        <div class="mobile-visit-badges">
+          <span class="anomaly-badge critical">● 1</span>
+          <span class="anomaly-badge warning">● 2</span>
+        </div>
+      </div>
+
+      <div class="mobile-visit-item severity-warning">
+        <div class="mobile-visit-top">
+          <span class="mobile-visit-engineer">Петров А.С.</span>
+          <span class="mobile-visit-date">11 сен</span>
+        </div>
+        <div class="mobile-visit-address">Склад «Южный», ул. Промышленная 18</div>
+        <span class="mobile-visit-code">RU/33/210</span>
+        <div class="mobile-visit-badges">
+          <span class="anomaly-badge warning">● 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== -->
+<!-- ДЕТАЛИ — ДЕСКТОП         -->
+<!-- ======================== -->
+<div id="detail-desktop" class="screen">
+  <div class="desktop-frame">
+    <div class="detail-header">
+      <div class="detail-breadcrumb" onclick="showScreen('list-desktop', document.querySelectorAll('.mockup-switcher button')[0])">← Аналитика визитов</div>
+      <h1>Визит RU/77/423 — ТЦ «Аврора»</h1>
+      <div class="detail-meta">
+        <span>Инженер: <strong>Петров А.С.</strong></span>
+        <span>Дата: <strong>15.09.2026, 10:15 — 14:30</strong></span>
+        <span>Статус: <span class="status-tag visit-status">Завершён</span></span>
+        <span class="status-tag open">● Не проверено</span>
+      </div>
+    </div>
+
+    <div class="anomaly-section">
+      <div class="anomaly-section-header">
+        <h3>Отклонения <span class="anomaly-count-badge">3</span></h3>
+        <div class="select-all-wrap">
+          <div class="custom-checkbox" id="select-all-cb" onclick="toggleSelectAll()"></div>
+          <label onclick="toggleSelectAll()">Выбрать все</label>
+        </div>
+      </div>
+
+      <!-- Аномалия 1 — pHash -->
+      <div class="anomaly-card critical" id="anomaly-1">
+        <div class="anomaly-checkbox-col">
+          <div class="custom-checkbox" onclick="toggleAnomaly(this, 'anomaly-1')"></div>
+        </div>
+        <div class="anomaly-card-main">
+          <div class="anomaly-card-header">
+            <span class="task-info">📷 Фото ПОСЛЕ — Внутренний блок СС (Серверная)</span>
+            <span class="severity-tag critical">Критическое</span>
+          </div>
+          <div class="anomaly-card-body">
+            <div class="anomaly-photo">
+              <div class="anomaly-photo-inner">
+                <span class="cam-icon">📷</span>
+                Фото ПОСЛЕ
+              </div>
+            </div>
+            <div class="anomaly-details">
+              <div class="anomaly-row"><span class="lbl">Проверка:</span><span class="val danger">pHash — сходство 95%</span></div>
+              <div class="anomaly-row"><span class="lbl">Совпадение с:</span><span class="val">Визит RU/77/423 от 12.08 (Иванов П.П.)</span></div>
+              <div class="anomaly-row"><span class="lbl">Оборудование:</span><span class="val">Внутр. блок СС, инв. №СС-4401</span></div>
+              <div class="anomaly-row"><span class="lbl">Источник:</span><span class="val warn">Галерея (не камера)</span></div>
+              <div class="anomaly-row"><span class="lbl">Timestamp:</span><span class="val ok">15.09, 13:47 ✓</span></div>
+              <button class="compare-btn" onclick="document.getElementById('compare-modal').classList.add('show')">🔍 Сравнить с оригиналом</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Аномалия 2 — Timestamp -->
+      <div class="anomaly-card critical" id="anomaly-2">
+        <div class="anomaly-checkbox-col">
+          <div class="custom-checkbox" onclick="toggleAnomaly(this, 'anomaly-2')"></div>
+        </div>
+        <div class="anomaly-card-main">
+          <div class="anomaly-card-header">
+            <span class="task-info">📷 Фото ДО — ИБП (Электрощитовая)</span>
+            <span class="severity-tag critical">Критическое</span>
+          </div>
+          <div class="anomaly-card-body">
+            <div class="anomaly-photo">
+              <div class="anomaly-photo-inner">
+                <span class="cam-icon">📷</span>
+                Фото ДО
+              </div>
+            </div>
+            <div class="anomaly-details">
+              <div class="anomaly-row"><span class="lbl">Проверка:</span><span class="val danger">Timestamp — вне окна визита</span></div>
+              <div class="anomaly-row"><span class="lbl">Фото сделано:</span><span class="val danger">14.09.2026, 08:12</span></div>
+              <div class="anomaly-row"><span class="lbl">Окно визита:</span><span class="val">15.09.2026, 10:15 — 14:30</span></div>
+              <div class="anomaly-row"><span class="lbl">Разница:</span><span class="val danger">~26 часов до начала визита</span></div>
+              <div class="anomaly-row"><span class="lbl">Источник:</span><span class="val ok">Камера ✓</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Аномалия 3 — GPS + Gallery -->
+      <div class="anomaly-card warning" id="anomaly-3">
+        <div class="anomaly-checkbox-col">
+          <div class="custom-checkbox" onclick="toggleAnomaly(this, 'anomaly-3')"></div>
+        </div>
+        <div class="anomaly-card-main">
+          <div class="anomaly-card-header">
+            <span class="task-info">📷 Фото ПОСЛЕ — ДГУ (уровень объекта)</span>
+            <span class="severity-tag warning">Предупреждение</span>
+          </div>
+          <div class="anomaly-card-body">
+            <div class="anomaly-photo">
+              <div class="anomaly-photo-inner">
+                <span class="cam-icon">📷</span>
+                Фото ПОСЛЕ
+              </div>
+            </div>
+            <div class="anomaly-details">
+              <div class="anomaly-row"><span class="lbl">Проверка:</span><span class="val warn">GPS — 350 м от адреса объекта</span></div>
+              <div class="anomaly-row"><span class="lbl">Координаты:</span><span class="val">55.7558, 37.6173</span></div>
+              <div class="anomaly-row"><span class="lbl">Адрес объекта:</span><span class="val">55.7535, 37.6210</span></div>
+              <div class="anomaly-row"><span class="lbl">Источник:</span><span class="val warn">Галерея (не камера)</span></div>
+              <div class="anomaly-row"><span class="lbl">Timestamp:</span><span class="val ok">15.09, 12:05 ✓</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Действия -->
+    <div class="detail-actions">
+      <div class="selected-info">Выбрано: <strong id="selected-count">0</strong> из 3 отклонений</div>
+      <button class="action-btn primary" id="reshoot-btn" disabled>📩 Запросить пересъёмку</button>
+      <button class="action-btn success">✅ Подтвердить визит</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== -->
+<!-- ДЕТАЛИ — МОБИЛЬНЫЙ       -->
+<!-- ======================== -->
+<div id="detail-mobile" class="screen">
+  <div class="mobile-frame">
+    <div class="mobile-header">
+      <button class="back-btn" onclick="showScreen('list-mobile', document.querySelectorAll('.mockup-switcher button')[1])">←</button>
+      <h2>Отклонения</h2>
+    </div>
+
+    <div class="mobile-detail-meta">
+      <p><strong>RU/77/423</strong> — ТЦ «Аврора»</p>
+      <p>Петров А.С. · 15.09.2026 · 10:15–14:30</p>
+      <p style="margin-top:4px"><span class="status-tag visit-status">Завершён</span> <span class="status-tag open">● Не проверено</span></p>
+    </div>
+
+    <div class="mobile-select-bar">
+      <div class="info">Выбрано: <strong id="mobile-selected-count">0</strong> из 3</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="custom-checkbox" id="mobile-select-all-cb" onclick="toggleMobileSelectAll()"></div>
+        <span style="font-size:12px;color:#475569">Все</span>
+      </div>
+    </div>
+
+    <div class="mobile-anomaly-list">
+      <!-- Аномалия 1 -->
+      <div class="mobile-anomaly-card critical" id="m-anomaly-1">
+        <div class="mobile-anomaly-header">
+          <div class="custom-checkbox chk" onclick="toggleMobileAnomaly(this, 'm-anomaly-1')"></div>
+          <span class="title">Фото ПОСЛЕ — Внутр. блок СС</span>
+          <span class="severity-tag critical">Крит.</span>
+        </div>
+        <div class="mobile-anomaly-body">
+          <div class="detail-row">pHash: <span class="val" style="color:#DC2626">95% сходство</span></div>
+          <div class="detail-row">Совпадение: <span class="val">визит 12.08 (Иванов)</span></div>
+          <div class="detail-row">Источник: <span class="val" style="color:#D97706">Галерея</span></div>
+          <div class="detail-row">Timestamp: <span class="val" style="color:#059669">15.09, 13:47 ✓</span></div>
+          <button class="compare-btn" style="margin-top:6px" onclick="document.getElementById('compare-modal').classList.add('show')">🔍 Сравнить</button>
+        </div>
+      </div>
+
+      <!-- Аномалия 2 -->
+      <div class="mobile-anomaly-card critical" id="m-anomaly-2">
+        <div class="mobile-anomaly-header">
+          <div class="custom-checkbox chk" onclick="toggleMobileAnomaly(this, 'm-anomaly-2')"></div>
+          <span class="title">Фото ДО — ИБП</span>
+          <span class="severity-tag critical">Крит.</span>
+        </div>
+        <div class="mobile-anomaly-body">
+          <div class="detail-row">Timestamp: <span class="val" style="color:#DC2626">Вне окна визита</span></div>
+          <div class="detail-row">Фото: <span class="val" style="color:#DC2626">14.09, 08:12</span></div>
+          <div class="detail-row">Визит: <span class="val">15.09, 10:15–14:30</span></div>
+          <div class="detail-row">Источник: <span class="val" style="color:#059669">Камера ✓</span></div>
+        </div>
+      </div>
+
+      <!-- Аномалия 3 -->
+      <div class="mobile-anomaly-card warning" id="m-anomaly-3">
+        <div class="mobile-anomaly-header">
+          <div class="custom-checkbox chk" onclick="toggleMobileAnomaly(this, 'm-anomaly-3')"></div>
+          <span class="title">Фото ПОСЛЕ — ДГУ</span>
+          <span class="severity-tag warning">Предупр.</span>
+        </div>
+        <div class="mobile-anomaly-body">
+          <div class="detail-row">GPS: <span class="val" style="color:#D97706">350 м от объекта</span></div>
+          <div class="detail-row">Источник: <span class="val" style="color:#D97706">Галерея</span></div>
+          <div class="detail-row">Timestamp: <span class="val" style="color:#059669">15.09, 12:05 ✓</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-actions">
+      <button class="action-btn primary" id="mobile-reshoot-btn" disabled>📩 Запросить пересъёмку</button>
+      <button class="action-btn success">✅ Подтвердить визит</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /mockup-container -->
+
+<!-- Модальное окно сравнения -->
+<div id="compare-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal-content">
+    <h3>🔍 Сравнение фото</h3>
+    <div class="compare-grid">
+      <div class="compare-item">
+        <div class="photo-box">
+          <div style="text-align:center">
+            <div style="font-size:36px">📷</div>
+            <div>Текущее фото</div>
+            <div style="font-size:11px;margin-top:2px;color:#475569">15.09.2026, 13:47</div>
+          </div>
+        </div>
+        <div class="meta">
+          <strong>Визит RU/77/423</strong><br>
+          Петров А.С. · 15.09.2026<br>
+          Внутр. блок СС · Фото ПОСЛЕ
+        </div>
+      </div>
+      <div class="compare-item">
+        <div class="photo-box original">
+          <div style="text-align:center">
+            <div style="font-size:36px">📷</div>
+            <div>Совпадающее фото</div>
+            <div style="font-size:11px;margin-top:2px;color:#475569">12.08.2026, 11:20</div>
+          </div>
+        </div>
+        <div class="meta">
+          <strong>Визит RU/77/423</strong><br>
+          Иванов П.П. · 12.08.2026<br>
+          Внутр. блок СС · Фото ПОСЛЕ
+        </div>
+      </div>
+    </div>
+    <div class="compare-alert">
+      ⚠️ pHash расстояние Хэмминга: 3 из 64 (95% сходства). Фото визуально идентичны.
+    </div>
+    <div class="modal-footer">
+      <button class="modal-close-btn" onclick="document.getElementById('compare-modal').classList.remove('show')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showScreen(id, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.mockup-switcher button').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+/* Desktop checkboxes */
+function toggleAnomaly(cb, cardId) {
+  cb.classList.toggle('checked');
+  const card = document.getElementById(cardId);
+  card.classList.toggle('selected', cb.classList.contains('checked'));
+  updateSelectedCount();
+}
+
+function toggleSelectAll() {
+  const cb = document.getElementById('select-all-cb');
+  const isChecked = !cb.classList.contains('checked');
+  cb.classList.toggle('checked', isChecked);
+  document.querySelectorAll('#detail-desktop .anomaly-checkbox-col .custom-checkbox').forEach(c => {
+    c.classList.toggle('checked', isChecked);
+    c.closest('.anomaly-card').classList.toggle('selected', isChecked);
+  });
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const count = document.querySelectorAll('#detail-desktop .anomaly-checkbox-col .custom-checkbox.checked').length;
+  document.getElementById('selected-count').textContent = count;
+  document.getElementById('reshoot-btn').disabled = count === 0;
+}
+
+/* Mobile checkboxes */
+function toggleMobileAnomaly(cb, cardId) {
+  cb.classList.toggle('checked');
+  const card = document.getElementById(cardId);
+  card.classList.toggle('selected', cb.classList.contains('checked'));
+  updateMobileSelectedCount();
+}
+
+function toggleMobileSelectAll() {
+  const cb = document.getElementById('mobile-select-all-cb');
+  const isChecked = !cb.classList.contains('checked');
+  cb.classList.toggle('checked', isChecked);
+  document.querySelectorAll('#detail-mobile .mobile-anomaly-header .custom-checkbox').forEach(c => {
+    c.classList.toggle('checked', isChecked);
+    c.closest('.mobile-anomaly-card').classList.toggle('selected', isChecked);
+  });
+  updateMobileSelectedCount();
+}
+
+function updateMobileSelectedCount() {
+  const count = document.querySelectorAll('#detail-mobile .mobile-anomaly-header .custom-checkbox.checked').length;
+  document.getElementById('mobile-selected-count').textContent = count;
+  document.getElementById('mobile-reshoot-btn').disabled = count === 0;
+}
+</script>
+
+</body>
+</html>

@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PictureOutlined, War
 import { api, isOffline } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
+import { capturePosition } from '../utils/captureGeo';
 
 const CLIENT_ZONES = ['kassovaya', 'zona_samoobsl', 'kassa', 'sanitarnyj_uzel', 'kryltso'];
 
@@ -98,7 +99,7 @@ export default function PhotoPage() {
 
   useEffect(() => { loadData(); }, [visitId, taskId]);
 
-  const handleUpload = async (file: File, moment: 'before' | 'after') => {
+  const handleUpload = async (file: File, moment: 'before' | 'after', source: 'camera' | 'gallery' = 'camera') => {
     if (!taskId || !visitId) return;
     // Check for duplicate: same file uploaded for the other moment
     if (lastUploadedFile && lastUploadedFile.name === file.name && lastUploadedFile.size === file.size) {
@@ -107,6 +108,11 @@ export default function PhotoPage() {
     }
     setUploading(true);
     try {
+      // Антифрод: захват метаданных
+      const capturedAt = new Date().toISOString();
+      const gps = source === 'camera' ? await capturePosition() : null;
+      const meta = { capturedAt, gpsLat: gps?.lat, gpsLng: gps?.lng, photoSource: source };
+
       // Сначала сжимаем, потом вычисляем хеш — чтобы хеш совпадал с тем, что сохранит сервер
       const compressed = await compressImage(file);
       const { computeFileHash } = await import('@/utils/fileHash');
@@ -126,27 +132,27 @@ export default function PhotoPage() {
             okText: 'Загрузить',
             cancelText: 'Отмена',
             onOk: async () => {
-              await performUploadCompressed(compressed, moment);
+              await performUploadCompressed(compressed, moment, meta);
             },
           });
           return;
         }
       }
 
-      await performUploadCompressed(compressed, moment);
+      await performUploadCompressed(compressed, moment, meta);
     } catch (err: any) {
       message.error(err.message);
       setUploading(false);
     }
   };
 
-  const performUploadCompressed = async (compressed: File, moment: 'before' | 'after') => {
+  const performUploadCompressed = async (compressed: File, moment: 'before' | 'after', meta?: { capturedAt?: string; gpsLat?: number; gpsLng?: number; photoSource?: string }) => {
     if (!taskId || !visitId) return;
     try {
       if (isOffline()) {
         await api.uploadPhotoOffline(taskId, compressed, moment);
       } else {
-        await api.uploadPhoto(taskId, compressed, moment);
+        await api.uploadPhoto(taskId, compressed, moment, meta);
       }
       const p = await api.getPhotos(taskId);
       setPhotos(p);
@@ -176,9 +182,9 @@ export default function PhotoPage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, moment: 'before' | 'after') => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, moment: 'before' | 'after', source: 'camera' | 'gallery' = 'camera') => {
     const file = e.target.files?.[0];
-    if (file) handleUpload(file, moment);
+    if (file) handleUpload(file, moment, source);
     e.target.value = '';
   };
 
@@ -243,8 +249,8 @@ export default function PhotoPage() {
             <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
               <Button icon={<CameraOutlined />} onClick={() => beforeRef.current?.click()} loading={uploading} block={isMobile}>Камера</Button>
               <Button icon={<PictureOutlined />} onClick={() => beforeGalleryRef.current?.click()} loading={uploading} block={isMobile}>Галерея</Button>
-              <input ref={beforeRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
-              <input ref={beforeGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
+              <input ref={beforeRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before', 'camera')} />
+              <input ref={beforeGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before', 'gallery')} />
             </Space>
           )}
         </div>
@@ -261,8 +267,8 @@ export default function PhotoPage() {
               <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
                 <Button icon={<CameraOutlined />} onClick={() => afterRef.current?.click()} loading={uploading} block={isMobile}>Камера</Button>
                 <Button icon={<PictureOutlined />} onClick={() => afterGalleryRef.current?.click()} loading={uploading} block={isMobile}>Галерея</Button>
-                <input ref={afterRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
-                <input ref={afterGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
+                <input ref={afterRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after', 'camera')} />
+                <input ref={afterGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after', 'gallery')} />
               </Space>
             )}
           </div>

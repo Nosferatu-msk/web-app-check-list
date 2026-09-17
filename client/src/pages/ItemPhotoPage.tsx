@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Space, App, Spin, Modal } from 'antd';
 import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, PictureOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
+import { capturePosition } from '../utils/captureGeo';
 
 const compressImage = async (file: File, maxPixels: number = 2073600): Promise<File> => {
   return new Promise((resolve) => {
@@ -90,10 +91,15 @@ export default function ItemPhotoPage() {
 
   useEffect(() => { loadData(); }, [visitId, taskId, itemId]);
 
-  const handleUpload = async (file: File, moment: 'before' | 'after') => {
+  const handleUpload = async (file: File, moment: 'before' | 'after', source: 'camera' | 'gallery' = 'camera') => {
     if (!itemId) return;
     setUploading(true);
     try {
+      // Антифрод: захват метаданных
+      const capturedAt = new Date().toISOString();
+      const gps = source === 'camera' ? await capturePosition() : null;
+      const meta = { capturedAt, gpsLat: gps?.lat, gpsLng: gps?.lng, photoSource: source };
+
       // Сначала сжимаем, потом вычисляем хеш — чтобы хеш совпадал с тем, что сохранит сервер
       const compressed = await compressImage(file);
       const { computeFileHash } = await import('@/utils/fileHash');
@@ -112,23 +118,23 @@ export default function ItemPhotoPage() {
           okText: 'Загрузить',
           cancelText: 'Отмена',
           onOk: async () => {
-            await performUploadCompressed(compressed, moment);
+            await performUploadCompressed(compressed, moment, meta);
           },
         });
         return;
       }
 
-      await performUploadCompressed(compressed, moment);
+      await performUploadCompressed(compressed, moment, meta);
     } catch (err: any) {
       message.error(err.message);
       setUploading(false);
     }
   };
 
-  const performUploadCompressed = async (compressed: File, moment: 'before' | 'after') => {
+  const performUploadCompressed = async (compressed: File, moment: 'before' | 'after', meta?: { capturedAt?: string; gpsLat?: number; gpsLng?: number; photoSource?: string }) => {
     if (!itemId) return;
     try {
-      await api.uploadItemPhoto(itemId, compressed, moment);
+      await api.uploadItemPhoto(itemId, compressed, moment, meta);
       await loadData();
       message.success('Фото загружено');
     } catch (err: any) {
@@ -138,9 +144,9 @@ export default function ItemPhotoPage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, moment: 'before' | 'after') => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, moment: 'before' | 'after', source: 'camera' | 'gallery' = 'camera') => {
     const file = e.target.files?.[0];
-    if (file) handleUpload(file, moment);
+    if (file) handleUpload(file, moment, source);
     e.target.value = '';
   };
 
@@ -180,8 +186,8 @@ export default function ItemPhotoPage() {
             <Space wrap>
               <Button icon={<CameraOutlined />} onClick={() => beforeRef.current?.click()} loading={uploading}>Камера</Button>
               <Button icon={<PictureOutlined />} onClick={() => beforeGalleryRef.current?.click()} loading={uploading}>Галерея</Button>
-              <input ref={beforeRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
-              <input ref={beforeGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before')} />
+              <input ref={beforeRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before', 'camera')} />
+              <input ref={beforeGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'before', 'gallery')} />
             </Space>
           )}
         </div>
@@ -197,8 +203,8 @@ export default function ItemPhotoPage() {
             <Space wrap>
               <Button icon={<CameraOutlined />} onClick={() => afterRef.current?.click()} loading={uploading}>Камера</Button>
               <Button icon={<PictureOutlined />} onClick={() => afterGalleryRef.current?.click()} loading={uploading}>Галерея</Button>
-              <input ref={afterRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
-              <input ref={afterGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after')} />
+              <input ref={afterRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after', 'camera')} />
+              <input ref={afterGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'after', 'gallery')} />
             </Space>
           )}
         </div>

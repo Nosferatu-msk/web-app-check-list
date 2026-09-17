@@ -180,6 +180,64 @@ export interface Photo {
   moment: PhotoMoment;
   fileSize?: number;
   mimeType?: string;
+  hash?: string;
+  phash?: string;
+  capturedAt?: string;
+  gpsLat?: number;
+  gpsLng?: number;
+  photoSource?: 'camera' | 'gallery' | 'unknown';
+  verificationStatus?: 'pending' | 'clean' | 'warning' | 'suspicious';
+  verificationDetails?: VerificationDetail[];
+}
+
+export interface VerificationDetail {
+  check: string;
+  passed: boolean;
+  severity?: 'critical' | 'warning';
+  message: string;
+  data?: Record<string, unknown>;
+}
+
+export type AnomalyType =
+  | 'photo_phash_match'
+  | 'photo_timestamp_mismatch'
+  | 'photo_gps_mismatch'
+  | 'photo_gallery_source'
+  | 'photo_no_gps';
+
+export type AnomalySeverity = 'critical' | 'warning';
+export type AnomalyStatus = 'open' | 'confirmed' | 'dismissed';
+
+export interface VisitAnomaly {
+  id: string;
+  visitId: string;
+  photoId?: string;
+  type: AnomalyType;
+  severity: AnomalySeverity;
+  details?: Record<string, unknown>;
+  status: AnomalyStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  photo?: Photo;
+}
+
+export interface AnalyticsVisitSummary {
+  visitId: string;
+  visitCode: string;
+  date: string;
+  engineer: { id: string; name: string };
+  address: { id: string; fullAddress: string };
+  visitStatus: string;
+  anomalyCount: { critical: number; warning: number };
+  reviewStatus: AnomalyStatus;
+}
+
+export interface AnalyticsSummary {
+  totalVisits: number;
+  visitsWithAnomalies: number;
+  criticalCount: number;
+  warningCount: number;
 }
 
 export interface AuditLogEntry {

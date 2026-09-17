@@ -129,16 +129,24 @@ export const api = {
     request<any>(`/visits/${visitId}/tasks/${taskId}/items/${itemId}`, { method: 'DELETE' }),
 
   // Photos
-  uploadPhoto: (taskId: string, file: File, moment: 'before' | 'after') => {
+  uploadPhoto: (taskId: string, file: File, moment: 'before' | 'after', meta?: { capturedAt?: string; gpsLat?: number; gpsLng?: number; photoSource?: string }) => {
     const form = new FormData();
     form.append('photo', file);
     form.append('moment', moment);
+    if (meta?.capturedAt) form.append('capturedAt', meta.capturedAt);
+    if (meta?.gpsLat != null) form.append('gpsLat', String(meta.gpsLat));
+    if (meta?.gpsLng != null) form.append('gpsLng', String(meta.gpsLng));
+    if (meta?.photoSource) form.append('photoSource', meta.photoSource);
     return request<any>(`/tasks/${taskId}/photos`, { method: 'POST', body: form });
   },
-  uploadItemPhoto: (itemId: string, file: File, moment: 'before' | 'after') => {
+  uploadItemPhoto: (itemId: string, file: File, moment: 'before' | 'after', meta?: { capturedAt?: string; gpsLat?: number; gpsLng?: number; photoSource?: string }) => {
     const form = new FormData();
     form.append('photo', file);
     form.append('moment', moment);
+    if (meta?.capturedAt) form.append('capturedAt', meta.capturedAt);
+    if (meta?.gpsLat != null) form.append('gpsLat', String(meta.gpsLat));
+    if (meta?.gpsLng != null) form.append('gpsLng', String(meta.gpsLng));
+    if (meta?.photoSource) form.append('photoSource', meta.photoSource);
     return request<any>(`/tasks/items/${itemId}/photos`, { method: 'POST', body: form });
   },
   getPhotos: (taskId: string) => request<any[]>(`/tasks/${taskId}/photos`),
@@ -150,6 +158,16 @@ export const api = {
   },
   checkPhotoDuplicate: (hash: string) =>
     request<any>('/photos/check-duplicate', { method: 'POST', body: JSON.stringify({ hash }) }),
+
+  // Analytics
+  getAnalyticsVisits: (queryString: string) =>
+    request<any>(`/analytics/visits?${queryString}`),
+  getAnalyticsVisit: (visitId: string) =>
+    request<any>(`/analytics/visits/${visitId}`),
+  reshootVisit: (visitId: string, anomalyIds: string[]) =>
+    request<any>(`/analytics/visits/${visitId}/reshoot`, { method: 'POST', body: JSON.stringify({ anomalyIds }) }),
+  confirmVisit: (visitId: string) =>
+    request<any>(`/analytics/visits/${visitId}/confirm`, { method: 'POST' }),
 
   // Reports
   generateReport: (visitId: string) =>
@@ -505,8 +523,17 @@ export const api = {
     return { message: 'Работа удалена', _offline: true };
   },
 
-  mtrUploadPhotoOffline: async (visitId: string, file: File, moment: 'before' | 'after') => {
-    if (!isOffline()) return api.mtr.uploadMtrPhoto(visitId, (() => { const fd = new FormData(); fd.append('photo', file); fd.append('moment', moment); return fd; })());
+  mtrUploadPhotoOffline: async (visitId: string, file: File, moment: 'before' | 'after', meta?: { capturedAt?: string; gpsLat?: number; gpsLng?: number; photoSource?: string }) => {
+    if (!isOffline()) return api.mtr.uploadMtrPhoto(visitId, (() => {
+      const fd = new FormData();
+      fd.append('photo', file);
+      fd.append('moment', moment);
+      if (meta?.capturedAt) fd.append('capturedAt', meta.capturedAt);
+      if (meta?.gpsLat != null) fd.append('gpsLat', String(meta.gpsLat));
+      if (meta?.gpsLng != null) fd.append('gpsLng', String(meta.gpsLng));
+      if (meta?.photoSource) fd.append('photoSource', meta.photoSource);
+      return fd;
+    })());
     const { db, localId, enqueueSync } = await import('../db/index');
     const id = localId();
     const visit = await db.mtrVisits.get(visitId);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Drawer, App, Breadcrumb } from 'antd';
 import type { MenuProps } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined, ExperimentOutlined, LinkOutlined, FileProtectOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EnvironmentOutlined, ToolOutlined, HomeOutlined, FileTextOutlined, UserOutlined, AuditOutlined, MenuOutlined, TeamOutlined, ImportOutlined, CheckCircleOutlined, ShopOutlined, AppstoreOutlined, RocketOutlined, ExperimentOutlined, LinkOutlined, FileProtectOutlined, ClockCircleOutlined, BarChartOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -26,6 +26,7 @@ const pageLabels: Record<string, string> = {
   '/admin/contracts': 'Договоры',
   '/admin/deadline-settings': 'Настройки сроков',
   '/admin/audit': 'Аудит',
+  '/admin/analytics': 'Аналитика визитов',
 };
 
 const menuItems: MenuProps['items'] = [
@@ -56,6 +57,7 @@ const menuItems: MenuProps['items'] = [
   { type: 'group', label: 'Система', children: [
     { key: '/admin/proposals', icon: <CheckCircleOutlined />, label: 'Модерация' },
     { key: '/admin/import', icon: <ImportOutlined />, label: 'Импорт CSV' },
+    { key: '/admin/analytics', icon: <BarChartOutlined />, label: 'Аналитика визитов' },
     { key: '/admin/system-notifications', icon: <RocketOutlined />, label: 'Уведомления' },
     { key: '/admin/audit', icon: <AuditOutlined />, label: 'Аудит' },
   ]},

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton, DatePicker } from 'antd';
-import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined } from '@ant-design/icons';
+import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined, PieChartOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -197,6 +197,7 @@ export default function VisitListPage() {
                 <>
                   <Button type="text" size="small" icon={<FormOutlined />} onClick={() => navigate('/requests')} aria-label="Заявки" />
                   <Button type="text" size="small" icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')} aria-label="Сводные отчёты" />
+                  <Button type="text" size="small" icon={<PieChartOutlined />} onClick={() => navigate('/analytics')} aria-label="Аналитика" />
                 </>
               )}
               {isAdmin && (
@@ -228,6 +229,7 @@ export default function VisitListPage() {
               <>
                 <Button icon={<FormOutlined />} onClick={() => navigate('/requests')}>Заявки</Button>
                 <Button icon={<BarChartOutlined />} onClick={() => navigate('/reports/summary')}>Сводные отчёты</Button>
+                <Button icon={<PieChartOutlined />} onClick={() => navigate('/analytics')}>Аналитика</Button>
               </>
             )}
             {isAdmin && (

@@ -43,6 +43,8 @@ import MtrReportPage from './pages/mtr/MtrReportPage';
 import MtrTmVisitListPage from './pages/mtr/MtrTmVisitListPage';
 import MtrAdminWorkTypes from './pages/mtr/MtrAdminWorkTypes';
 import MtrAdminAssignments from './pages/mtr/MtrAdminAssignments';
+import AnalyticsPage from './pages/AnalyticsPage';
+import AnalyticsDetailPage from './pages/AnalyticsDetailPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -135,6 +137,8 @@ export default function App() {
       <Route path="/visit/:id/report" element={<ProtectedRoute><EngineerRoute><ReportPage /></EngineerRoute></ProtectedRoute>} />
       <Route path="/reports/summary" element={<TmAdminRoute><ProtectedRoute><SummaryReportPage /></ProtectedRoute></TmAdminRoute>} />
       <Route path="/requests" element={<TmAdminRoute><ProtectedRoute><RequestsPage /></ProtectedRoute></TmAdminRoute>} />
+      <Route path="/analytics" element={<TmAdminRoute><ProtectedRoute><AnalyticsPage /></ProtectedRoute></TmAdminRoute>} />
+      <Route path="/analytics/:id" element={<TmAdminRoute><ProtectedRoute><AnalyticsDetailPage /></ProtectedRoute></TmAdminRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
         <Route index element={<Navigate to="/admin/addresses" />} />
         <Route path="addresses" element={<AdminAddresses />} />
@@ -154,6 +158,7 @@ export default function App() {
         <Route path="mtr-assignments" element={<MtrAdminAssignments />} />
         <Route path="contracts" element={<ContractsPage />} />
         <Route path="deadline-settings" element={<DeadlineSettingsPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
       </Route>
       {/* MTR routes */}
       <Route path="/mtr/visits" element={<ProtectedRoute><EngineerMtrRoute><MtrVisitListPage /></EngineerMtrRoute></ProtectedRoute>} />

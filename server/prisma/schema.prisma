@@ -115,6 +115,7 @@ model User {
   mtrTmObjects             MtrTmObject[]          @relation("MtrTmObjectRelation")
   mtrTmEngineersAsTm       MtrTmEngineer[]        @relation("MtrTmEngineerTmRelation")
   mtrEngineersAsTm         MtrTmEngineer[]        @relation("MtrTmEngineerEngineerRelation")
+  reviewedAnomalies        VisitAnomaly[]         @relation("AnomalyReviewer")
 
   @@map("users")
 }
@@ -128,6 +129,8 @@ model Address {
   fullAddress   String   @map("full_address")
   customerEmail String?  @map("customer_email")
   objectCode    String?  @unique @map("object_code")
+  latitude      Float?
+  longitude     Float?
   isDeleted     Boolean  @default(false) @map("is_deleted")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -217,6 +220,7 @@ model Visit {
   visitEngineers   VisitEngineer[]
   importedRequests ImportedRequest[]
   visitRequests    VisitRequest[]
+  anomalies        VisitAnomaly[]
 
   @@index([userId, dateStart])
   @@index([status])
@@ -271,11 +275,20 @@ model Photo {
   mimeType            String?     @map("mime_type")
   hash                String?
   mtrVisitId          String?     @map("mtr_visit_id")
+  // Антифрод-система верификации фото
+  phash               String?
+  capturedAt          DateTime?   @map("captured_at")
+  gpsLat              Float?      @map("gps_lat")
+  gpsLng              Float?      @map("gps_lng")
+  photoSource         String?     @map("photo_source")
+  verificationStatus  String      @default("pending") @map("verification_status")
+  verificationDetails Json?       @map("verification_details")
   createdAt           DateTime    @default(now()) @map("created_at")
 
   task              Task?              @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskEquipmentItem TaskEquipmentItem? @relation(fields: [taskEquipmentItemId], references: [id], onDelete: Cascade)
   mtrVisit          MtrVisit?          @relation(fields: [mtrVisitId], references: [id], onDelete: Cascade)
+  anomalies         VisitAnomaly[]
 
   @@unique([taskId, moment])
   @@unique([taskEquipmentItemId, moment])
@@ -283,6 +296,7 @@ model Photo {
   @@index([taskEquipmentItemId, moment])
   @@index([mtrVisitId])
   @@index([hash])
+  @@index([verificationStatus])
   @@map("photos")
 }
 
@@ -818,4 +832,28 @@ model SyncMutation {
   @@index([userId])
   @@index([createdAt])
   @@map("sync_mutations")
+}
+
+// Антифрод-система: отклонения по результатам верификации фото
+model VisitAnomaly {
+  id          String    @id @default(uuid())
+  visitId     String    @map("visit_id")
+  photoId     String?   @map("photo_id")
+  type        String
+  severity    String
+  details     Json?
+  status      String    @default("open")
+  reviewedBy  String?   @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  visit   Visit   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  photo   Photo?  @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  reviewer User?  @relation("AnomalyReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([visitId])
+  @@index([type])
+  @@index([status])
+  @@index([visitId, status])
+  @@map("visit_anomalies")
 }

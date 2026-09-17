@@ -19,6 +19,7 @@ import systemWebhookRoutes from './routes/system-webhook.js';
 import mtrRoutes from './routes/mtr.js';
 import contractRoutes from './routes/contracts.js';
 import syncRoutes from './routes/sync.js';
+import analyticsRoutes from './routes/analytics.js';
 import { startCronJobs } from './services/cron.js';
 import { apiVersionMiddleware, getApiVersion } from './middleware/apiVersion.js';
 
@@ -53,6 +54,7 @@ app.use('/api/system/webhook', systemWebhookRoutes);
 app.use('/api/mtr', mtrRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
