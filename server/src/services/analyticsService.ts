@@ -160,9 +160,37 @@ export async function getAnalyticsVisitDetails(visitId: string, userId: string, 
       address: { select: { id: true, fullAddress: true, objectCode: true } },
       anomalies: {
         include: {
-          photo: { select: { id: true, fileName: true, filePath: true, moment: true } },
+          photo: {
+            select: {
+              id: true, fileName: true, filePath: true, moment: true,
+              verificationStatus: true, verificationDetails: true,
+              capturedAt: true, gpsLat: true, gpsLng: true, photoSource: true, phash: true,
+            },
+          },
         },
         orderBy: { createdAt: 'asc' },
+      },
+      tasks: {
+        include: {
+          photos: {
+            select: {
+              id: true, fileName: true, moment: true,
+              verificationStatus: true, verificationDetails: true,
+              capturedAt: true, gpsLat: true, gpsLng: true, photoSource: true, phash: true,
+            },
+          },
+          equipmentItems: {
+            include: {
+              photos: {
+                select: {
+                  id: true, fileName: true, moment: true,
+                  verificationStatus: true, verificationDetails: true,
+                  capturedAt: true, gpsLat: true, gpsLng: true, photoSource: true, phash: true,
+                },
+              },
+            },
+          },
+        },
       },
     },
   });
@@ -175,6 +203,19 @@ export async function getAnalyticsVisitDetails(visitId: string, userId: string, 
       where: { tmId: userId, engineerId: visit.userId || undefined },
     });
     if (!tmEngineer) return null;
+  }
+
+  // Собираем все фото визита
+  const allPhotos: any[] = [];
+  for (const task of visit.tasks) {
+    for (const p of task.photos) {
+      allPhotos.push({ ...p, taskEquipmentItemId: null });
+    }
+    for (const ei of task.equipmentItems) {
+      for (const p of ei.photos) {
+        allPhotos.push({ ...p, taskEquipmentItemId: ei.id });
+      }
+    }
   }
 
   return {
@@ -199,7 +240,26 @@ export async function getAnalyticsVisitDetails(visitId: string, userId: string, 
         id: a.photo.id,
         fileName: a.photo.fileName,
         moment: a.photo.moment,
+        verificationStatus: a.photo.verificationStatus,
+        verificationDetails: a.photo.verificationDetails,
+        capturedAt: a.photo.capturedAt,
+        gpsLat: a.photo.gpsLat,
+        gpsLng: a.photo.gpsLng,
+        photoSource: a.photo.photoSource,
+        phash: a.photo.phash,
       } : null,
+    })),
+    allPhotos: allPhotos.map(p => ({
+      id: p.id,
+      fileName: p.fileName,
+      moment: p.moment,
+      verificationStatus: p.verificationStatus,
+      verificationDetails: p.verificationDetails,
+      capturedAt: p.capturedAt,
+      gpsLat: p.gpsLat,
+      gpsLng: p.gpsLng,
+      photoSource: p.photoSource,
+      phash: p.phash,
     })),
   };
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Checkbox, Button, Spin, Empty, Modal, App } from 'antd';
-import { ArrowLeftOutlined, CameraOutlined, CheckOutlined, SendOutlined, EyeOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CameraOutlined, CheckOutlined, SendOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
@@ -14,7 +14,12 @@ interface Anomaly {
   status: string;
   details: any;
   createdAt: string;
-  photo?: { id: string; fileName: string; moment: string } | null;
+  photo?: {
+    id: string; fileName: string; moment: string;
+    verificationStatus: string; verificationDetails: any[];
+    capturedAt?: string; gpsLat?: number; gpsLng?: number;
+    photoSource?: string; phash?: string;
+  } | null;
 }
 
 interface VisitDetail {
@@ -116,6 +121,51 @@ export default function AnalyticsDetailPage() {
         }
       },
     });
+  };
+
+  const renderVerificationResults = (photo: Anomaly['photo']) => {
+    if (!photo?.verificationDetails) return null;
+    const details = Array.isArray(photo.verificationDetails) ? photo.verificationDetails : [];
+
+    const checkLabels: Record<string, string> = {
+      phash: 'pHash (визуальное сходство)',
+      timestamp: 'Timestamp (окно визита)',
+      gps: 'GPS-координаты',
+      source: 'Источник фото',
+    };
+
+    return (
+      <div style={{ marginTop: 10, padding: '10px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #F1F5F9' }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Результаты проверок:</div>
+        {details.map((d: any, i: number) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 12 }}>
+            {d.passed ? (
+              <CheckCircleOutlined style={{ color: '#059669', fontSize: 14 }} />
+            ) : d.severity === 'critical' ? (
+              <CloseCircleOutlined style={{ color: '#DC2626', fontSize: 14 }} />
+            ) : d.severity === 'warning' ? (
+              <WarningOutlined style={{ color: '#D97706', fontSize: 14 }} />
+            ) : (
+              <QuestionCircleOutlined style={{ color: '#94A3B8', fontSize: 14 }} />
+            )}
+            <span style={{ color: '#475569', minWidth: 160 }}>{checkLabels[d.check] || d.check}:</span>
+            <span style={{
+              color: d.passed ? '#059669' : d.severity === 'critical' ? '#DC2626' : d.severity === 'warning' ? '#D97706' : '#475569',
+              fontWeight: 500,
+            }}>{d.message}</span>
+          </div>
+        ))}
+        {/* Дополнительные метаданные */}
+        <div style={{ marginTop: 6, borderTop: '1px solid #E2E8F0', paddingTop: 6 }}>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 11, color: '#475569' }}>
+            <span>Съёмка: {photo.capturedAt ? new Date(photo.capturedAt).toLocaleString('ru-RU') : 'не указана'}</span>
+            <span>GPS: {photo.gpsLat != null ? `${photo.gpsLat.toFixed(4)}, ${photo.gpsLng?.toFixed(4)}` : 'не доступен'}</span>
+            <span>Источник: {photo.photoSource === 'camera' ? 'Камера' : photo.photoSource === 'gallery' ? 'Галерея' : 'не определён'}</span>
+            {photo.phash && <span>pHash: {photo.phash.slice(0, 8)}...</span>}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderDetail = (anomaly: Anomaly) => {
@@ -235,8 +285,12 @@ export default function AnalyticsDetailPage() {
                     {a.severity === 'critical' ? 'Критическое' : 'Предупреждение'}
                   </span>
                 </div>
-                <div style={{ padding: '14px 16px' }}>
-                  {renderDetail(a)}
+                <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                  {a.photo && <PhotoThumbnail photoId={a.photo.id} />}
+                  <div style={{ flex: 1 }}>
+                    {renderDetail(a)}
+                    {renderVerificationResults(a.photo)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -297,7 +351,9 @@ export default function AnalyticsDetailPage() {
                   </span>
                 </div>
                 <div style={{ padding: '10px 12px' }}>
+                  {a.photo && <PhotoThumbnail photoId={a.photo.id} />}
                   {renderDetail(a)}
+                  {renderVerificationResults(a.photo)}
                 </div>
               </div>
             ))}
@@ -330,6 +386,28 @@ export default function AnalyticsDetailPage() {
           matchedInfo={compareModal.info}
           matchedEngineer={compareModal.engineer}
         />
+      )}
+    </div>
+  );
+}
+
+function PhotoThumbnail({ photoId }: { photoId: string }) {
+  const [url, setUrl] = useState<string>('');
+  useEffect(() => {
+    api.getPhotoBlobUrl(photoId).then(setUrl).catch(() => {});
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [photoId]);
+
+  return (
+    <div style={{
+      width: 80, height: 60, borderRadius: 6, background: '#F1F5F9',
+      border: '1px solid #E2E8F0', overflow: 'hidden', flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {url ? (
+        <img src={url} alt="Фото" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <CameraOutlined style={{ color: '#94A3B8', fontSize: 20 }} />
       )}
     </div>
   );
