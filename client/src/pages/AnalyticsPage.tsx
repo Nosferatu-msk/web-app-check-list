@@ -115,8 +115,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div style={{ background: '#F8FAFC', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
+    <div className="page-container" style={{ maxWidth: 1400, background: '#F8FAFC', minHeight: '100vh' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Аналитика визитов</div>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
@@ -204,7 +203,6 @@ export default function AnalyticsPage() {
         <Button icon={<DownloadOutlined />} onClick={handleExport} style={{ marginBottom: 24 }}>
           Экспорт в CSV
         </Button>
-      </div>
     </div>
   );
 }

@@ -391,7 +391,7 @@ export default function AnalyticsDetailPage() {
           </div>
         </>
       ) : (
-        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
+        <div className="page-container" style={{ maxWidth: 1400 }}>
           <Card style={{ borderRadius: 12, marginTop: 20, overflow: 'hidden' }} styles={{ body: { padding: 0 } }}>
             {content}
           </Card>
