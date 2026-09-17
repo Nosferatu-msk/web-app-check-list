@@ -277,14 +277,21 @@ export async function reshootVisit(visitId: string, anomalyIds: string[], review
     throw new Error('Отклонения не найдены');
   }
 
-  // Удаляем фото (физически + из БД)
+  // Удаляем фото (физически + из БД) — собираем уникальные photoId
+  const photoIdsToDelete = new Set<string>();
   for (const anomaly of anomalies) {
-    if (anomaly.photo) {
-      try {
-        fs.unlinkSync(anomaly.photo.filePath);
-      } catch { /* ignore */ }
-      await prisma.photo.delete({ where: { id: anomaly.photoId! } });
+    if (anomaly.photoId) photoIdsToDelete.add(anomaly.photoId);
+  }
+
+  for (const photoId of photoIdsToDelete) {
+    // Получаем путь к файлу перед удалением
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } }).catch(() => null);
+    if (photo) {
+      try { fs.unlinkSync(photo.filePath); } catch { /* ignore */ }
     }
+    try {
+      await prisma.photo.delete({ where: { id: photoId } });
+    } catch { /* фото уже удалено или не существует */ }
   }
 
   // Обновляем статусы задач
