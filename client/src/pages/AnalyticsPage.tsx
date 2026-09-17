@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Statistic, Input, Select, Pagination, Spin, Empty, Button } from 'antd';
-import { BarChartOutlined, WarningOutlined, CheckCircleOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
+import { BarChartOutlined, WarningOutlined, CheckCircleOutlined, SearchOutlined, DownloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
         <div style={{ padding: '20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ fontSize: 13, color: '#0F766E', cursor: 'pointer', marginBottom: 8 }} onClick={() => navigate('/')}>← К списку визитов</div>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} style={{ marginBottom: 8 }}>Назад</Button>
             <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <BarChartOutlined style={{ color: '#0F766E' }} /> Аналитика визитов
             </h1>

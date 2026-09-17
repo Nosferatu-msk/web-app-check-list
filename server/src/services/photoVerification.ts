@@ -169,16 +169,21 @@ async function checkPhash(
     let compareWhere: any = {
       id: { not: photo.id },
       phash: { not: null },
+      createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     };
 
     if (photo.taskEquipmentItemId && objectEquipmentId) {
-      // Групповая задача — сравниваем по objectEquipmentId
+      // Групповая задача — сравниваем по objectEquipmentId за последние 30 дней (все визиты)
       compareWhere.taskEquipmentItem = { objectEquipmentId };
     } else if (photo.taskId && equipmentTypeId) {
-      // Индивидуальная задача — сравниваем по equipmentTypeId в том же визите
+      // Индивидуальная задача — сравниваем по equipmentTypeId + addressId за последние 30 дней (все визиты)
       compareWhere.task = {
-        visitId: photo.task.visitId,
+        visitId: { not: photo.task.visitId },
         equipmentTypeId,
+        visit: {
+          addressId: photo.task.visit.addressId,
+          isDeleted: false,
+        },
       };
     } else {
       return null;
@@ -206,11 +211,11 @@ async function checkPhash(
     if (!bestMatch) return null;
 
     if (bestMatch.distance <= PHASH_CRITICAL_THRESHOLD) {
-      const matchPhoto = await prisma.photo.findUnique({
+      const matchPhoto: any = await prisma.photo.findUnique({
         where: { id: bestMatch.photo.id },
         include: {
           task: { include: { visit: { include: { address: true, user: true } } } },
-          taskEquipmentItem: { include: { task: { include: { visit: { include: { user: true } } } } } },
+          taskEquipmentItem: { include: { task: { include: { visit: { include: { address: true, user: true } } } } } },
         },
       });
 
@@ -221,16 +226,18 @@ async function checkPhash(
       if (matchPhoto?.task?.visit) {
         matchVisitId = matchPhoto.task.visit.id;
         matchEngineer = matchPhoto.task.visit.user?.fullName || 'неизвестно';
-        matchInfo = `Визит от ${matchPhoto.task.visit.dateStart?.toISOString().split('T')[0]}`;
+        const addr = matchPhoto.task.visit.address?.objectCode || matchPhoto.task.visit.address?.fullAddress || '';
+        matchInfo = `${addr}, ${matchPhoto.task.visit.dateStart?.toISOString().split('T')[0]}`;
       } else if (matchPhoto?.taskEquipmentItem?.task?.visit) {
         matchVisitId = matchPhoto.taskEquipmentItem.task.visit.id;
         matchEngineer = matchPhoto.taskEquipmentItem.task.visit.user?.fullName || 'неизвестно';
-        matchInfo = `Визит от ${matchPhoto.taskEquipmentItem.task.visit.dateStart?.toISOString().split('T')[0]}`;
+        const addr = matchPhoto.taskEquipmentItem.task.visit.address?.objectCode || matchPhoto.taskEquipmentItem.task.visit.address?.fullAddress || '';
+        matchInfo = `${addr}, ${matchPhoto.taskEquipmentItem.task.visit.dateStart?.toISOString().split('T')[0]}`;
       }
 
       return {
         severity: 'critical',
-        message: `Визуальное сходство ${Math.round((1 - bestMatch.distance / 64) * 100)}% с другим фото`,
+        message: `Визуальное сходство ${Math.round((1 - bestMatch.distance / 64) * 100)}% с фото из другого визита`,
         details: {
           hammingDistance: bestMatch.distance,
           similarityPercent: Math.round((1 - bestMatch.distance / 64) * 100),
