@@ -486,4 +486,40 @@ router.post('/check-duplicate', async (req: AuthRequest, res: Response) => {
   res.json(info);
 });
 
+// GET /api/photos/:id/detail — детали фото для модалки сравнения
+router.get('/:id/detail', async (req: AuthRequest, res: Response) => {
+  try {
+    const photo: any = await prisma.photo.findUnique({
+      where: { id: req.params.id as string },
+      include: {
+        task: { include: { visit: { include: { user: true } }, equipmentType: true } },
+        taskEquipmentItem: { include: { objectEquipment: true, task: { include: { visit: { include: { user: true } } } } } },
+        mtrVisit: { include: { engineer: true } },
+      },
+    });
+    if (!photo) { res.status(404).json({ error: 'Фото не найдено' }); return; }
+
+    const result: any = { id: photo.id, fileName: photo.fileName, moment: photo.moment };
+
+    if (photo.task?.visit) {
+      result.engineerName = photo.task.visit.engineerName || photo.task.visit.user?.fullName;
+      result.visitDate = photo.task.visit.dateStart?.toISOString().split('T')[0];
+      result.equipmentType = photo.task.equipmentType?.name || '';
+    } else if (photo.taskEquipmentItem?.task?.visit) {
+      result.engineerName = photo.taskEquipmentItem.task.visit.engineerName || photo.taskEquipmentItem.task.visit.user?.fullName;
+      result.visitDate = photo.taskEquipmentItem.task.visit.dateStart?.toISOString().split('T')[0];
+      result.equipmentType = photo.taskEquipmentItem.objectEquipment?.equipmentTypeCode || '';
+    } else if (photo.mtrVisit) {
+      result.engineerName = photo.mtrVisit.engineer?.fullName;
+      result.visitDate = photo.mtrVisit.dateStart?.toISOString().split('T')[0];
+      result.equipmentType = 'МТР';
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('[photos] getPhotoDetail error:', err);
+    res.status(500).json({ error: 'Ошибка получения данных' });
+  }
+});
+
 export default router;

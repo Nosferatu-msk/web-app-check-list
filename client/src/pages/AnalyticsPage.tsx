@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
   if (isMobile) {
     return (
       <div style={{ background: '#F8FAFC', minHeight: '100vh' }}>
-        <MobileHeader title="Аналитика" showBack onBack={() => navigate(-1)} />
+        <MobileHeader title="Аналитика" showBack onBack={() => navigate('/')} />
         <div style={{ padding: '12px 16px', display: 'flex', gap: 8, overflowX: 'auto' }}>
           {[{ l: 'Все', v: '' }, { l: 'Критические', v: 'critical' }, { l: 'Предупреждения', v: 'warning' }].map(f => (
             <span key={f.v} onClick={() => { setSeverityFilter(f.v); setPage(1); }} style={{
@@ -119,6 +119,7 @@ export default function AnalyticsPage() {
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
         <div style={{ padding: '20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
+            <div style={{ fontSize: 13, color: '#0F766E', cursor: 'pointer', marginBottom: 8 }} onClick={() => navigate('/')}>← К списку визитов</div>
             <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <BarChartOutlined style={{ color: '#0F766E' }} /> Аналитика визитов
             </h1>

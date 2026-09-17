@@ -50,7 +50,11 @@ export default function AnalyticsDetailPage() {
   const [loading, setLoading] = useState(true);
   const [visit, setVisit] = useState<VisitDetail | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [compareModal, setCompareModal] = useState<{ currentId: string; matchedId: string; distance?: number; percent?: number; info?: string; engineer?: string } | null>(null);
+  const [compareModal, setCompareModal] = useState<{
+    currentId: string; matchedId: string; distance?: number; percent?: number;
+    currentInfo?: { engineer?: string; date?: string; equipment?: string; moment?: string };
+    matchedInfo?: { engineer?: string; date?: string; equipment?: string; moment?: string };
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -180,11 +184,32 @@ export default function AnalyticsDetailPage() {
             {d.hammingDistance != null && <DetailRow label="Расстояние:" value={`${d.hammingDistance} из 64`} />}
             {d.matchedPhotoId && (
               <Button size="small" icon={<EyeOutlined />} style={{ marginTop: 4, borderColor: '#0F766E', color: '#0F766E' }}
-                onClick={() => anomaly.photo && setCompareModal({
-                  currentId: anomaly.photo.id, matchedId: d.matchedPhotoId,
-                  distance: d.hammingDistance, percent: d.similarityPercent,
-                  info: d.matchInfo, engineer: d.matchEngineer,
-                })}>
+                onClick={async () => {
+                  // Загружаем данные совпадающего фото
+                  let matchedInfo: any = {};
+                  try {
+                    const matchedPhoto = await api.getPhotoDetail(d.matchedPhotoId);
+                    if (matchedPhoto) {
+                      matchedInfo = {
+                        engineer: matchedPhoto.engineerName || '',
+                        date: matchedPhoto.visitDate || '',
+                        equipment: matchedPhoto.equipmentType || '',
+                        moment: matchedPhoto.moment,
+                      };
+                    }
+                  } catch { /* ignore */ }
+                  setCompareModal({
+                    currentId: anomaly.photo!.id, matchedId: d.matchedPhotoId,
+                    distance: d.hammingDistance, percent: d.similarityPercent,
+                    currentInfo: {
+                      engineer: visit?.engineer.name,
+                      date: visit ? new Date(visit.dateStart).toLocaleDateString('ru-RU') : '',
+                      equipment: ANOMALY_LABELS[anomaly.type] || '',
+                      moment: anomaly.photo?.moment,
+                    },
+                    matchedInfo,
+                  });
+                }}>
                 Сравнить с оригиналом
               </Button>
             )}
@@ -383,8 +408,8 @@ export default function AnalyticsDetailPage() {
           matchedPhotoId={compareModal.matchedId}
           hammingDistance={compareModal.distance}
           similarityPercent={compareModal.percent}
-          matchedInfo={compareModal.info}
-          matchedEngineer={compareModal.engineer}
+          currentInfo={compareModal.currentInfo}
+          matchedInfo={compareModal.matchedInfo}
         />
       )}
     </div>

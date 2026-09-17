@@ -168,6 +168,8 @@ export const api = {
     request<any>(`/analytics/visits/${visitId}/reshoot`, { method: 'POST', body: JSON.stringify({ anomalyIds }) }),
   confirmVisit: (visitId: string) =>
     request<any>(`/analytics/visits/${visitId}/confirm`, { method: 'POST' }),
+  getPhotoDetail: (photoId: string) =>
+    request<any>(`/photos/${photoId}/detail`),
 
   // Reports
   generateReport: (visitId: string) =>

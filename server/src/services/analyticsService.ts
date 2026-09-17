@@ -56,11 +56,11 @@ export async function getAnalyticsVisits(params: {
     ];
   }
 
-  // Фильтр по отклонениям
+  // Фильтр по отклонениям — по умолчанию только open
   const anomalyWhere: any = {};
   if (type) anomalyWhere.type = type;
   if (severity) anomalyWhere.severity = severity;
-  if (status) anomalyWhere.status = status;
+  anomalyWhere.status = status || 'open';
 
   const hasAnomalyFilter = type || severity || status;
 

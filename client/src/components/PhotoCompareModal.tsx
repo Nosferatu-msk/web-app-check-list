@@ -11,13 +11,13 @@ interface PhotoCompareModalProps {
   matchedPhotoId: string;
   hammingDistance?: number;
   similarityPercent?: number;
-  matchedInfo?: string;
-  matchedEngineer?: string;
+  currentInfo?: { engineer?: string; date?: string; equipment?: string; moment?: string };
+  matchedInfo?: { engineer?: string; date?: string; equipment?: string; moment?: string };
 }
 
 export default function PhotoCompareModal({
   open, onClose, currentPhotoId, matchedPhotoId,
-  hammingDistance, similarityPercent, matchedInfo, matchedEngineer,
+  hammingDistance, similarityPercent, currentInfo, matchedInfo,
 }: PhotoCompareModalProps) {
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [matchedUrl, setMatchedUrl] = useState<string>('');
@@ -54,6 +54,13 @@ export default function PhotoCompareModal({
             )}
           </div>
           <Text strong style={{ display: 'block', marginTop: 8 }}>Текущее фото</Text>
+          {currentInfo && (
+            <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>
+              {currentInfo.engineer && <div>{currentInfo.engineer}</div>}
+              {currentInfo.date && <div>{currentInfo.date}</div>}
+              {currentInfo.equipment && <div>{currentInfo.equipment} · Фото {currentInfo.moment === 'before' ? 'ДО' : 'ПОСЛЕ'}</div>}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{
@@ -68,8 +75,13 @@ export default function PhotoCompareModal({
             )}
           </div>
           <Text strong style={{ display: 'block', marginTop: 8 }}>Совпадающее фото</Text>
-          {matchedEngineer && <Text type="secondary" style={{ fontSize: 12 }}>{matchedEngineer}</Text>}
-          {matchedInfo && <div><Text type="secondary" style={{ fontSize: 12 }}>{matchedInfo}</Text></div>}
+          {matchedInfo && (
+            <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>
+              {matchedInfo.engineer && <div>{matchedInfo.engineer}</div>}
+              {matchedInfo.date && <div>{matchedInfo.date}</div>}
+              {matchedInfo.equipment && <div>{matchedInfo.equipment} · Фото {matchedInfo.moment === 'before' ? 'ДО' : 'ПОСЛЕ'}</div>}
+            </div>
+          )}
         </div>
       </div>
       {hammingDistance != null && (
