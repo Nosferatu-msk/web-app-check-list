@@ -248,13 +248,11 @@ export default function AnalyticsDetailPage() {
   const content = (
     <>
       {/* Header */}
-      <div style={{ padding: '16px 24px', borderBottom: '1px solid #E2E8F0' }}>
-        {!isMobile && (
-          <div style={{ fontSize: 13, color: '#0F766E', cursor: 'pointer', marginBottom: 8 }}
-            onClick={() => navigate('/analytics')}>
-            ← Аналитика визитов
-          </div>
-        )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Отклонения визита</div>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/analytics')}>Назад</Button>
+      </div>
+      <div style={{ padding: '0 0 16px', borderBottom: '1px solid #E2E8F0', marginBottom: 16 }}>
         <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
           Визит {visit.visitCode} — {visit.address}
         </h1>

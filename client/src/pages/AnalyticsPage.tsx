@@ -117,14 +117,9 @@ export default function AnalyticsPage() {
   return (
     <div style={{ background: '#F8FAFC', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
-        <div style={{ padding: '20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} style={{ marginBottom: 8 }}>Назад</Button>
-            <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <BarChartOutlined style={{ color: '#0F766E' }} /> Аналитика визитов
-            </h1>
-            <p style={{ fontSize: 13, color: '#475569', margin: '2px 0 0' }}>Визиты с отклонениями по результатам автоматических проверок</p>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Аналитика визитов</div>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
         </div>
 
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
