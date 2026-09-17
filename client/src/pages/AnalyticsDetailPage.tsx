@@ -285,11 +285,10 @@ export default function AnalyticsDetailPage() {
         </div>
 
         {visit.anomalies.map(a => (
-          <div key={a.id} style={{
-            border: `1px solid ${selectedIds.has(a.id) ? '#0F766E' : '#E2E8F0'}`,
+          <div key={a.id} className="anomaly-card" style={{
             borderLeft: `3px solid ${a.severity === 'critical' ? '#DC2626' : '#D97706'}`,
-            borderRadius: 12, marginBottom: 10, overflow: 'hidden',
-            background: selectedIds.has(a.id) ? '#F0FDFA' : '#fff',
+            marginBottom: 10, overflow: 'hidden', cursor: 'default',
+            ...(selectedIds.has(a.id) ? { border: '1px solid #0F766E', background: '#F0FDFA' } : {}),
           }}>
             <div style={{ display: 'flex', alignItems: 'stretch' }}>
               <div style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', borderRight: '1px solid #F1F5F9' }}>
@@ -356,11 +355,10 @@ export default function AnalyticsDetailPage() {
           </div>
           <div style={{ padding: '12px 16px' }}>
             {visit.anomalies.map(a => (
-              <div key={a.id} style={{
-                border: `1px solid ${selectedIds.has(a.id) ? '#0F766E' : '#E2E8F0'}`,
+              <div key={a.id} className="anomaly-card" style={{
                 borderLeft: `3px solid ${a.severity === 'critical' ? '#DC2626' : '#D97706'}`,
-                borderRadius: 12, marginBottom: 10, overflow: 'hidden',
-                background: selectedIds.has(a.id) ? '#F0FDFA' : '#fff',
+                marginBottom: 10, overflow: 'hidden', cursor: 'default',
+                ...(selectedIds.has(a.id) ? { border: '1px solid #0F766E', background: '#F0FDFA' } : {}),
               }}>
                 <div style={{ padding: '10px 12px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Checkbox checked={selectedIds.has(a.id)} onChange={() => toggleAnomaly(a.id)} />

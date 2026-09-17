@@ -87,8 +87,8 @@ export default function AnalyticsPage() {
           {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> : visits.length === 0 ? (
             <Empty description="Нет визитов с отклонениями" />
           ) : visits.map(v => (
-            <div key={v.visitId} onClick={() => navigate(`/analytics/${v.visitId}`)}
-              style={{ border: '1px solid #E2E8F0', borderLeft: `3px solid ${severityColor(v)}`, borderRadius: 12, padding: '12px 14px', marginBottom: 8, cursor: 'pointer', background: '#fff' }}>
+            <div key={v.visitId} className="anomaly-card" onClick={() => navigate(`/analytics/${v.visitId}`)}
+              style={{ borderLeft: `3px solid ${severityColor(v)}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 14, fontWeight: 500 }}>{v.engineer.name}</span>
                 <span style={{ fontSize: 12, color: '#475569' }}>{v.date}</span>
@@ -167,9 +167,8 @@ export default function AnalyticsPage() {
         ) : (
           <>
             {visits.map(v => (
-              <Card key={v.visitId} size="small" style={{ borderRadius: 12, marginBottom: 8, borderLeft: `3px solid ${severityColor(v)}`, cursor: 'pointer' }}
-                onClick={() => navigate(`/analytics/${v.visitId}`)}
-                styles={{ body: { padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 } }}>
+              <div key={v.visitId} className="anomaly-card" onClick={() => navigate(`/analytics/${v.visitId}`)}
+                style={{ borderLeft: `3px solid ${severityColor(v)}`, display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ minWidth: 48 }}>
                   <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1 }}>{v.date.split('-')[2]}</div>
                   <div style={{ fontSize: 11, color: '#475569' }}>{['янн','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][parseInt(v.date.split('-')[1]) - 1]}</div>
@@ -192,7 +191,7 @@ export default function AnalyticsPage() {
                   )}
                 </div>
                 <span style={{ color: '#94A3B8', fontSize: 16 }}>›</span>
-              </Card>
+              </div>
             ))}
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
               <Pagination current={page} total={total} pageSize={20} onChange={setPage} showSizeChanger={false} />
