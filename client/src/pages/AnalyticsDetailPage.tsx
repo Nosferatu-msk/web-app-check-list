@@ -1,7 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Checkbox, Button, Spin, Empty, Modal, App } from 'antd';
-import { ArrowLeftOutlined, CameraOutlined, CheckOutlined, SendOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined, CameraOutlined, CheckOutlined, SendOutlined, EyeOutlined,
+  CheckCircleOutlined, CloseCircleOutlined, WarningOutlined,
+} from '@ant-design/icons';
 import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
@@ -34,12 +37,26 @@ interface VisitDetail {
   anomalies: Anomaly[];
 }
 
-const ANOMALY_LABELS: Record<string, string> = {
-  photo_phash_match: 'Совпадение фото (pHash)',
-  photo_timestamp_mismatch: 'Вне окна визита',
-  photo_gps_mismatch: 'GPS не совпадает',
-  photo_gallery_source: 'Фото из галереи',
-  photo_no_gps: 'GPS недоступен',
+interface PhotoGroup {
+  photoId: string;
+  photo: NonNullable<Anomaly['photo']>;
+  anomalies: Anomaly[];
+  maxSeverity: 'critical' | 'warning';
+  openCount: number;
+}
+
+const CHECK_LABELS: Record<string, string> = {
+  phash: 'pHash (визуальное сходство)',
+  timestamp: 'Timestamp (окно визита)',
+  gps: 'GPS-координаты',
+  source: 'Источник фото',
+};
+
+const CHECK_TO_ANOMALY: Record<string, string> = {
+  phash: 'photo_phash_match',
+  timestamp: 'photo_timestamp_mismatch',
+  gps: 'photo_gps_mismatch',
+  source: 'photo_gallery_source',
 };
 
 export default function AnalyticsDetailPage() {
@@ -49,7 +66,7 @@ export default function AnalyticsDetailPage() {
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [visit, setVisit] = useState<VisitDetail | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [compareModal, setCompareModal] = useState<{
     currentId: string; matchedId: string; distance?: number; percent?: number;
     currentInfo?: { engineer?: string; date?: string; equipment?: string; moment?: string };
@@ -71,36 +88,81 @@ export default function AnalyticsDetailPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const toggleAnomaly = (anomalyId: string) => {
-    setSelectedIds(prev => {
+  const photoGroups = useMemo(() => {
+    if (!visit) return [];
+    const map = new Map<string, PhotoGroup>();
+    for (const a of visit.anomalies) {
+      if (!a.photo) continue;
+      const pid = a.photo.id;
+      if (!map.has(pid)) {
+        map.set(pid, {
+          photoId: pid,
+          photo: a.photo,
+          anomalies: [],
+          maxSeverity: 'warning',
+          openCount: 0,
+        });
+      }
+      const g = map.get(pid)!;
+      g.anomalies.push(a);
+      if (a.severity === 'critical') g.maxSeverity = 'critical';
+      if (a.status === 'open') g.openCount++;
+    }
+    return Array.from(map.values());
+  }, [visit]);
+
+  const totalOpenAnomalies = visit?.anomalies.filter(a => a.status === 'open').length ?? 0;
+
+  const togglePhoto = (photoId: string) => {
+    setSelectedPhotos(prev => {
       const next = new Set(prev);
-      if (next.has(anomalyId)) next.delete(anomalyId); else next.add(anomalyId);
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
       return next;
     });
   };
 
-  const toggleAll = () => {
-    if (!visit) return;
-    const openAnomalies = visit.anomalies.filter(a => a.status === 'open');
-    if (selectedIds.size === openAnomalies.length) {
-      setSelectedIds(new Set());
+  const toggleAllPhotos = () => {
+    if (!photoGroups.length) return;
+    const photosWithOpen = photoGroups.filter(g => g.openCount > 0);
+    if (selectedPhotos.size === photosWithOpen.length) {
+      setSelectedPhotos(new Set());
     } else {
-      setSelectedIds(new Set(openAnomalies.map(a => a.id)));
+      setSelectedPhotos(new Set(photosWithOpen.map(g => g.photoId)));
     }
   };
 
+  const selectedAnomalyCount = useMemo(() => {
+    let count = 0;
+    for (const g of photoGroups) {
+      if (selectedPhotos.has(g.photoId)) {
+        count += g.anomalies.filter(a => a.status === 'open').length;
+      }
+    }
+    return count;
+  }, [photoGroups, selectedPhotos]);
+
   const handleReshoot = () => {
-    if (selectedIds.size === 0) return;
+    if (selectedPhotos.size === 0) return;
+    const anomalyIds: string[] = [];
+    for (const g of photoGroups) {
+      if (selectedPhotos.has(g.photoId)) {
+        anomalyIds.push(...g.anomalies.filter(a => a.status === 'open').map(a => a.id));
+      }
+    }
     Modal.confirm({
       title: 'Запросить пересъёмку',
-      content: `Будут удалены ${selectedIds.size} фото с отклонениями. Статус визита будет изменён на «В работе». Продолжить?`,
+      content: `Будут удалены ${selectedPhotos.size} фото с отклонениями. Статус визита будет изменён на «В работе». Продолжить?`,
       okText: 'Запросить пересъёмку',
       cancelText: 'Отмена',
       onOk: async () => {
         try {
-          await api.reshootVisit(id!, Array.from(selectedIds));
+          await api.reshootVisit(id!, anomalyIds);
           message.success('Пересъёмка запрошена');
-          setSelectedIds(new Set());
+          setSelectedPhotos(new Set());
           await loadData();
         } catch (err: any) {
           message.error(err.message || 'Ошибка');
@@ -127,123 +189,169 @@ export default function AnalyticsDetailPage() {
     });
   };
 
-  const renderVerificationResults = (photo: Anomaly['photo']) => {
-    if (!photo?.verificationDetails) return null;
-    const details = Array.isArray(photo.verificationDetails) ? photo.verificationDetails : [];
+  const anomalyMap = useMemo(() => {
+    const m = new Map<string, Anomaly>();
+    if (!visit) return m;
+    for (const a of visit.anomalies) m.set(a.type, a);
+    // Также сохраняем photo_no_gps отдельно, т.к. gps может маппиться на два типа
+    for (const a of visit.anomalies) {
+      if (a.type === 'photo_no_gps') m.set('photo_no_gps', a);
+    }
+    return m;
+  }, [visit]);
 
-    const checkLabels: Record<string, string> = {
-      phash: 'pHash (визуальное сходство)',
-      timestamp: 'Timestamp (окно визита)',
-      gps: 'GPS-координаты',
-      source: 'Источник фото',
-    };
+  const renderCheckDetail = (check: string, photoId: string) => {
+    const anomalyType = CHECK_TO_ANOMALY[check];
+    // Для gps: сначала ищем gps_mismatch, потом no_gps
+    const anomaly = (check === 'gps'
+      ? (anomalyMap.get('photo_gps_mismatch') || anomalyMap.get('photo_no_gps'))
+      : anomalyMap.get(anomalyType));
+    const d = anomaly?.details || {};
+
+    if (check === 'phash' && !d.passed && d.matchedPhotoId) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span>
+            Сходство {d.similarityPercent || '?'}%
+            {d.matchInfo && ` — ${d.matchInfo}`}
+            {d.hammingDistance != null && <span style={{ color: '#94A3B8', marginLeft: 6 }}>(расст. {d.hammingDistance}/64)</span>}
+          </span>
+          <Button size="small" icon={<EyeOutlined />}
+            style={{ borderColor: '#0F766E', color: '#0F766E', fontSize: 11 }}
+            onClick={async () => {
+              let matchedInfo: any = {};
+              try {
+                const mp = await api.getPhotoDetail(d.matchedPhotoId);
+                if (mp) matchedInfo = { engineer: mp.engineerName || '', date: mp.visitDate || '', equipment: mp.equipmentType || '', moment: mp.moment };
+              } catch { /* ignore */ }
+              setCompareModal({
+                currentId: photoId, matchedId: d.matchedPhotoId,
+                distance: d.hammingDistance, percent: d.similarityPercent,
+                currentInfo: { engineer: visit?.engineer.name, date: visit ? new Date(visit.dateStart).toLocaleDateString('ru-RU') : '', moment: 'before' },
+                matchedInfo,
+              });
+            }}>
+            Сравнить
+          </Button>
+        </div>
+      );
+    }
+    if (check === 'timestamp' && !d.passed) {
+      return <span>Сделано за {d.differenceMinutes || '?'} мин до окна визита</span>;
+    }
+    if (check === 'gps' && !d.passed) {
+      if (d.distanceMeters) return <span>В {d.distanceMeters} м от адреса объекта</span>;
+      return <span>Координаты недоступны</span>;
+    }
+    if (check === 'source' && !d.passed) {
+      return <span>Загружено из галереи</span>;
+    }
+    return null;
+  };
+
+  const renderPhotoCard = (group: PhotoGroup) => {
+    const { photoId, photo, anomalies } = group;
+    const isSelected = selectedPhotos.has(photoId);
+    const hasOpen = group.openCount > 0;
+    const checks = Array.isArray(photo.verificationDetails) ? photo.verificationDetails : [];
+    const failedCount = checks.filter((c: any) => !c.passed).length;
+    const borderColor = group.maxSeverity === 'critical' ? '#DC2626' : '#D97706';
 
     return (
-      <div style={{ marginTop: 10, padding: '10px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #F1F5F9' }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Результаты проверок:</div>
-        {details.map((d: any, i: number) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 12 }}>
-            {d.passed ? (
-              <CheckCircleOutlined style={{ color: '#059669', fontSize: 14 }} />
-            ) : d.severity === 'critical' ? (
-              <CloseCircleOutlined style={{ color: '#DC2626', fontSize: 14 }} />
-            ) : d.severity === 'warning' ? (
-              <WarningOutlined style={{ color: '#D97706', fontSize: 14 }} />
-            ) : (
-              <QuestionCircleOutlined style={{ color: '#94A3B8', fontSize: 14 }} />
-            )}
-            <span style={{ color: '#475569', minWidth: 160 }}>{checkLabels[d.check] || d.check}:</span>
-            <span style={{
-              color: d.passed ? '#059669' : d.severity === 'critical' ? '#DC2626' : d.severity === 'warning' ? '#D97706' : '#475569',
-              fontWeight: 500,
-            }}>{d.message}</span>
+      <div key={photoId} style={{
+        border: isSelected ? '1px solid #0F766E' : '1px solid #E2E8F0',
+        borderLeft: `3px solid ${borderColor}`,
+        borderRadius: 10, marginBottom: 12, overflow: 'hidden',
+        background: isSelected ? '#F0FDFA' : '#fff',
+        transition: 'all 0.2s',
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9',
+        }}>
+          {hasOpen && (
+            <Checkbox
+              checked={isSelected}
+              indeterminate={!isSelected && anomalies.some(a => selectedPhotos.has(photoId))}
+              onChange={() => togglePhoto(photoId)}
+            />
+          )}
+          <PhotoThumbnail photoId={photoId} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#0F172A' }}>
+              Фото {photo.moment === 'before' ? 'ДО' : 'ПОСЛЕ'}
+            </div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 1 }}>
+              {photo.capturedAt ? new Date(photo.capturedAt).toLocaleString('ru-RU') : 'Время не указано'}
+              {photo.photoSource === 'gallery' ? ' · из галереи' : ''}
+            </div>
           </div>
-        ))}
-        {/* Дополнительные метаданные */}
-        <div style={{ marginTop: 6, borderTop: '1px solid #E2E8F0', paddingTop: 6 }}>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 11, color: '#475569' }}>
-            <span>Съёмка: {photo.capturedAt ? new Date(photo.capturedAt).toLocaleString('ru-RU') : 'не указана'}</span>
-            <span>GPS: {photo.gpsLat != null ? `${photo.gpsLat.toFixed(4)}, ${photo.gpsLng?.toFixed(4)}` : 'не доступен'}</span>
-            <span>Источник: {photo.photoSource === 'camera' ? 'Камера' : photo.photoSource === 'gallery' ? 'Галерея' : 'не определён'}</span>
-            {photo.phash && <span>pHash: {photo.phash.slice(0, 8)}...</span>}
-          </div>
+          <span style={{
+            padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, flexShrink: 0,
+            background: group.maxSeverity === 'critical' ? '#FEE2E2' : '#FEF3C7',
+            color: group.maxSeverity === 'critical' ? '#DC2626' : '#92400E',
+          }}>
+            {group.maxSeverity === 'critical' ? 'Критично' : 'Предупреждение'}
+          </span>
+        </div>
+
+        {/* Check results */}
+        <div style={{ padding: '6px 14px' }}>
+          {checks.map((check: any, i: number) => {
+            const isPassed = check.passed;
+            const isCritical = !isPassed && check.severity === 'critical';
+            const isWarning = !isPassed && check.severity === 'warning';
+            const icon = isPassed
+              ? <CheckCircleOutlined style={{ color: '#059669', fontSize: 14 }} />
+              : isCritical
+                ? <CloseCircleOutlined style={{ color: '#DC2626', fontSize: 14 }} />
+                : isWarning
+                  ? <WarningOutlined style={{ color: '#D97706', fontSize: 14 }} />
+                  : <CheckCircleOutlined style={{ color: '#94A3B8', fontSize: 14 }} />;
+            const textColor = isPassed ? '#059669' : isCritical ? '#DC2626' : isWarning ? '#D97706' : '#475569';
+
+            return (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8,
+                padding: '7px 0',
+                borderBottom: i < checks.length - 1 ? '1px solid #F8FAFC' : 'none',
+              }}>
+                <div style={{ marginTop: 1, flexShrink: 0 }}>{icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: '#475569', fontWeight: 500 }}>
+                    {CHECK_LABELS[check.check] || check.check}
+                  </div>
+                  {!isPassed ? (
+                    <div style={{ fontSize: 12, color: textColor, marginTop: 2, fontWeight: 500 }}>
+                      {renderCheckDetail(check.check, photoId) || check.message}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: '#059669', marginTop: 1 }}>{check.message}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Metadata footer */}
+        <div style={{
+          padding: '6px 14px', borderTop: '1px solid #F1F5F9',
+          display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: '#94A3B8',
+        }}>
+          <span>GPS: {photo.gpsLat != null ? `${photo.gpsLat.toFixed(4)}, ${photo.gpsLng?.toFixed(4)}` : '—'}</span>
+          {photo.phash && <span>pHash: {photo.phash.slice(0, 8)}…</span>}
+          <span>{failedCount} из {checks.length} проверок не пройдено</span>
         </div>
       </div>
     );
   };
 
-  const renderDetail = (anomaly: Anomaly) => {
-    const d = anomaly.details || {};
-    switch (anomaly.type) {
-      case 'photo_phash_match':
-        return (
-          <>
-            <DetailRow label="Проверка:" value={`pHash — сходство ${d.similarityPercent || '?'}%`} danger />
-            {d.matchInfo && <DetailRow label="Совпадение:" value={d.matchInfo} />}
-            {d.matchEngineer && <DetailRow label="Инженер:" value={d.matchEngineer} />}
-            {d.hammingDistance != null && <DetailRow label="Расстояние:" value={`${d.hammingDistance} из 64`} />}
-            {d.matchedPhotoId && (
-              <Button size="small" icon={<EyeOutlined />} style={{ marginTop: 4, borderColor: '#0F766E', color: '#0F766E' }}
-                onClick={async () => {
-                  // Загружаем данные совпадающего фото
-                  let matchedInfo: any = {};
-                  try {
-                    const matchedPhoto = await api.getPhotoDetail(d.matchedPhotoId);
-                    if (matchedPhoto) {
-                      matchedInfo = {
-                        engineer: matchedPhoto.engineerName || '',
-                        date: matchedPhoto.visitDate || '',
-                        equipment: matchedPhoto.equipmentType || '',
-                        moment: matchedPhoto.moment,
-                      };
-                    }
-                  } catch { /* ignore */ }
-                  setCompareModal({
-                    currentId: anomaly.photo!.id, matchedId: d.matchedPhotoId,
-                    distance: d.hammingDistance, percent: d.similarityPercent,
-                    currentInfo: {
-                      engineer: visit?.engineer.name,
-                      date: visit ? new Date(visit.dateStart).toLocaleDateString('ru-RU') : '',
-                      equipment: ANOMALY_LABELS[anomaly.type] || '',
-                      moment: anomaly.photo?.moment,
-                    },
-                    matchedInfo,
-                  });
-                }}>
-                Сравнить с оригиналом
-              </Button>
-            )}
-          </>
-        );
-      case 'photo_timestamp_mismatch':
-        return (
-          <>
-            <DetailRow label="Проверка:" value="Timestamp — вне окна визита" danger />
-            {d.capturedAt && <DetailRow label="Фото сделано:" value={new Date(d.capturedAt).toLocaleString('ru-RU')} danger />}
-            {d.visitWindowStart && <DetailRow label="Окно визита:" value={`${new Date(d.visitWindowStart).toLocaleString('ru-RU')} — ${new Date(d.visitWindowEnd).toLocaleString('ru-RU')}`} />}
-            {d.differenceMinutes && <DetailRow label="Разница:" value={`~${d.differenceMinutes} мин`} danger />}
-          </>
-        );
-      case 'photo_gps_mismatch':
-        return (
-          <>
-            <DetailRow label="Проверка:" value={`GPS — ${d.distanceMeters || '?'} м от адреса`} warn />
-            {d.distanceMeters && <DetailRow label="Расстояние:" value={`${d.distanceMeters} м (макс. ${d.maxDistanceMeters} м)`} warn />}
-          </>
-        );
-      case 'photo_gallery_source':
-        return <DetailRow label="Источник:" value="Галерея (не камера)" warn />;
-      case 'photo_no_gps':
-        return <DetailRow label="GPS:" value="Недоступен" warn />;
-      default:
-        return null;
-    }
-  };
-
   if (loading) return <Spin style={{ display: 'block', margin: '80px auto' }} />;
   if (!visit) return <Empty description="Визит не найден" />;
 
-  const openAnomalies = visit.anomalies.filter(a => a.status === 'open');
+  const photosWithOpen = photoGroups.filter(g => g.openCount > 0);
 
   const content = (
     <>
@@ -268,56 +376,30 @@ export default function AnalyticsDetailPage() {
         </div>
       </div>
 
-      {/* Anomalies */}
+      {/* Photo cards */}
       <div style={{ padding: '16px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid #F1F5F9' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid #F1F5F9',
+        }}>
           <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            Отклонения
-            <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
-              {visit.anomalies.length}
+            Фото с отклонениями
+            <span style={{
+              background: '#FEE2E2', color: '#DC2626', padding: '2px 8px',
+              borderRadius: 6, fontSize: 12, fontWeight: 600,
+            }}>
+              {photoGroups.length}
             </span>
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Checkbox checked={selectedIds.size === openAnomalies.length && openAnomalies.length > 0} onChange={toggleAll}>
-              <span style={{ fontSize: 13, color: '#475569' }}>Выбрать все</span>
-            </Checkbox>
-          </div>
+          <Checkbox
+            checked={selectedPhotos.size === photosWithOpen.length && photosWithOpen.length > 0}
+            onChange={toggleAllPhotos}
+          >
+            <span style={{ fontSize: 13, color: '#475569' }}>Выбрать все</span>
+          </Checkbox>
         </div>
 
-        {visit.anomalies.map(a => (
-          <div key={a.id} className="anomaly-card" style={{
-            borderLeft: `3px solid ${a.severity === 'critical' ? '#DC2626' : '#D97706'}`,
-            marginBottom: 10, overflow: 'hidden', cursor: 'default',
-            ...(selectedIds.has(a.id) ? { border: '1px solid #0F766E', background: '#F0FDFA' } : {}),
-          }}>
-            <div style={{ display: 'flex', alignItems: 'stretch' }}>
-              <div style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', borderRight: '1px solid #F1F5F9' }}>
-                <Checkbox checked={selectedIds.has(a.id)} onChange={() => toggleAnomaly(a.id)} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, background: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CameraOutlined style={{ fontSize: 14 }} /> {a.photo ? `Фото ${a.photo.moment === 'before' ? 'ДО' : 'ПОСЛЕ'}` : 'Фото'} — {ANOMALY_LABELS[a.type] || a.type}
-                  </span>
-                  <span style={{
-                    padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                    background: a.severity === 'critical' ? '#FEE2E2' : '#FEF3C7',
-                    color: a.severity === 'critical' ? '#DC2626' : '#92400E',
-                  }}>
-                    {a.severity === 'critical' ? 'Критическое' : 'Предупреждение'}
-                  </span>
-                </div>
-                <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                  {a.photo && <PhotoThumbnail photoId={a.photo.id} />}
-                  <div style={{ flex: 1 }}>
-                    {renderDetail(a)}
-                    {renderVerificationResults(a.photo)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+        {photoGroups.map(renderPhotoCard)}
       </div>
 
       {/* Actions */}
@@ -326,9 +408,12 @@ export default function AnalyticsDetailPage() {
         display: 'flex', gap: 10, flexWrap: 'wrap', background: '#F8FAFC', alignItems: 'center',
       }}>
         <span style={{ fontSize: 13, color: '#475569', marginRight: 'auto' }}>
-          Выбрано: <strong style={{ color: '#0F172A' }}>{selectedIds.size}</strong> из {visit.anomalies.length}
+          Выбрано фото: <strong style={{ color: '#0F172A' }}>{selectedPhotos.size}</strong> из {photoGroups.length}
+          {selectedAnomalyCount > 0 && (
+            <span style={{ color: '#94A3B8', marginLeft: 8 }}>({selectedAnomalyCount} откл.)</span>
+          )}
         </span>
-        <Button type="primary" icon={<SendOutlined />} disabled={selectedIds.size === 0} onClick={handleReshoot}>
+        <Button type="primary" icon={<SendOutlined />} disabled={selectedPhotos.size === 0} onClick={handleReshoot}>
           Запросить пересъёмку
         </Button>
         <Button icon={<CheckOutlined />} style={{ background: '#059669', color: '#fff', borderColor: '#059669' }} onClick={handleConfirm}>
@@ -344,43 +429,32 @@ export default function AnalyticsDetailPage() {
         <>
           <MobileHeader title="Отклонения" showBack onBack={() => navigate('/analytics')} />
           <div style={{ padding: '12px 16px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-            <p style={{ fontSize: 13, color: '#475569', margin: 0 }}><strong>{visit.visitCode}</strong> — {visit.address}</p>
-            <p style={{ fontSize: 13, color: '#475569', margin: '3px 0 0' }}>{visit.engineer.name} · {new Date(visit.dateStart).toLocaleDateString('ru-RU')} · {visit.timeStart}–{visit.timeEnd || ''}</p>
+            <p style={{ fontSize: 13, color: '#475569', margin: 0 }}>
+              <strong>{visit.visitCode}</strong> — {visit.address}
+            </p>
+            <p style={{ fontSize: 13, color: '#475569', margin: '3px 0 0' }}>
+              {visit.engineer.name} · {new Date(visit.dateStart).toLocaleDateString('ru-RU')} · {visit.timeStart}–{visit.timeEnd || ''}
+            </p>
           </div>
-          <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', background: '#fff' }}>
-            <span style={{ fontSize: 13, color: '#475569' }}>Выбрано: <strong>{selectedIds.size}</strong> из {visit.anomalies.length}</span>
-            <Checkbox checked={selectedIds.size === openAnomalies.length && openAnomalies.length > 0} onChange={toggleAll}>
+          <div style={{
+            padding: '10px 16px', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', background: '#fff',
+          }}>
+            <span style={{ fontSize: 13, color: '#475569' }}>
+              {photoGroups.length} фото · <strong>{selectedPhotos.size}</strong> выбрано
+            </span>
+            <Checkbox
+              checked={selectedPhotos.size === photosWithOpen.length && photosWithOpen.length > 0}
+              onChange={toggleAllPhotos}
+            >
               <span style={{ fontSize: 12, color: '#475569' }}>Все</span>
             </Checkbox>
           </div>
           <div style={{ padding: '12px 16px' }}>
-            {visit.anomalies.map(a => (
-              <div key={a.id} className="anomaly-card" style={{
-                borderLeft: `3px solid ${a.severity === 'critical' ? '#DC2626' : '#D97706'}`,
-                marginBottom: 10, overflow: 'hidden', cursor: 'default',
-                ...(selectedIds.has(a.id) ? { border: '1px solid #0F766E', background: '#F0FDFA' } : {}),
-              }}>
-                <div style={{ padding: '10px 12px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Checkbox checked={selectedIds.has(a.id)} onChange={() => toggleAnomaly(a.id)} />
-                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{ANOMALY_LABELS[a.type] || a.type}</span>
-                  <span style={{
-                    padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                    background: a.severity === 'critical' ? '#FEE2E2' : '#FEF3C7',
-                    color: a.severity === 'critical' ? '#DC2626' : '#92400E',
-                  }}>
-                    {a.severity === 'critical' ? 'Крит.' : 'Предупр.'}
-                  </span>
-                </div>
-                <div style={{ padding: '10px 12px' }}>
-                  {a.photo && <PhotoThumbnail photoId={a.photo.id} />}
-                  {renderDetail(a)}
-                  {renderVerificationResults(a.photo)}
-                </div>
-              </div>
-            ))}
+            {photoGroups.map(renderPhotoCard)}
           </div>
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid #E2E8F0' }}>
-            <Button type="primary" block icon={<SendOutlined />} disabled={selectedIds.size === 0} onClick={handleReshoot}>
+            <Button type="primary" block icon={<SendOutlined />} disabled={selectedPhotos.size === 0} onClick={handleReshoot}>
               Запросить пересъёмку
             </Button>
             <Button block icon={<CheckOutlined />} style={{ background: '#059669', color: '#fff', borderColor: '#059669' }} onClick={handleConfirm}>
@@ -421,24 +495,15 @@ function PhotoThumbnail({ photoId }: { photoId: string }) {
 
   return (
     <div style={{
-      width: 80, height: 60, borderRadius: 6, background: '#F1F5F9',
+      width: 48, height: 48, borderRadius: 8, background: '#F1F5F9',
       border: '1px solid #E2E8F0', overflow: 'hidden', flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       {url ? (
         <img src={url} alt="Фото" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <CameraOutlined style={{ color: '#94A3B8', fontSize: 20 }} />
+        <CameraOutlined style={{ color: '#94A3B8', fontSize: 18 }} />
       )}
-    </div>
-  );
-}
-
-function DetailRow({ label, value, danger, warn }: { label: string; value: string; danger?: boolean; warn?: boolean }) {
-  return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 5, fontSize: 13 }}>
-      <span style={{ color: '#475569', minWidth: 110 }}>{label}</span>
-      <span style={{ color: danger ? '#DC2626' : warn ? '#D97706' : '#0F172A', fontWeight: 500 }}>{value}</span>
     </div>
   );
 }
