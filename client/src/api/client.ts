@@ -170,6 +170,8 @@ export const api = {
     request<any>(`/analytics/visits/${visitId}/confirm`, { method: 'POST' }),
   updateAnomalyStatus: (anomalyId: string, status: string) =>
     request<any>(`/analytics/anomalies/${anomalyId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  batchUpdateAnomalies: (anomalyIds: string[], status: string) =>
+    request<any>('/analytics/anomalies/batch', { method: 'PATCH', body: JSON.stringify({ anomalyIds, status }) }),
   getPhotoDetail: (photoId: string) =>
     request<any>(`/photos/${photoId}/detail`),
 

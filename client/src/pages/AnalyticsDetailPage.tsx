@@ -146,17 +146,18 @@ export default function AnalyticsDetailPage() {
   }, [photoGroups, selectedPhotos]);
 
   const handleReshoot = () => {
-    if (selectedPhotos.size === 0) return;
+    // Пересъёмка для НЕотмеченных фото (подозрительные)
+    const unselectedOpen = photoGroups.filter(g => g.openCount > 0 && !selectedPhotos.has(g.photoId));
+    if (unselectedOpen.length === 0) return;
     const anomalyIds: string[] = [];
-    for (const g of photoGroups) {
-      if (selectedPhotos.has(g.photoId)) {
-        anomalyIds.push(...g.anomalies.filter(a => a.status === 'open').map(a => a.id));
-      }
+    for (const g of unselectedOpen) {
+      anomalyIds.push(...g.anomalies.filter(a => a.status === 'open').map(a => a.id));
     }
     Modal.confirm({
       title: 'Запросить пересъёмку',
-      content: `Будут удалены ${selectedPhotos.size} фото с отклонениями. Статус визита будет изменён на «В работе». Продолжить?`,
+      content: `Будут удалены ${unselectedOpen.length} фото (${anomalyIds.length} отклонений). Статус визита будет изменён на «В работе». Продолжить?`,
       okText: 'Запросить пересъёмку',
+      okType: 'danger',
       cancelText: 'Отмена',
       onOk: async () => {
         try {
@@ -172,31 +173,30 @@ export default function AnalyticsDetailPage() {
   };
 
   const handleConfirm = () => {
+    // Подтвердить (dismiss) отмеченные фото — ТМ проверила и всё нормально
+    if (selectedPhotos.size === 0) return;
+    const anomalyIds: string[] = [];
+    for (const g of photoGroups) {
+      if (selectedPhotos.has(g.photoId)) {
+        anomalyIds.push(...g.anomalies.filter(a => a.status === 'open').map(a => a.id));
+      }
+    }
     Modal.confirm({
-      title: 'Подтвердить визит',
-      content: 'Все отклонения будут отмечены как проверенные. Продолжить?',
+      title: 'Подтвердить отклонения',
+      content: `${selectedPhotos.size} фото (${anomalyIds.length} отклонений) будут отмечены как проверенные и исчезнут из списка. Продолжить?`,
       okText: 'Подтвердить',
       cancelText: 'Отмена',
       onOk: async () => {
         try {
-          await api.confirmVisit(id!);
-          message.success('Визит подтверждён');
+          await api.batchUpdateAnomalies(anomalyIds, 'dismissed');
+          message.success('Отклонения подтверждены');
+          setSelectedPhotos(new Set());
           await loadData();
         } catch (err: any) {
           message.error(err.message || 'Ошибка');
         }
       },
     });
-  };
-
-  const handleToggleAnomaly = async (anomalyId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'open' ? 'confirmed' : 'dismissed';
-    try {
-      await api.updateAnomalyStatus(anomalyId, newStatus);
-      await loadData();
-    } catch (err: any) {
-      message.error(err.message || 'Ошибка обновления');
-    }
   };
 
   const anomalyMap = useMemo(() => {
@@ -321,12 +321,6 @@ export default function AnalyticsDetailPage() {
                   : <CheckCircleOutlined style={{ color: '#94A3B8', fontSize: 14 }} />;
             const textColor = isPassed ? '#059669' : isCritical ? '#DC2626' : isWarning ? '#D97706' : '#475569';
 
-            // Найти аномалию для этой проверки
-            const anomalyType = check.check === 'gps'
-              ? (anomalies.find(a => a.type === 'photo_gps_mismatch' || a.type === 'photo_no_gps')?.type)
-              : anomalies.find(a => a.type === CHECK_TO_ANOMALY[check.check])?.type;
-            const anomaly = anomalyType ? anomalies.find(a => a.type === anomalyType) : null;
-
             return (
               <div key={i} style={{
                 display: 'flex', alignItems: 'flex-start', gap: 8,
@@ -346,25 +340,6 @@ export default function AnalyticsDetailPage() {
                     <div style={{ fontSize: 11, color: '#059669', marginTop: 1 }}>{check.message}</div>
                   )}
                 </div>
-                {!isPassed && anomaly && (
-                  <Button
-                    size="small"
-                    type={anomaly.status === 'confirmed' ? 'default' : 'text'}
-                    icon={anomaly.status === 'confirmed'
-                      ? <CheckCircleOutlined style={{ color: '#059669' }} />
-                      : <CheckOutlined style={{ color: '#94A3B8' }} />
-                    }
-                    title={anomaly.status === 'confirmed' ? 'Подтверждено — нажать для отмены' : 'Подтвердить отклонение'}
-                    style={{
-                      flexShrink: 0, fontSize: 11, height: 26,
-                      borderColor: anomaly.status === 'confirmed' ? '#059669' : '#E2E8F0',
-                      background: anomaly.status === 'confirmed' ? '#ECFDF5' : 'transparent',
-                    }}
-                    onClick={() => handleToggleAnomaly(anomaly.id, anomaly.status)}
-                  >
-                    {anomaly.status === 'confirmed' ? '✓' : ''}
-                  </Button>
-                )}
               </div>
             );
           })}
@@ -440,20 +415,29 @@ export default function AnalyticsDetailPage() {
       {/* Actions */}
       <div style={{
         padding: '16px 24px', borderTop: '1px solid #E2E8F0',
-        display: 'flex', gap: 10, flexWrap: 'wrap', background: '#F8FAFC', alignItems: 'center',
+        display: 'flex', flexDirection: 'column', gap: 10, background: '#F8FAFC',
       }}>
-        <span style={{ fontSize: 13, color: '#475569', marginRight: 'auto' }}>
-          Выбрано фото: <strong style={{ color: '#0F172A' }}>{selectedPhotos.size}</strong> из {photoGroups.length}
-          {selectedAnomalyCount > 0 && (
-            <span style={{ color: '#94A3B8', marginLeft: 8 }}>({selectedAnomalyCount} откл.)</span>
-          )}
-        </span>
-        <Button type="primary" icon={<SendOutlined />} disabled={selectedPhotos.size === 0} onClick={handleReshoot}>
-          Запросить пересъёмку
-        </Button>
-        <Button icon={<CheckOutlined />} style={{ background: '#059669', color: '#fff', borderColor: '#059669' }} onClick={handleConfirm}>
-          Подтвердить визит
-        </Button>
+        <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>
+          Отметьте галочками фото, по которым отклонения сняты. Отмеченные можно подтвердить, по неотмеченным — запросить пересъёмку.
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, color: '#475569', marginRight: 'auto' }}>
+            Отмечено: <strong style={{ color: '#0F172A' }}>{selectedPhotos.size}</strong> из {photoGroups.length}
+            {selectedAnomalyCount > 0 && (
+              <span style={{ color: '#94A3B8', marginLeft: 8 }}>({selectedAnomalyCount} откл.)</span>
+            )}
+          </span>
+          <Button type="primary" danger icon={<SendOutlined />}
+            disabled={photoGroups.length - selectedPhotos.size === 0}
+            onClick={handleReshoot}>
+            Пересъёмка ({photoGroups.length - selectedPhotos.size})
+          </Button>
+          <Button icon={<CheckOutlined />} style={{ background: '#059669', color: '#fff', borderColor: '#059669' }}
+            disabled={selectedPhotos.size === 0}
+            onClick={handleConfirm}>
+            Подтвердить ({selectedPhotos.size})
+          </Button>
+        </div>
       </div>
     </>
   );
@@ -489,11 +473,15 @@ export default function AnalyticsDetailPage() {
             {photoGroups.map(renderPhotoCard)}
           </div>
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid #E2E8F0' }}>
-            <Button type="primary" block icon={<SendOutlined />} disabled={selectedPhotos.size === 0} onClick={handleReshoot}>
-              Запросить пересъёмку
+            <Button type="primary" danger block icon={<SendOutlined />}
+              disabled={photoGroups.length - selectedPhotos.size === 0}
+              onClick={handleReshoot}>
+              Пересъёмка ({photoGroups.length - selectedPhotos.size})
             </Button>
-            <Button block icon={<CheckOutlined />} style={{ background: '#059669', color: '#fff', borderColor: '#059669' }} onClick={handleConfirm}>
-              Подтвердить визит
+            <Button block icon={<CheckOutlined />} style={{ background: '#059669', color: '#fff', borderColor: '#059669' }}
+              disabled={selectedPhotos.size === 0}
+              onClick={handleConfirm}>
+              Подтвердить ({selectedPhotos.size})
             </Button>
           </div>
         </>
