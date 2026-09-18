@@ -166,6 +166,19 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     }
   }
 
+  // Автоподстановка contractId из tm_objects (инженер → ТМ → адрес → договор)
+  let autoContractId: string | null = null;
+  if (req.userRole === 'engineer' && !rest.contractId) {
+    const tmAssignment = await prisma.tmEngineer.findUnique({ where: { engineerId: req.userId as string } });
+    if (tmAssignment) {
+      const tmObject = await prisma.tmObject.findFirst({
+        where: { tmId: tmAssignment.tmId, addressId: rest.addressId },
+        select: { contractId: true },
+      });
+      if (tmObject?.contractId) autoContractId = tmObject.contractId;
+    }
+  }
+
   const visit = await prisma.visit.create({
     data: {
       ...rest,
@@ -174,6 +187,7 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
       status: req.userRole !== 'engineer' && targetUserId ? 'planned' : 'not_started',
       assignedById: req.userRole !== 'engineer' && targetUserId ? req.userId : null,
       assignedAt: req.userRole !== 'engineer' && targetUserId ? new Date() : null,
+      contractId: autoContractId || rest.contractId || null,
     },
     include: { address: true, tasks: { include: taskInclude }, visitEngineers: true },
   });
