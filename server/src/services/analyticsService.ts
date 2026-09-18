@@ -159,7 +159,7 @@ export async function getAnalyticsVisitDetails(visitId: string, userId: string, 
       user: { select: { id: true, fullName: true } },
       address: { select: { id: true, fullAddress: true, objectCode: true } },
       anomalies: {
-        where: { photoId: { not: null } },
+        where: { photoId: { not: null }, status: 'open' },
         include: {
           photo: {
             select: {
