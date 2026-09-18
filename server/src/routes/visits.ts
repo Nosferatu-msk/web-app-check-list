@@ -181,6 +181,7 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
 
   // Автоназначение на заявки по адресу
   const autoAssignedRequests: any[] = [];
+  console.log(`[autoAssign] check: visit=${visit.id} autoAssign=${autoAssignRequests} role=${req.userRole} address=${rest.addressId}`);
   if (autoAssignRequests && req.userRole === 'engineer') {
     const engineer = await prisma.user.findUnique({
       where: { id: req.userId as string },
@@ -208,6 +209,8 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
       },
       take: 20,
     });
+
+    console.log(`[autoAssign] visit=${visit.id} address=${rest.addressId} engineer=${req.userId} found=${requests.length} requests:`, requests.map(r => ({ id: r.id, ext: r.externalRequestId, visitStatus: r.visit?.status })));
 
     for (const request of requests) {
       const existingLink = await prisma.visitRequest.findUnique({
