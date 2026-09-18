@@ -260,6 +260,66 @@ async function checkPhash(
       };
     }
 
+    // Дополнительная проверка для индивидуальных задач — фото внутри того же визита
+    if (photo.taskId) {
+      const sameVisitPhotos = await prisma.photo.findMany({
+        where: {
+          id: { not: photo.id },
+          phash: { not: null },
+          moment: photo.moment,
+          task: { visitId: photo.task.visitId },
+        },
+        select: { id: true, phash: true, taskId: true },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+
+      let svBestMatch: { photo: typeof sameVisitPhotos[0]; distance: number } | null = null;
+
+      for (const rp of sameVisitPhotos) {
+        if (!rp.phash) continue;
+        const distance = hammingDistance(phash, rp.phash);
+        if (!svBestMatch || distance < svBestMatch.distance) {
+          svBestMatch = { photo: rp, distance };
+        }
+      }
+
+      if (svBestMatch && svBestMatch.distance <= PHASH_WARNING_THRESHOLD) {
+        const matchTask: any = await prisma.task.findUnique({
+          where: { id: svBestMatch.photo.taskId! },
+          include: { equipmentType: true },
+        });
+        const eqName = matchTask?.equipmentType?.name || '';
+
+        if (svBestMatch.distance <= PHASH_CRITICAL_THRESHOLD) {
+          return {
+            severity: 'critical',
+            message: `Визуальное сходство ${Math.round((1 - svBestMatch.distance / 64) * 100)}% с фото в том же визите${eqName ? ` (${eqName})` : ''}`,
+            details: {
+              hammingDistance: svBestMatch.distance,
+              similarityPercent: Math.round((1 - svBestMatch.distance / 64) * 100),
+              matchedPhotoId: svBestMatch.photo.id,
+              matchVisitId: photo.task.visitId,
+              matchInfo: `Тот же визит${eqName ? `, оборудование: ${eqName}` : ''}`,
+              scope: 'same_visit',
+            },
+          };
+        }
+
+        return {
+          severity: 'warning',
+          message: `Фото похоже на другое в том же визите (расстояние ${svBestMatch.distance})${eqName ? ` (${eqName})` : ''}`,
+          details: {
+            hammingDistance: svBestMatch.distance,
+            similarityPercent: Math.round((1 - svBestMatch.distance / 64) * 100),
+            matchedPhotoId: svBestMatch.photo.id,
+            matchInfo: `Тот же визит${eqName ? `, оборудование: ${eqName}` : ''}`,
+            scope: 'same_visit',
+          },
+        };
+      }
+    }
+
     return null;
   } catch (error) {
     console.error('[photoVerification] Ошибка проверки pHash:', error);
