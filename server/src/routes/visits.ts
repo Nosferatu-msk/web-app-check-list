@@ -237,6 +237,15 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
         data: { visitId: visit.id },
       });
 
+      // Синхронизировать contractId из заявки в визит (если ещё не установлен)
+      if (request.contractId && !visit.contractId) {
+        await prisma.visit.update({
+          where: { id: visit.id },
+          data: { contractId: request.contractId },
+        });
+        visit.contractId = request.contractId;
+      }
+
       // Назначить инженера на визит
       if (!visit.visitEngineers?.some((ve: any) => ve.engineerId === req.userId)) {
         const isPrimary = !(visit as any)._primaryAssigned;
@@ -822,6 +831,16 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
         where: { id: request.id },
         data: { visitId: visit.id },
       });
+
+      // Синхронизировать contractId из заявки в визит (если ещё не установлен)
+      if (request.contractId && !visit.contractId) {
+        await prisma.visit.update({
+          where: { id: visit.id },
+          data: { contractId: request.contractId },
+        });
+        visit.contractId = request.contractId;
+      }
+
       await prisma.requestAssignmentLog.create({
         data: {
           importedRequestId: request.id,
