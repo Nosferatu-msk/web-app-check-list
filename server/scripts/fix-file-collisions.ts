@@ -87,8 +87,8 @@ async function main() {
     select: { id: true, filePath: true },
   });
 
-  // Динамический импорт computePhash
-  const { computePhash } = await import('../src/utils/phash.js');
+  // Динамический импорт computePhash (в контейнере только dist/)
+  const { computePhash } = await import('../dist/utils/phash.js');
 
   let recomputed = 0;
   let errors = 0;
