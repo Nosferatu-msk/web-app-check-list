@@ -189,6 +189,16 @@ export default function AnalyticsDetailPage() {
     });
   };
 
+  const handleToggleAnomaly = async (anomalyId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'open' ? 'confirmed' : 'dismissed';
+    try {
+      await api.updateAnomalyStatus(anomalyId, newStatus);
+      await loadData();
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка обновления');
+    }
+  };
+
   const anomalyMap = useMemo(() => {
     const m = new Map<string, Anomaly>();
     if (!visit) return m;
@@ -311,6 +321,12 @@ export default function AnalyticsDetailPage() {
                   : <CheckCircleOutlined style={{ color: '#94A3B8', fontSize: 14 }} />;
             const textColor = isPassed ? '#059669' : isCritical ? '#DC2626' : isWarning ? '#D97706' : '#475569';
 
+            // Найти аномалию для этой проверки
+            const anomalyType = check.check === 'gps'
+              ? (anomalies.find(a => a.type === 'photo_gps_mismatch' || a.type === 'photo_no_gps')?.type)
+              : anomalies.find(a => a.type === CHECK_TO_ANOMALY[check.check])?.type;
+            const anomaly = anomalyType ? anomalies.find(a => a.type === anomalyType) : null;
+
             return (
               <div key={i} style={{
                 display: 'flex', alignItems: 'flex-start', gap: 8,
@@ -330,6 +346,25 @@ export default function AnalyticsDetailPage() {
                     <div style={{ fontSize: 11, color: '#059669', marginTop: 1 }}>{check.message}</div>
                   )}
                 </div>
+                {!isPassed && anomaly && (
+                  <Button
+                    size="small"
+                    type={anomaly.status === 'confirmed' ? 'default' : 'text'}
+                    icon={anomaly.status === 'confirmed'
+                      ? <CheckCircleOutlined style={{ color: '#059669' }} />
+                      : <CheckOutlined style={{ color: '#94A3B8' }} />
+                    }
+                    title={anomaly.status === 'confirmed' ? 'Подтверждено — нажать для отмены' : 'Подтвердить отклонение'}
+                    style={{
+                      flexShrink: 0, fontSize: 11, height: 26,
+                      borderColor: anomaly.status === 'confirmed' ? '#059669' : '#E2E8F0',
+                      background: anomaly.status === 'confirmed' ? '#ECFDF5' : 'transparent',
+                    }}
+                    onClick={() => handleToggleAnomaly(anomaly.id, anomaly.status)}
+                  >
+                    {anomaly.status === 'confirmed' ? '✓' : ''}
+                  </Button>
+                )}
               </div>
             );
           })}
