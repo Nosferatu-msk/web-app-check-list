@@ -83,7 +83,6 @@ async function main() {
   const affectedPhotos = await prisma.photo.findMany({
     where: {
       phash: { not: null },
-      filePath: { not: null },
     },
     select: { id: true, filePath: true },
   });
