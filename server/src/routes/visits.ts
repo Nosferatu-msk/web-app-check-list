@@ -980,6 +980,11 @@ router.delete('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => 
   // Получаем задачу перед удалением для проверки связей с заявками
   const taskToDelete = await prisma.task.findUnique({ where: { id: req.params.id as string } });
 
+  // Удаляем сиротские VisitAnomaly, связанные с фото этой задачи
+  await prisma.visitAnomaly.deleteMany({
+    where: { photo: { taskId: req.params.id as string } },
+  });
+
   await prisma.task.delete({ where: { id: req.params.id as string } });
 
   // Проверяем, нужно ли разорвать связи с заявками

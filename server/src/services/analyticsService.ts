@@ -56,8 +56,8 @@ export async function getAnalyticsVisits(params: {
     ];
   }
 
-  // Фильтр по отклонениям — по умолчанию только open
-  const anomalyWhere: any = {};
+  // Фильтр по отклонениям — по умолчанию только open, исключаем сиротские (без фото)
+  const anomalyWhere: any = { photoId: { not: null } };
   if (type) anomalyWhere.type = type;
   if (severity) anomalyWhere.severity = severity;
   anomalyWhere.status = status || 'open';
@@ -159,6 +159,7 @@ export async function getAnalyticsVisitDetails(visitId: string, userId: string, 
       user: { select: { id: true, fullName: true } },
       address: { select: { id: true, fullAddress: true, objectCode: true } },
       anomalies: {
+        where: { photoId: { not: null } },
         include: {
           photo: {
             select: {
