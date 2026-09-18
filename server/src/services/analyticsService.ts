@@ -308,21 +308,31 @@ export async function reshootVisit(visitId: string, anomalyIds: string[], review
   });
 
   if (visit) {
+    const taskIdsToUpdate = new Set<string>();
+
     for (const task of visit.tasks) {
       const hasPhotos = task.photos.length > 0 ||
         task.equipmentItems.some((tei: any) => tei.photos.length > 0);
 
       if (!hasPhotos && task.status !== 'not_started') {
-        await prisma.task.update({
-          where: { id: task.id },
-          data: { status: 'not_started' },
-        });
+        taskIdsToUpdate.add(task.id);
       }
     }
 
-    // Проверяем статус визита
-    const allTasksNotStarted = visit.tasks.every((t: any) => t.status === 'not_started');
-    if (allTasksNotStarted && visit.status !== 'in_progress') {
+    if (taskIdsToUpdate.size > 0) {
+      await prisma.task.updateMany({
+        where: { id: { in: Array.from(taskIdsToUpdate) } },
+        data: { status: 'not_started' },
+      });
+    }
+
+    // Пересчитываем статус визита с учётом обновлённых задач
+    const updatedTasks = await prisma.task.findMany({
+      where: { visitId },
+      select: { status: true },
+    });
+    const allNotStarted = updatedTasks.every(t => t.status === 'not_started');
+    if (allNotStarted && visit.status !== 'in_progress') {
       await prisma.visit.update({
         where: { id: visitId },
         data: { status: 'in_progress' },
