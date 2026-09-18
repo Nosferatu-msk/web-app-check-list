@@ -32,6 +32,43 @@ const SATISFACTORY_OPTIONS = [
   { label: 'Неудовлетворительно', value: 'unsatisfactory' },
 ];
 
+// Валидация: текст не начинается со спецсимвола или пробела
+const validateNoSpecialStart = (_: any, value: string) => {
+  if (!value) return Promise.resolve();
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return Promise.resolve();
+  if (!/^[\p{L}\p{N}]/u.test(trimmed)) {
+    return Promise.reject(new Error('Не может начинаться со спецсимвола или пробела'));
+  }
+  return Promise.resolve();
+};
+
+// Валидация: числовое поле (показания, температуры)
+const validateNumericField = (_: any, value: string) => {
+  if (!value && value !== '0') return Promise.resolve();
+  const str = String(value).trim().replace(',', '.');
+  if (str === '' || str === '.') return Promise.reject(new Error('Введите число'));
+  if (!/^-?\d+(\.\d+)?$/.test(str)) return Promise.reject(new Error('Должно быть числом'));
+  const negative = str.startsWith('-');
+  const absStr = negative ? str.slice(1) : str;
+  const parts = absStr.split('.');
+  if (parts[0].length > 1 && parts[0].startsWith('0')) {
+    return Promise.reject(new Error('Число не может начинаться с 0'));
+  }
+  if (parts[0].length > 9) {
+    return Promise.reject(new Error('Целая часть не более 9 цифр'));
+  }
+  if (parts[1] && parts[1].length > 4) {
+    return Promise.reject(new Error('Дробная часть не более 4 цифр'));
+  }
+  return Promise.resolve();
+};
+
+// Нормализация числового значения: запятая → точка
+const normalizeNumericValue = (value: string): string => {
+  return value.replace(',', '.');
+};
+
 // Parameter definitions per equipment type
 const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' | 'number' | 'text'; options?: any[]; required?: boolean; defaultValue?: any }[]> = {
   rsch: [
@@ -434,6 +471,18 @@ export default function TaskPage() {
     const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
     const finalConclusion = formConclusion || conclusion;
     const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
+
+    // Нормализация числовых значений (запятая → точка)
+    const eqCode = task.equipmentType?.code || '';
+    const config = PARAM_CONFIG[eqCode] || [];
+    for (const p of config) {
+      if (p.type === 'number' && parameters[p.key] !== undefined && parameters[p.key] !== null) {
+        const str = String(parameters[p.key]).trim().replace(',', '.');
+        const num = parseFloat(str);
+        if (!isNaN(num)) parameters[p.key] = num;
+      }
+    }
+
     const updateData: Record<string, any> = {
       parameters,
       selectedRecommendationIds: selectedRecs,
@@ -537,6 +586,17 @@ export default function TaskPage() {
       const finalConclusion = formConclusion || conclusion;
       const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
 
+      // Нормализация числовых значений (запятая → точка)
+      const eqCode = task.equipmentType?.code || '';
+      const config = PARAM_CONFIG[eqCode] || [];
+      for (const p of config) {
+        if (p.type === 'number' && parameters[p.key] !== undefined && parameters[p.key] !== null) {
+          const str = String(parameters[p.key]).trim().replace(',', '.');
+          const num = parseFloat(str);
+          if (!isNaN(num)) parameters[p.key] = num;
+        }
+      }
+
       const photosRequired = task.equipmentType?.photosRequired || 1;
       const hasAllPhotos = photoCount >= photosRequired;
       const status = hasAllPhotos ? 'completed' : 'in_progress';
@@ -547,6 +607,7 @@ export default function TaskPage() {
         additionalRecommendations: additionalRecommendations || '',
         conclusion: finalConclusion,
         status,
+        validateParams: true,
       });
       message.success(hasAllPhotos ? 'Сохранено' : 'Параметры сохранены. Загрузите фотографии для завершения');
       navigate(`/visit/${visitId}`);
@@ -569,6 +630,17 @@ export default function TaskPage() {
       const { conclusion: formConclusion, additionalRecommendations, ...formParamValues } = allValues;
       const finalConclusion = formConclusion || conclusion;
       const parameters = { ...loadedParamsRef.current, ...formParamValues, conclusion: finalConclusion };
+
+      // Нормализация числовых значений (запятая → точка)
+      const eqCode = task.equipmentType?.code || '';
+      const config = PARAM_CONFIG[eqCode] || [];
+      for (const p of config) {
+        if (p.type === 'number' && parameters[p.key] !== undefined && parameters[p.key] !== null) {
+          const str = String(parameters[p.key]).trim().replace(',', '.');
+          const num = parseFloat(str);
+          if (!isNaN(num)) parameters[p.key] = num;
+        }
+      }
 
       const updateData: Record<string, any> = {
         parameters,
@@ -627,12 +699,23 @@ export default function TaskPage() {
                       ) : p.label
                     }
                     name={p.key}
-                    rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}
+                    rules={[
+                      ...(p.required ? [{ required: true, message: 'Заполните поле' }] : []),
+                      ...(p.type === 'number' ? [{ validator: validateNumericField }] : []),
+                      ...(p.type === 'text' ? [{ validator: validateNoSpecialStart }] : []),
+                    ]}
                   >
                     {p.type === 'select' ? (
                       <Select options={p.options} placeholder="Выберите..." />
                     ) : p.type === 'number' ? (
-                      <Input type="number" inputMode="decimal" placeholder="Введите значение" />
+                      <Input type="text" inputMode="decimal" placeholder="Введите значение"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val.includes(',')) {
+                            form.setFieldValue(p.key, normalizeNumericValue(val));
+                          }
+                        }}
+                      />
                     ) : p.key === 'model' ? (
                       <ModelAutocomplete equipmentTypeId={task?.equipmentType?.id} />
                     ) : (
@@ -704,12 +787,23 @@ export default function TaskPage() {
                     ) : p.label
                   }
                   name={p.key}
-                  rules={p.required ? [{ required: true, message: 'Заполните поле' }] : []}
+                  rules={[
+                    ...(p.required ? [{ required: true, message: 'Заполните поле' }] : []),
+                    ...(p.type === 'number' ? [{ validator: validateNumericField }] : []),
+                    ...(p.type === 'text' ? [{ validator: validateNoSpecialStart }] : []),
+                  ]}
                 >
                   {p.type === 'select' ? (
                     <Select options={p.options} placeholder="Выберите..." />
                   ) : p.type === 'number' ? (
-                    <Input type="number" placeholder="Введите значение" />
+                    <Input type="text" inputMode="decimal" placeholder="Введите значение"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.includes(',')) {
+                          form.setFieldValue(p.key, normalizeNumericValue(val));
+                        }
+                      }}
+                    />
                   ) : p.key === 'model' ? (
                     <ModelAutocomplete equipmentTypeId={task?.equipmentType?.id} />
                   ) : (

@@ -5,6 +5,15 @@ import prisma from '../models/prisma.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { logAudit } from '../middleware/audit.js';
+import {
+  isMeaningfulText,
+  startsWithValidChar,
+  validateAndNormalizeReadings,
+  validateTaskParameters,
+  validateTaskFields,
+  normalizeNumericParams,
+  getRequiredParams,
+} from '../utils/validation.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -569,7 +578,7 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
     include: {
       tasks: {
         include: {
-          equipmentType: { select: { photosRequired: true, name: true } },
+          equipmentType: { select: { photosRequired: true, name: true, code: true } },
           photos: { select: { id: true } },
         },
       },
@@ -609,6 +618,36 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
         taskId: t.id,
         equipmentName: t.equipmentType?.name,
       })),
+    });
+    return;
+  }
+
+  // Проверка: обязательные параметры задач (показания, модели, серийные номера)
+  const tasksWithInvalidParams: { taskId: string; equipmentName: string; errors: string[] }[] = [];
+  for (const task of existing.tasks) {
+    if (task.status === 'completed' || task.status === 'in_progress') {
+      const eqCode = task.equipmentType?.code || '';
+      const paramErrors = validateTaskParameters(task.parameters as Record<string, any> | null, eqCode);
+      const fieldErrs = validateTaskFields({
+        brand: task.brand,
+        model: task.model,
+        serialNumber: task.serialNumber,
+      });
+      const allErrors = [...paramErrors.map(e => e.message), ...fieldErrs.map(e => e.message)];
+      if (allErrors.length > 0) {
+        tasksWithInvalidParams.push({
+          taskId: task.id,
+          equipmentName: task.equipmentType?.name || 'оборудование',
+          errors: allErrors,
+        });
+      }
+    }
+  }
+  if (tasksWithInvalidParams.length > 0) {
+    const details = tasksWithInvalidParams.map(t => `${t.equipmentName}: ${t.errors.join(', ')}`).join('; ');
+    res.status(400).json({
+      error: `Нельзя завершить визит: ${details}`,
+      tasksWithInvalidParams,
     });
     return;
   }
@@ -693,6 +732,18 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
   const data = req.body;
   if (data.roomTypeId === '') data.roomTypeId = undefined;
   if (data.objectEquipmentId === '') data.objectEquipmentId = undefined;
+
+  // Валидация: brand, model, serialNumber не могут начинаться со спецсимволов/пробелов
+  const createFieldErrors = validateTaskFields({
+    brand: data.brand,
+    model: data.model,
+    serialNumber: data.serialNumber,
+  });
+  if (createFieldErrors.length > 0) {
+    res.status(400).json({ error: createFieldErrors.map(e => e.message).join('; ') });
+    return;
+  }
+
   const maxOrder = await prisma.task.aggregate({ where: { visitId }, _max: { sortOrder: true } });
 
   const task = await prisma.task.create({
@@ -844,6 +895,38 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
   if ((data.conclusion === 'ok_with_notes' || data.conclusion === 'faulty') && !data.additionalRecommendations?.trim()) {
     res.status(400).json({ error: 'При наличии замечаний укажите дополнительные рекомендации' });
     return;
+  }
+
+  // Валидация: brand, model, serialNumber не могут начинаться со спецсимволов/пробелов
+  const fieldErrors = validateTaskFields({
+    brand: data.brand,
+    model: data.model,
+    serialNumber: data.serialNumber,
+  });
+  if (fieldErrors.length > 0) {
+    res.status(400).json({ error: fieldErrors.map(e => e.message).join('; ') });
+    return;
+  }
+
+  // Нормализация и (опционально) валидация parameters
+  if (data.parameters && typeof data.parameters === 'object') {
+    const existingTask = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      include: { equipmentType: { select: { code: true } } },
+    });
+    if (existingTask) {
+      // Нормализация числовых значений (запятая → точка) — всегда
+      data.parameters = normalizeNumericParams(data.parameters, existingTask.equipmentType.code);
+
+      // Валидация обязательных полей — только при явном сохранении (не автосохранение)
+      if (req.body.validateParams) {
+        const paramErrors = validateTaskParameters(data.parameters, existingTask.equipmentType.code);
+        if (paramErrors.length > 0) {
+          res.status(400).json({ error: paramErrors.map(e => e.message).join('; ') });
+          return;
+        }
+      }
+    }
   }
 
   const task = await prisma.task.update({

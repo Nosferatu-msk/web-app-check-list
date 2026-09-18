@@ -538,6 +538,27 @@ export default function VisitPage() {
     if (!visit?.id) return;
     const completedTasks = tasks.filter(t => t.status === 'completed');
     if (completedTasks.length === 0) { message.warning('Должна быть хотя бы 1 выполненная задача'); return; }
+
+    // Проверка обязательных параметров задач (показания, модели, серийные номера)
+    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
+    const missingFields: string[] = [];
+    for (const task of tasks) {
+      if (task.status !== 'completed' && task.status !== 'in_progress') continue;
+      const eqCode = task.equipmentType?.code || '';
+      const params = (task.parameters || {}) as Record<string, any>;
+      const eqName = task.equipmentType?.name || 'оборудование';
+
+      if (METER_CODES.includes(eqCode)) {
+        if (!params.readings && params.readings !== 0) missingFields.push(`${eqName}: показания`);
+        if (!params.model || !params.model.trim()) missingFields.push(`${eqName}: модель`);
+        if (!params.serial_number || !params.serial_number.trim()) missingFields.push(`${eqName}: серийный номер`);
+      }
+    }
+    if (missingFields.length > 0) {
+      message.error(`Заполните обязательные поля: ${missingFields.join(', ')}`);
+      return;
+    }
+
     try {
       if (isOffline()) {
         await api.completeVisitOffline(visit.id);
