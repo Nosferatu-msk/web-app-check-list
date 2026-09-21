@@ -318,6 +318,43 @@ async function checkPhash(
           },
         };
       }
+
+      // Проверка: before vs after в том же визите (инженер загрузил одно фото как ДО и ПОСЛЕ)
+      const oppositeMoment = photo.moment === 'before' ? 'after' : 'before';
+      const crossMomentPhotos = await prisma.photo.findMany({
+        where: {
+          id: { not: photo.id },
+          phash: { not: null },
+          moment: oppositeMoment,
+          task: { visitId: photo.task.visitId, equipmentTypeId: photo.task.equipmentTypeId },
+        },
+        select: { id: true, phash: true, taskId: true },
+        take: 10,
+      });
+
+      for (const cm of crossMomentPhotos) {
+        if (!cm.phash) continue;
+        const distance = hammingDistance(phash, cm.phash);
+        if (distance <= PHASH_CRITICAL_THRESHOLD) {
+          const matchTask: any = await prisma.task.findUnique({
+            where: { id: cm.taskId! },
+            include: { equipmentType: true },
+          });
+          const eqName = matchTask?.equipmentType?.name || '';
+          return {
+            severity: 'critical',
+            message: `Фото ДО и ПОСЛЕ идентичны (${Math.round((1 - distance / 64) * 100)}% сходства)${eqName ? ` — ${eqName}` : ''}`,
+            details: {
+              hammingDistance: distance,
+              similarityPercent: Math.round((1 - distance / 64) * 100),
+              matchedPhotoId: cm.id,
+              matchVisitId: photo.task.visitId,
+              matchInfo: `Тот же визит, ДО/ПОСЛЕ${eqName ? `, оборудование: ${eqName}` : ''}`,
+              scope: 'same_visit_cross_moment',
+            },
+          };
+        }
+      }
     }
 
     return null;

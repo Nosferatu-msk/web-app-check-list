@@ -547,7 +547,6 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
       where: {
         id: { not: srcPhoto.id },
         phash: { not: null },
-        moment: srcPhoto.moment,
         createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
       },
       include: {
