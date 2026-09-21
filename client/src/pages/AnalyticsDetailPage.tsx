@@ -336,7 +336,7 @@ export default function AnalyticsDetailPage() {
           <span>GPS: {photo.gpsLat != null ? `${photo.gpsLat.toFixed(4)}, ${photo.gpsLng?.toFixed(4)}` : '—'}</span>
           {photo.phash && <span>pHash: {photo.phash.slice(0, 8)}…</span>}
           <span>{failedCount} из {checks.length} проверок не пройдено</span>
-          {photo.phash && (
+          {photo.phash && checks.some((c: any) => c.check === 'phash' && !c.passed) && (
             <Button size="small" icon={<EyeOutlined />}
               style={{ marginLeft: 'auto', borderColor: '#0F766E', color: '#0F766E', fontSize: 11, height: 24 }}
               onClick={() => setDuplicateModal(photoId)}>

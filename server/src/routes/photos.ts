@@ -527,22 +527,27 @@ router.get('/:id/detail', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/photos/:id/duplicates — все дубликаты фото по pHash
+// GET /api/photos/:id/duplicates — все дубликаты фото по pHash (поиск по всей БД)
 router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
   try {
-    const photo = await prisma.photo.findUnique({
+    const srcPhoto: any = await prisma.photo.findUnique({
       where: { id: req.params.id as string },
-      select: { id: true, phash: true, moment: true },
+      include: {
+        task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } }, equipmentType: true } },
+        taskEquipmentItem: { include: { objectEquipment: true, task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } } } } } },
+      },
     });
-    if (!photo || !photo.phash) {
+    if (!srcPhoto || !srcPhoto.phash) {
       res.json({ current: null, duplicates: [] });
       return;
     }
 
+    // Поиск по всей БД — инженер мог вложить дубликат в любую задачу
     const allPhotos = await prisma.photo.findMany({
       where: {
-        id: { not: photo.id },
+        id: { not: srcPhoto.id },
         phash: { not: null },
+        moment: srcPhoto.moment,
         createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
       },
       include: {
@@ -555,7 +560,7 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
     const matches: Array<{ photoId: string; distance: number; similarity: number }> = [];
     for (const p of allPhotos) {
       if (!p.phash) continue;
-      const dist = hammingDistance(photo.phash, p.phash);
+      const dist = hammingDistance(srcPhoto.phash, p.phash);
       if (dist <= PHASH_DUPLICATE_THRESHOLD) {
         matches.push({ photoId: p.id, distance: dist, similarity: Math.round((1 - dist / 64) * 100) });
       }
@@ -582,15 +587,7 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
       return info;
     };
 
-    const currentPhoto: any = await prisma.photo.findUnique({
-      where: { id: photo.id },
-      include: {
-        task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } }, equipmentType: true } },
-        taskEquipmentItem: { include: { objectEquipment: true, task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } } } } } },
-      },
-    });
-
-    const current = currentPhoto ? formatInfo(currentPhoto, 0, 100, true) : null;
+    const current = formatInfo(srcPhoto, 0, 100, true);
 
     const duplicates = matches.map(m => {
       const p = allPhotos.find(x => x.id === m.photoId);
