@@ -9,6 +9,7 @@ import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
 import PhotoCompareModal from '../components/PhotoCompareModal';
+import DuplicatePhotosModal from '../components/DuplicatePhotosModal';
 
 interface Anomaly {
   id: string;
@@ -72,6 +73,7 @@ export default function AnalyticsDetailPage() {
     currentInfo?: { engineer?: string; date?: string; equipment?: string; moment?: string };
     matchedInfo?: { engineer?: string; date?: string; equipment?: string; moment?: string };
   } | null>(null);
+  const [duplicateModal, setDuplicateModal] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -228,20 +230,8 @@ export default function AnalyticsDetailPage() {
           </span>
           <Button size="small" icon={<EyeOutlined />}
             style={{ borderColor: '#0F766E', color: '#0F766E', fontSize: 11 }}
-            onClick={async () => {
-              let matchedInfo: any = {};
-              try {
-                const mp = await api.getPhotoDetail(d.matchedPhotoId);
-                if (mp) matchedInfo = { engineer: mp.engineerName || '', date: mp.visitDate || '', equipment: mp.equipmentType || '', moment: mp.moment };
-              } catch { /* ignore */ }
-              setCompareModal({
-                currentId: photoId, matchedId: d.matchedPhotoId,
-                distance: d.hammingDistance, percent: d.similarityPercent,
-                currentInfo: { engineer: visit?.engineer.name, date: visit ? new Date(visit.dateStart).toLocaleDateString('ru-RU') : '', moment: 'before' },
-                matchedInfo,
-              });
-            }}>
-            Сравнить
+            onClick={() => setDuplicateModal(photoId)}>
+            Сравнение
           </Button>
         </div>
       );
@@ -505,6 +495,12 @@ export default function AnalyticsDetailPage() {
           matchedInfo={compareModal.matchedInfo}
         />
       )}
+
+      <DuplicatePhotosModal
+        open={!!duplicateModal}
+        onClose={() => setDuplicateModal(null)}
+        photoId={duplicateModal || ''}
+      />
     </div>
   );
 }

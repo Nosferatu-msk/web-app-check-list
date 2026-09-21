@@ -7,6 +7,9 @@ import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import prisma from '../models/prisma.js';
 import { logAudit } from '../middleware/audit.js';
 import { verifyPhoto } from '../services/photoVerification.js';
+import { hammingDistance } from '../utils/phash.js';
+
+const PHASH_DUPLICATE_THRESHOLD = 10;
 
 const router = Router();
 router.use(authMiddleware);
@@ -521,6 +524,84 @@ router.get('/:id/detail', async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error('[photos] getPhotoDetail error:', err);
     res.status(500).json({ error: 'Ошибка получения данных' });
+  }
+});
+
+// GET /api/photos/:id/duplicates — все дубликаты фото по pHash
+router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
+  try {
+    const photo = await prisma.photo.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true, phash: true, moment: true },
+    });
+    if (!photo || !photo.phash) {
+      res.json({ current: null, duplicates: [] });
+      return;
+    }
+
+    const allPhotos = await prisma.photo.findMany({
+      where: {
+        id: { not: photo.id },
+        phash: { not: null },
+        createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
+      include: {
+        task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } }, equipmentType: true } },
+        taskEquipmentItem: { include: { objectEquipment: true, task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } } } } } },
+      },
+      take: 200,
+    });
+
+    const matches: Array<{ photoId: string; distance: number; similarity: number }> = [];
+    for (const p of allPhotos) {
+      if (!p.phash) continue;
+      const dist = hammingDistance(photo.phash, p.phash);
+      if (dist <= PHASH_DUPLICATE_THRESHOLD) {
+        matches.push({ photoId: p.id, distance: dist, similarity: Math.round((1 - dist / 64) * 100) });
+      }
+    }
+    matches.sort((a, b) => a.distance - b.distance);
+
+    const formatInfo = (p: any, dist: number, sim: number, isCurrent: boolean) => {
+      const info: any = { photoId: p.id, hammingDistance: dist, similarityPercent: sim, isCurrent, moment: p.moment };
+      if (p.task?.visit) {
+        info.visitCode = p.task.visit.address?.objectCode || '';
+        info.address = p.task.visit.address?.fullAddress || '';
+        info.engineerName = p.task.visit.user?.fullName || '';
+        info.equipmentType = p.task.equipmentType?.name || '';
+        info.visitDate = p.task.visit.dateStart?.toISOString().split('T')[0] || '';
+        info.visitId = p.task.visit.id;
+      } else if (p.taskEquipmentItem?.task?.visit) {
+        info.visitCode = p.taskEquipmentItem.task.visit.address?.objectCode || '';
+        info.address = p.taskEquipmentItem.task.visit.address?.fullAddress || '';
+        info.engineerName = p.taskEquipmentItem.task.visit.user?.fullName || '';
+        info.equipmentType = p.taskEquipmentItem.objectEquipment?.equipmentTypeCode || '';
+        info.visitDate = p.taskEquipmentItem.task.visit.dateStart?.toISOString().split('T')[0] || '';
+        info.visitId = p.taskEquipmentItem.task.visit.id;
+      }
+      return info;
+    };
+
+    const currentPhoto: any = await prisma.photo.findUnique({
+      where: { id: photo.id },
+      include: {
+        task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } }, equipmentType: true } },
+        taskEquipmentItem: { include: { objectEquipment: true, task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } } } } } },
+      },
+    });
+
+    const current = currentPhoto ? formatInfo(currentPhoto, 0, 100, true) : null;
+
+    const duplicates = matches.map(m => {
+      const p = allPhotos.find(x => x.id === m.photoId);
+      if (!p) return null;
+      return formatInfo(p, m.distance, m.similarity, false);
+    }).filter(Boolean);
+
+    res.json({ current, duplicates });
+  } catch (err) {
+    console.error('[photos] getPhotoDuplicates error:', err);
+    res.status(500).json({ error: 'Ошибка получения дубликатов' });
   }
 });
 

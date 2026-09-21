@@ -174,6 +174,8 @@ export const api = {
     request<any>('/analytics/anomalies/batch', { method: 'PATCH', body: JSON.stringify({ anomalyIds, status }) }),
   getPhotoDetail: (photoId: string) =>
     request<any>(`/photos/${photoId}/detail`),
+  getPhotoDuplicates: (photoId: string) =>
+    request<any>(`/photos/${photoId}/duplicates`),
 
   // Reports
   generateReport: (visitId: string) =>
