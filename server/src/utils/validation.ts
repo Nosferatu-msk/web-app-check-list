@@ -29,6 +29,50 @@ export function startsWithValidChar(value: unknown): boolean {
   return /^[\p{L}\p{N}]/u.test(str);
 }
 
+// ─── Антифрод: блок-лист placeholder-значений ──────────────
+
+const PLACEHOLDER_WORDS = [
+  'нет', 'нет данных', 'неизвестно', 'не заполнено', 'отсутствует',
+  'нет информации', 'н/д',
+  'n/a', 'null', 'none', 'unknown', 'no data', 'not filled',
+];
+
+/**
+ * Проверяет, содержит ли значение placeholder-слово из блок-листа.
+ * Регистронезависимо, проверяет вхождение подстроки (включая «нет123», «Нет_2222»).
+ */
+export function containsPlaceholder(value: unknown): boolean {
+  if (!value) return false;
+  const normalized = String(value).trim().toLowerCase().replace(/[_\s-]+/g, ' ');
+  return PLACEHOLDER_WORDS.some(word => normalized.includes(word));
+}
+
+/**
+ * Проверяет, что модель содержит и буквы, и цифры.
+ * Реальные модели оборудования почти всегда — комбинация (MXM80RV, Меркурий 230, SC-125A).
+ * Только буквы или только цифры — признак некорректного заполнения.
+ */
+export function isModelFormatValid(value: unknown): boolean {
+  if (!value) return false;
+  const str = String(value).trim();
+  if (str.length === 0) return false;
+  const hasLetter = /\p{L}/u.test(str);
+  const hasDigit = /\p{N}/u.test(str);
+  return hasLetter && hasDigit;
+}
+
+/**
+ * Проверяет, что все три поля (brand, model, serialNumber) не содержат одинаковые значения.
+ * Копипаст одного и того же текста во все поля — признак некорректного заполнения.
+ */
+export function areFieldsIdentical(brand: unknown, model: unknown, serialNumber: unknown): boolean {
+  const b = String(brand || '').trim().toLowerCase();
+  const m = String(model || '').trim().toLowerCase();
+  const s = String(serialNumber || '').trim().toLowerCase();
+  if (!b || !m || !s) return false;
+  return b === m && m === s;
+}
+
 // ─── Показания и числовая валидация ─────────────────────────
 
 /**
@@ -195,6 +239,7 @@ export function validateTaskParameters(
 
 /**
  * Проверяет текстовые поля задачи (brand, model, serialNumber) на корректность.
+ * Включает: проверка начала, блок-лист placeholder-значений, детектор копипаста, формат модели.
  */
 export function validateTaskFields(fields: {
   brand?: string | null;
@@ -203,6 +248,7 @@ export function validateTaskFields(fields: {
 }): TaskValidationError[] {
   const errors: TaskValidationError[] = [];
 
+  // Базовая проверка: начало с допустимого символа
   if (fields.brand && !startsWithValidChar(fields.brand)) {
     errors.push({ field: 'brand', message: 'Изготовитель: не может начинаться со спецсимвола или пробела' });
   }
@@ -211,6 +257,27 @@ export function validateTaskFields(fields: {
   }
   if (fields.serialNumber && !startsWithValidChar(fields.serialNumber)) {
     errors.push({ field: 'serialNumber', message: 'Серийный номер: не может начинаться со спецсимвола или пробела' });
+  }
+
+  // Блок-лист: placeholder-значения недопустимы ни в одном поле
+  if (fields.brand && containsPlaceholder(fields.brand)) {
+    errors.push({ field: 'brand', message: 'Изготовитель: указан некорректный ответ' });
+  }
+  if (fields.model && containsPlaceholder(fields.model)) {
+    errors.push({ field: 'model', message: 'Модель: указан некорректный ответ' });
+  }
+  if (fields.serialNumber && containsPlaceholder(fields.serialNumber)) {
+    errors.push({ field: 'serialNumber', message: 'Серийный номер: указан некорректный ответ' });
+  }
+
+  // Модель должна содержать и буквы, и цифры
+  if (fields.model && startsWithValidChar(fields.model) && !containsPlaceholder(fields.model) && !isModelFormatValid(fields.model)) {
+    errors.push({ field: 'model', message: 'Модель должна содержать и буквы, и цифры (например, Меркурий 230, SC-125A)' });
+  }
+
+  // Детектор копипаста: все три поля не должны быть одинаковыми
+  if (fields.brand && fields.model && fields.serialNumber && areFieldsIdentical(fields.brand, fields.model, fields.serialNumber)) {
+    errors.push({ field: 'brand', message: 'Изготовитель, модель и серийный номер не могут быть одинаковыми' });
   }
 
   return errors;

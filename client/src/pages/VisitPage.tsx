@@ -21,6 +21,44 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
   completed: { color: 'success', label: 'Выполнено' },
 };
 
+// ─── Антифрод: валидация полей оборудования ─────────────────
+
+const PLACEHOLDER_WORDS = [
+  'нет', 'нет данных', 'неизвестно', 'не заполнено', 'отсутствует',
+  'нет информации', 'н/д',
+  'n/a', 'null', 'none', 'unknown', 'no data', 'not filled',
+];
+
+const containsPlaceholder = (value: string): boolean => {
+  const normalized = value.trim().toLowerCase().replace(/[_\s-]+/g, ' ');
+  return PLACEHOLDER_WORDS.some(word => normalized.includes(word));
+};
+
+const getEquipmentFieldError = (value: string, fieldLabel: string): string | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (containsPlaceholder(trimmed)) {
+    return `${fieldLabel}: указан некорректный ответ`;
+  }
+  return null;
+};
+
+const getModelError = (value: string): string | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (containsPlaceholder(trimmed)) {
+    return 'Модель: указан некорректный ответ';
+  }
+  const hasLetter = /\p{L}/u.test(trimmed);
+  const hasDigit = /\p{N}/u.test(trimmed);
+  if (!hasLetter || !hasDigit) {
+    return 'Модель должна содержать и буквы, и цифры (например, Меркурий 230, SC-125A)';
+  }
+  return null;
+};
+
 function determineSeason(date: dayjs.Dayjs): string {
   const m = date.month() + 1;
   return (m >= 4 && m <= 10) ? 'summer' : 'winter';
@@ -1233,7 +1271,27 @@ export default function VisitPage() {
                 <Form.Item name="comment" label="Комментарий">
                   <Input placeholder="Необязательно" />
                 </Form.Item>
-                <Form.Item name="brand" label="Производитель" rules={[{ required: true, message: 'Укажите производителя' }]}>
+                <Form.Item
+                  name="brand"
+                  label="Производитель"
+                  dependencies={['model', 'serialNumber']}
+                  rules={[
+                    { required: true, message: 'Укажите производителя' },
+                    ({ getFieldValue }) => ({
+                      validator(_: any, value: string) {
+                        if (!value) return Promise.resolve();
+                        const fieldErr = getEquipmentFieldError(value, 'Изготовитель');
+                        if (fieldErr) return Promise.reject(new Error(fieldErr));
+                        const model = getFieldValue('model');
+                        const sn = getFieldValue('serialNumber');
+                        if (value && model && sn && value.trim().toLowerCase() === model.trim().toLowerCase() && model.trim().toLowerCase() === sn.trim().toLowerCase()) {
+                          return Promise.reject(new Error('Изготовитель, модель и серийный номер не могут быть одинаковыми'));
+                        }
+                        return Promise.resolve();
+                      },
+                    }),
+                  ]}
+                >
                   <AutoComplete
                     placeholder="Начните вводить..."
                     options={mfrOptions}
@@ -1256,7 +1314,27 @@ export default function VisitPage() {
                     allowClear
                   />
                 </Form.Item>
-                <Form.Item name="model" label="Модель" rules={[{ required: true, message: 'Укажите модель' }]}>
+                <Form.Item
+                  name="model"
+                  label="Модель"
+                  dependencies={['brand', 'serialNumber']}
+                  rules={[
+                    { required: true, message: 'Укажите модель' },
+                    ({ getFieldValue }) => ({
+                      validator(_: any, value: string) {
+                        if (!value) return Promise.resolve();
+                        const modelErr = getModelError(value);
+                        if (modelErr) return Promise.reject(new Error(modelErr));
+                        const brand = getFieldValue('brand');
+                        const sn = getFieldValue('serialNumber');
+                        if (brand && value && sn && brand.trim().toLowerCase() === value.trim().toLowerCase() && value.trim().toLowerCase() === sn.trim().toLowerCase()) {
+                          return Promise.reject(new Error('Изготовитель, модель и серийный номер не могут быть одинаковыми'));
+                        }
+                        return Promise.resolve();
+                      },
+                    }),
+                  ]}
+                >
                   <AutoComplete
                     placeholder="Начните вводить..."
                     options={modelOptions}
@@ -1274,24 +1352,39 @@ export default function VisitPage() {
                     allowClear
                   />
                 </Form.Item>
-                <Form.Item noStyle dependencies={['equipmentTypeId']}>
+                <Form.Item noStyle dependencies={['equipmentTypeId', 'brand', 'model']}>
                   {({ getFieldValue }) => {
                     const eqTypeId = getFieldValue('equipmentTypeId');
                     const eqType = equipmentTypes.find(e => e.id === eqTypeId);
                     const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
                     const isMeter = eqType && METER_CODES.includes(eqType.code);
-                    
+
                     return (
-                      <Form.Item 
-                        name="serialNumber" 
+                      <Form.Item
+                        name="serialNumber"
                         label="Серийный номер"
-                        rules={[{ 
-                          required: isMeter, 
-                          message: 'Серийный номер обязателен для приборов учёта' 
-                        }]}
+                        rules={[
+                          {
+                            required: isMeter,
+                            message: 'Серийный номер обязателен для приборов учёта'
+                          },
+                          ({ getFieldValue: gf }) => ({
+                            validator(_: any, value: string) {
+                              if (!value) return Promise.resolve();
+                              const fieldErr = getEquipmentFieldError(value, 'Серийный номер');
+                              if (fieldErr) return Promise.reject(new Error(fieldErr));
+                              const brand = gf('brand');
+                              const model = gf('model');
+                              if (brand && model && value && brand.trim().toLowerCase() === model.trim().toLowerCase() && model.trim().toLowerCase() === value.trim().toLowerCase()) {
+                                return Promise.reject(new Error('Изготовитель, модель и серийный номер не могут быть одинаковыми'));
+                              }
+                              return Promise.resolve();
+                            },
+                          }),
+                        ]}
                         extra={!isMeter ? 'Если не указать, будет сгенерирован автоматически' : undefined}
                       >
-                        <Input 
+                        <Input
                           placeholder={isMeter ? 'Введите серийный номер' : 'Обязательно для счётчиков, иначе сгенерируется автоматически'}
                           style={isMeter ? { borderColor: undefined } : undefined}
                         />
