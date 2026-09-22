@@ -251,12 +251,22 @@ const ITEM_TYPE_NAMES: Record<string, string> = {
 async function photoToBase64(filePath: string, simplified: boolean): Promise<string> {
   if (simplified) return '';
   const absPath = path.resolve(filePath);
-  if (!fs.existsSync(absPath)) return '';
+  if (!fs.existsSync(absPath)) {
+    console.warn(`[unifiedReport] Фото не найдено: ${absPath} (исходный путь: ${filePath})`);
+    return '';
+  }
   try {
     const buf = await resizeForPreview(absPath);
     return `data:image/jpeg;base64,${buf.toString('base64')}`;
-  } catch {
-    return '';
+  } catch (err) {
+    console.warn(`[unifiedReport] Ошибка resizeForPreview для ${absPath}, fallback на прямое чтение:`, err);
+    try {
+      const buf = fs.readFileSync(absPath);
+      return `data:image/jpeg;base64,${buf.toString('base64')}`;
+    } catch (fallbackErr) {
+      console.error(`[unifiedReport] Fallback тоже не удался для ${absPath}:`, fallbackErr);
+      return '';
+    }
   }
 }
 
@@ -383,6 +393,8 @@ export async function generateUnifiedReportHtml(
     }
   }
   const simplified = simplifiedMode || totalPhotos > MAX_PHOTOS;
+
+  console.log(`[unifiedReport] Визитов: ${visits.length}, задач: ${visits.reduce((s, v) => s + v.tasks.length, 0)}, фото: ${totalPhotos}, simplified: ${simplified}${totalPhotos > MAX_PHOTOS ? ` (превышен лимит ${MAX_PHOTOS})` : ''}`);
 
   // Group visits by address
   const byAddress = new Map<string, UnifiedReportVisit[]>();
