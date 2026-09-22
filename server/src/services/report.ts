@@ -340,19 +340,28 @@ export async function generateReportHtml(visitId: string): Promise<string> {
 
       // Фото по единицам
       let photosHtml = '';
-      for (let j = 0; j < items.length; j++) {
-        const item = items[j];
-        const eq = item.objectEquipment;
-        for (const photo of item.photos) {
-          const photoPath = path.resolve(photo.filePath);
-          let photoData = '';
-          if (fs.existsSync(photoPath)) {
-            const buf = fs.readFileSync(photoPath);
-            photoData = `data:image/jpeg;base64,${buf.toString('base64')}`;
+      const totalItemPhotos = items.reduce((s: number, item: any) => s + (item.photos?.length || 0), 0);
+      if (totalItemPhotos === 0) {
+        photosHtml = '<div style="margin:8px 0;"><span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:10pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует</span></div>';
+      } else {
+        for (let j = 0; j < items.length; j++) {
+          const item = items[j];
+          const eq = item.objectEquipment;
+          for (const photo of item.photos) {
+            const photoPath = path.resolve(photo.filePath);
+            let photoData = '';
+            if (fs.existsSync(photoPath)) {
+              const buf = fs.readFileSync(photoPath);
+              photoData = `data:image/jpeg;base64,${buf.toString('base64')}`;
+            }
+            const num = String(j + 1).padStart(2, '0');
+            const momentLabel = photo.moment === 'before' ? 'до' : 'после';
+            if (photoData) {
+              photosHtml += `<div style="margin:8px 0;"><strong>[ФОТО ${num}] ${photo.fileName}</strong> (${momentLabel})<br><img src="${photoData}" style="max-width:400px;max-height:300px;" /></div>`;
+            } else {
+              photosHtml += `<div style="margin:8px 0;"><span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:10pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует: ${photo.fileName}</span></div>`;
+            }
           }
-          const num = String(j + 1).padStart(2, '0');
-          const momentLabel = photo.moment === 'before' ? 'до' : 'после';
-          photosHtml += `<div style="margin:8px 0;"><strong>[ФОТО ${num}] ${photo.fileName}</strong> (${momentLabel})<br><img src="${photoData}" style="max-width:400px;max-height:300px;" /></div>`;
         }
       }
 
@@ -361,7 +370,12 @@ export async function generateReportHtml(visitId: string): Promise<string> {
       for (const [key, val] of Object.entries(params)) {
         if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
         const label = PARAM_LABELS[key] || key;
-        paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
+        const isEmpty = val === null || val === undefined || (typeof val === 'string' && val.trim() === '');
+        if (isEmpty) {
+          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
+        } else {
+          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
+        }
       }
 
       const engineerInfo = task._engineerName ? `<br><span style="font-size:13px;color:#666;">Инженер: ${task._engineerName}</span>` : '';
@@ -379,23 +393,36 @@ export async function generateReportHtml(visitId: string): Promise<string> {
           ${recsHtml ? `<p><strong>📊 Рекомендации:</strong></p><ul>${recsHtml}</ul>` : ''}
         </div>`;
     } else {
-      // ─── ИНДИВИДУАЛЬНАЯ ЗАДАЧА (без изменений) ────────────
+      // ─── ИНДИВИДУАЛЬНАЯ ЗАДАЧА ────────────
       let paramsHtml = '';
       for (const [key, val] of Object.entries(params)) {
         if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
         const label = PARAM_LABELS[key] || key;
-        paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
+        const isEmpty = val === null || val === undefined || (typeof val === 'string' && val.trim() === '');
+        if (isEmpty) {
+          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
+        } else {
+          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
+        }
       }
 
       let photosHtml = '';
-      for (const photo of task.photos) {
-        const photoPath = path.resolve(photo.filePath);
-        let photoData = '';
-        if (fs.existsSync(photoPath)) {
-          const buf = fs.readFileSync(photoPath);
-          photoData = `data:image/jpeg;base64,${buf.toString('base64')}`;
+      if (!task.photos || task.photos.length === 0) {
+        photosHtml = '<div style="margin:8px 0;"><span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:10pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует</span></div>';
+      } else {
+        for (const photo of task.photos) {
+          const photoPath = path.resolve(photo.filePath);
+          let photoData = '';
+          if (fs.existsSync(photoPath)) {
+            const buf = fs.readFileSync(photoPath);
+            photoData = `data:image/jpeg;base64,${buf.toString('base64')}`;
+          }
+          if (photoData) {
+            photosHtml += `<div style="margin:8px 0;"><strong>[ФОТО] ${photo.fileName}</strong><br><img src="${photoData}" style="max-width:400px;max-height:300px;" /></div>`;
+          } else {
+            photosHtml += `<div style="margin:8px 0;"><span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:10pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует: ${photo.fileName}</span></div>`;
+          }
         }
-        photosHtml += `<div style="margin:8px 0;"><strong>[ФОТО] ${photo.fileName}</strong><br><img src="${photoData}" style="max-width:400px;max-height:300px;" /></div>`;
       }
 
       const location = task.roomType ? task.roomType.name : (task.comment || '—');

@@ -275,7 +275,12 @@ function renderParams(params: Record<string, unknown>): string {
   for (const [key, val] of Object.entries(params)) {
     if (['conclusion', 'selected_recommendations', 'additional_recommendations'].includes(key)) continue;
     const label = PARAM_LABELS[key] || key;
-    html += `<tr><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${label}</td><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${formatParamValue(key, val)}</td></tr>`;
+    const isEmpty = val === null || val === undefined || (typeof val === 'string' && val.trim() === '');
+    if (isEmpty) {
+      html += `<tr><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${label}</td><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
+    } else {
+      html += `<tr><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${label}</td><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${formatParamValue(key, val)}</td></tr>`;
+    }
   }
   return html;
 }
@@ -295,6 +300,9 @@ function renderPhotosText(photos: { fileName: string; moment: string }[]): strin
 }
 
 async function renderPhotosGrid(photos: { fileName: string; filePath: string; moment: string }[], simplified: boolean): Promise<string> {
+  if (photos.length === 0) {
+    return '<div style="margin:4px 0;"><span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:9pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует</span></div>';
+  }
   if (simplified) return renderPhotosText(photos);
   let html = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0;">';
   for (const photo of photos) {
@@ -303,7 +311,7 @@ async function renderPhotosGrid(photos: { fileName: string; filePath: string; mo
     if (b64) {
       html += `<div style="text-align:center;max-width:200px;"><img src="${b64}" style="max-width:180px;max-height:140px;border:1px solid #ddd;border-radius:3px;" /><div style="font-size:7pt;color:#666;">${photo.fileName} (${momentLabel})</div></div>`;
     } else {
-      html += `<span style="display:inline-block;padding:2px 6px;background:#fff3cd;border-radius:3px;font-size:8pt;">⚠ Фото отсутствует: ${photo.fileName}</span>`;
+      html += `<span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:8pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует: ${photo.fileName}</span>`;
     }
   }
   html += '</div>';
