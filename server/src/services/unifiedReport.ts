@@ -241,7 +241,7 @@ export interface UnifiedReportOptions {
   simplifiedMode?: boolean;
 }
 
-const MAX_PHOTOS = 200;
+const MAX_PHOTOS = 1000;
 
 const ITEM_TYPE_NAMES: Record<string, string> = {
   splitvn: 'Внутр. блок СС', mssvn: 'Внутр. блок МСС', vrv_vn: 'Внутр. блок VRV',
