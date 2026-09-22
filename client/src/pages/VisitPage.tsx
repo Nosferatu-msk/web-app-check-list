@@ -328,13 +328,17 @@ export default function VisitPage() {
       try {
         const values = await form.validateFields();
         setSaving(true);
-        const data = {
+        const data: any = {
           addressId: values.addressId,
           engineerName: values.engineerName,
           dateStart: values.dateStart.format('YYYY-MM-DD'),
           timeStart: values.timeStart ? values.timeStart.format('HH:mm') : dayjs().format('HH:mm'),
           season: values.season,
         };
+        // Автопривязка заявок для нового визита инженера
+        if (user?.role === 'engineer') {
+          data.autoAssignRequests = true;
+        }
         localStorage.setItem('lastEngineerName', values.engineerName);
         const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
 
