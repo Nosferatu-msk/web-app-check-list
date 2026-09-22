@@ -554,7 +554,8 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
         task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } }, equipmentType: true } },
         taskEquipmentItem: { include: { objectEquipment: true, task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } } } } } },
       },
-      take: 200,
+      orderBy: { createdAt: 'desc' },
+      take: 1000,
     });
 
     const matches: Array<{ photoId: string; distance: number; similarity: number }> = [];
