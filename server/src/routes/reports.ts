@@ -261,6 +261,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       isDeleted: false,
       dateStart: { gte: from, lte: to },
       status: { in: ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm', 'awaiting_assignment', 'planned', 'not_started', 'in_progress'] },
+      userId: { not: null },
     };
 
     if (type === 'objects') {
