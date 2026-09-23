@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, CameraOutlined, SaveOutlined, FileTextOutlined } fro
 import { api } from '../api/client';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { REQUIRED_PARAMS_CONFIG } from '@shared/types/params';
 import VoiceInputButton from '../components/VoiceInputButton';
 import MobileHeader from '../components/MobileHeader';
 import dayjs from 'dayjs';
@@ -666,7 +667,11 @@ export default function TaskPage() {
   };
 
   const equipmentCode = task?.equipmentType?.code || '';
-  const paramConfig = PARAM_CONFIG[equipmentCode] || [];
+  const requiredKeys = new Set((REQUIRED_PARAMS_CONFIG[equipmentCode] || []).map(p => p.key));
+  const paramConfig = (PARAM_CONFIG[equipmentCode] || []).map(p => ({
+    ...p,
+    required: p.required || requiredKeys.has(p.key),
+  }));
 
   if (loading || formInitialValues === null) return <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>;
 

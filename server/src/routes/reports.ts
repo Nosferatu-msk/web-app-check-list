@@ -340,7 +340,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
         parameters: t.parameters,
         selectedRecommendationIds: t.selectedRecommendationIds || undefined,
         additionalRecommendations: t.additionalRecommendations || undefined,
-        equipmentType: t.equipmentType ? { name: t.equipmentType.name } : undefined,
+        equipmentType: t.equipmentType ? { name: t.equipmentType.name, code: t.equipmentType.code } : undefined,
         roomType: t.roomType ? { name: t.roomType.name } : undefined,
         photos: t.photos.map(p => ({ fileName: p.fileName, filePath: p.filePath, moment: p.moment })),
         equipmentItems: t.equipmentItems?.map(ei => ({

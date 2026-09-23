@@ -2,6 +2,11 @@
  * Валидация данных задач — обязательные поля, антифрод, нормализация показаний.
  */
 
+import { getRequiredParams, type RequiredParam } from '../../../shared/types/params.js';
+
+export type { RequiredParam };
+export { getRequiredParams };
+
 // ─── Антифрод: осмысленность текста ─────────────────────────
 
 /**
@@ -139,63 +144,6 @@ export function validateNumberParam(value: unknown, label: string): { valid: boo
   }
 
   return { valid: true, value: num };
-}
-
-// ─── Конфигурация обязательных параметров по типу оборудования ─
-
-interface RequiredParam {
-  key: string;
-  type: 'text' | 'number';
-  label: string;
-}
-
-const REQUIRED_PARAMS: Record<string, RequiredParam[]> = {
-  schetchik_electroshc: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
-    { key: 'readings', type: 'number', label: 'Показания' },
-  ],
-  schetchik_hvs: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
-    { key: 'readings', type: 'number', label: 'Показания' },
-  ],
-  schetchik_gvs: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
-    { key: 'readings', type: 'number', label: 'Показания' },
-  ],
-  meter_gas: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
-    { key: 'readings', type: 'number', label: 'Показания' },
-  ],
-  vent: [
-    { key: 'temperature_before', type: 'number', label: 'Температура воздуха до теплообменника' },
-    { key: 'temperature_after', type: 'number', label: 'Температура воздуха после теплообменника' },
-  ],
-  teplozavesa: [
-    { key: 'temperature_before', type: 'number', label: 'Температура воздуха до теплообменника' },
-    { key: 'temperature_after', type: 'number', label: 'Температура воздуха после теплообменника' },
-  ],
-  pritochnaya: [
-    { key: 'temperature_before', type: 'number', label: 'Температура воздуха до теплообменника' },
-    { key: 'temperature_after', type: 'number', label: 'Температура воздуха после теплообменника' },
-  ],
-  'pritochno-vytyzhnaya': [
-    { key: 'temperature_before', type: 'number', label: 'Температура воздуха до теплообменника' },
-    { key: 'temperature_after', type: 'number', label: 'Температура воздуха после теплообменника' },
-  ],
-  kotyel: [
-    { key: 'water_temperature', type: 'number', label: 'Температура теплоносителя' },
-  ],
-  cond_mobile: [
-    { key: 'room_temperature', type: 'number', label: 'Температура помещения' },
-  ],
-};
-
-export function getRequiredParams(equipmentCode: string): RequiredParam[] {
-  return REQUIRED_PARAMS[equipmentCode] || [];
 }
 
 // ─── Комплексная валидация задачи ────────────────────────────

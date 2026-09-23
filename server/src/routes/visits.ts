@@ -196,7 +196,7 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
   // Автоназначение на заявки по адресу
   const autoAssignedRequests: any[] = [];
   console.log(`[autoAssign] check: visit=${visit.id} autoAssign=${autoAssignRequests} role=${req.userRole} address=${rest.addressId}`);
-  if (autoAssignRequests && req.userRole === 'engineer') {
+  if (autoAssignRequests) {
     const engineer = await prisma.user.findUnique({
       where: { id: req.userId as string },
       select: { fullName: true },
@@ -221,7 +221,6 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
           },
         },
       },
-      take: 20,
     });
 
     console.log(`[autoAssign] visit=${visit.id} address=${rest.addressId} engineer=${req.userId} found=${requests.length} requests:`, requests.map(r => ({ id: r.id, ext: r.externalRequestId, visitStatus: r.visit?.status })));
@@ -678,6 +677,62 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
     return;
   }
 
+  // Автопривязка заявок перед завершением
+  try {
+    const addressId = existing.addressId;
+    const visitId = existing.id;
+
+    // Helper: привязка заявки к визиту
+    const bindRequest = async (requestId: string, sourceVisit: { contractId: string | null } | null) => {
+      await prisma.visitRequest.create({ data: { visitId, importedRequestId: requestId } });
+      await prisma.importedRequest.update({ where: { id: requestId }, data: { visitId } });
+      if (sourceVisit?.contractId && !existing.contractId) {
+        await prisma.visit.update({ where: { id: visitId }, data: { contractId: sourceVisit.contractId } });
+      }
+    };
+
+    // 1. Привязка заявок ИСЖ объекта (одна заявка → много визитов — это нормально)
+    const iszhRequests = await prisma.importedRequest.findMany({
+      where: {
+        matchedAddressId: addressId,
+        equipmentType: { code: 'iszh_object' },
+        visit: { status: { in: ['awaiting_assignment', 'planned'] } },
+        NOT: { visitRequests: { some: { visitId } } },
+      },
+      include: { visit: true },
+    });
+
+    for (const r of iszhRequests) {
+      await bindRequest(r.id, r.visit);
+    }
+
+    // 2. Привязка заявок на конкретное оборудование (1 заявка → 1 визит)
+    // Фильтр: только заявки, которые ещё НЕ привязаны ни к одному рабочему визиту
+    const taskEquipmentTypeIds = [...new Set(existing.tasks.map(t => t.equipmentTypeId).filter(Boolean))] as string[];
+    if (taskEquipmentTypeIds.length > 0) {
+      const equipRequests = await prisma.importedRequest.findMany({
+        where: {
+          matchedAddressId: addressId,
+          equipmentTypeId: { in: taskEquipmentTypeIds },
+          equipmentType: { code: { not: 'iszh_object' } },
+          visit: { status: { in: ['awaiting_assignment', 'planned'] } },
+          visitRequests: { none: {} },
+        },
+        include: { visit: true },
+      });
+
+      for (const r of equipRequests) {
+        await bindRequest(r.id, r.visit);
+      }
+    }
+
+    if (iszhRequests.length > 0 || taskEquipmentTypeIds.length > 0) {
+      console.log(`[visit/complete] Автопривязка: ISZH=${iszhRequests.length}, адрес=${addressId}`);
+    }
+  } catch (bindErr) {
+    console.error('[visit/complete] Ошибка автопривязки заявок:', bindErr);
+  }
+
   const now = new Date();
   const msk = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
   const timeEnd = `${String(msk.getHours()).padStart(2, '0')}:${String(msk.getMinutes()).padStart(2, '0')}`;
@@ -823,7 +878,6 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
           status: { in: ['awaiting_assignment', 'planned'] },
         },
       },
-      take: 20,
     });
 
     for (const request of matchingRequests) {
@@ -866,8 +920,8 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
       });
       boundRequests.push({ requestId: request.id, externalRequestId: request.externalRequestId });
     }
-  } catch {
-    // Ошибка привязки заявок не должна блокировать создание задачи
+  } catch (bindErr) {
+    console.error('[task/create] Ошибка автопривязки заявок:', bindErr);
   }
 
   await logAudit({ userId: req.userId, action: 'create', entityType: 'task', entityId: task.id, newValue: data, ipAddress: req.ip, userAgent: req.headers['user-agent'] });

@@ -1,6 +1,7 @@
 import prisma from '../models/prisma.js';
 import fs from 'fs';
 import path from 'path';
+import { getRequiredParams } from '../../../shared/types/params.js';
 
 const CONCLUSION_MAP: Record<string, string> = {
   ok: 'Исправно, замечаний нет',
@@ -134,6 +135,28 @@ const PARAM_LABELS: Record<string, string> = {
   water_condition: 'Состояние воды',
   air_intensity: 'Интенсивность подачи воздуха',
 };
+
+function renderParamsWithRequired(params: Record<string, unknown>, equipmentCode: string, skipKeys: string[] = []): string {
+  const renderedKeys = new Set<string>();
+  let html = '';
+  for (const [key, val] of Object.entries(params)) {
+    if (skipKeys.includes(key)) continue;
+    renderedKeys.add(key);
+    const label = PARAM_LABELS[key] || key;
+    const isEmpty = val === null || val === undefined || (typeof val === 'string' && val.trim() === '');
+    if (isEmpty) {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
+    } else {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
+    }
+  }
+  for (const rp of getRequiredParams(equipmentCode)) {
+    if (!renderedKeys.has(rp.key)) {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${rp.label}</td><td style="padding:4px 8px;border:1px solid #ddd;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
+    }
+  }
+  return html;
+}
 
 function formatBool(val: unknown): string {
   return val ? 'Да' : 'Нет';
@@ -366,17 +389,8 @@ export async function generateReportHtml(visitId: string): Promise<string> {
       }
 
       // Общие параметры
-      let paramsHtml = '';
-      for (const [key, val] of Object.entries(params)) {
-        if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
-        const label = PARAM_LABELS[key] || key;
-        const isEmpty = val === null || val === undefined || (typeof val === 'string' && val.trim() === '');
-        if (isEmpty) {
-          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
-        } else {
-          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
-        }
-      }
+      const groupEqCode = task.equipmentType?.code || '';
+      let paramsHtml = renderParamsWithRequired(params, groupEqCode, ['conclusion', 'selected_recommendations', 'additional_recommendations']);
 
       const engineerInfo = task._engineerName ? `<br><span style="font-size:13px;color:#666;">Инженер: ${task._engineerName}</span>` : '';
 
@@ -394,17 +408,8 @@ export async function generateReportHtml(visitId: string): Promise<string> {
         </div>`;
     } else {
       // ─── ИНДИВИДУАЛЬНАЯ ЗАДАЧА ────────────
-      let paramsHtml = '';
-      for (const [key, val] of Object.entries(params)) {
-        if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
-        const label = PARAM_LABELS[key] || key;
-        const isEmpty = val === null || val === undefined || (typeof val === 'string' && val.trim() === '');
-        if (isEmpty) {
-          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
-        } else {
-          paramsHtml += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${label}</td><td style="padding:4px 8px;border:1px solid #ddd;">${formatParamValue(key, val)}</td></tr>`;
-        }
-      }
+      const indEqCode = task.equipmentType?.code || '';
+      let paramsHtml = renderParamsWithRequired(params, indEqCode, ['conclusion', 'selected_recommendations', 'additional_recommendations']);
 
       let photosHtml = '';
       if (!task.photos || task.photos.length === 0) {
@@ -497,7 +502,7 @@ interface SummaryVisit {
   tasks: {
     id: string;
     conclusion?: string | null;
-    equipmentType?: { name: string } | null;
+    equipmentType?: { name: string; code: string } | null;
     roomType?: { name: string } | null;
     comment?: string | null;
     parameters?: unknown;
@@ -690,13 +695,9 @@ export function generateObjectReportHtml(
       const equipName = t.equipmentType?.name || '—';
       const location = t.roomType?.name || (t.comment || '—');
       const params = (t.parameters || {}) as Record<string, unknown>;
+      const sumEqCode = t.equipmentType?.code || '';
 
-      let paramsHtml = '';
-      for (const [key, val] of Object.entries(params)) {
-        if (key === 'conclusion' || key === 'selected_recommendations' || key === 'additional_recommendations') continue;
-        const label = PARAM_LABELS[key] || key;
-        paramsHtml += `<tr><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${label}</td><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${formatParamValue(key, val)}</td></tr>`;
-      }
+      let paramsHtml = renderParamsWithRequired(params, sumEqCode, ['conclusion', 'selected_recommendations', 'additional_recommendations']);
 
       let photosHtml = '';
       for (const photo of (t.photos || [])) {

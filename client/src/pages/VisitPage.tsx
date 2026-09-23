@@ -6,6 +6,7 @@ import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { REQUIRED_PARAMS_CONFIG } from '@shared/types/params';
 import TorchButton from '../components/TorchButton';
 import NotificationBell from '../components/NotificationBell';
 import dayjs from 'dayjs';
@@ -219,8 +220,8 @@ export default function VisitPage() {
         season: values.season,
       };
 
-      // Автопривязка заявок для нового визита инженера
-      if (isNew && user?.role === 'engineer') {
+      // Автопривязка заявок для нового визита
+      if (isNew) {
         data.autoAssignRequests = true;
       }
 
@@ -581,19 +582,32 @@ export default function VisitPage() {
     const completedTasks = tasks.filter(t => t.status === 'completed');
     if (completedTasks.length === 0) { message.warning('Должна быть хотя бы 1 выполненная задача'); return; }
 
-    // Проверка обязательных параметров задач (показания, модели, серийные номера)
-    const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'];
+    const notStartedTasks = tasks.filter(t => t.status === 'not_started');
+    if (notStartedTasks.length > 0) {
+      const names = notStartedTasks.map(t => t.equipmentType?.name || 'оборудование').join(', ');
+      message.warning(`Начните или удалите задачи: ${names}`);
+      return;
+    }
+
     const missingFields: string[] = [];
     for (const task of tasks) {
       if (task.status !== 'completed' && task.status !== 'in_progress') continue;
       const eqCode = task.equipmentType?.code || '';
       const params = (task.parameters || {}) as Record<string, any>;
       const eqName = task.equipmentType?.name || 'оборудование';
+      const requiredParams = REQUIRED_PARAMS_CONFIG[eqCode] || [];
 
-      if (METER_CODES.includes(eqCode)) {
-        if (!params.readings && params.readings !== 0) missingFields.push(`${eqName}: показания`);
-        if (!params.model || !params.model.trim()) missingFields.push(`${eqName}: модель`);
-        if (!params.serial_number || !params.serial_number.trim()) missingFields.push(`${eqName}: серийный номер`);
+      for (const rp of requiredParams) {
+        const val = params[rp.key];
+        if (rp.type === 'number') {
+          if (val === undefined || val === null || val === '') {
+            missingFields.push(`${eqName}: ${rp.label}`);
+          }
+        } else {
+          if (!val || !String(val).trim()) {
+            missingFields.push(`${eqName}: ${rp.label}`);
+          }
+        }
       }
     }
     if (missingFields.length > 0) {

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { resizeForPreview } from './imageProcessor.js';
+import { getRequiredParams } from '../../../shared/types/params.js';
 
 const CONCLUSION_MAP: Record<string, string> = {
   ok: 'Исправно, замечаний нет',
@@ -215,7 +216,7 @@ export interface UnifiedReportTask {
   parameters?: unknown;
   selectedRecommendationIds?: string[];
   additionalRecommendations?: string | null;
-  equipmentType?: { name: string } | null;
+  equipmentType?: { name: string; code: string } | null;
   roomType?: { name: string } | null;
   photos?: { fileName: string; filePath: string; moment: string }[];
   equipmentItems?: {
@@ -270,10 +271,13 @@ async function photoToBase64(filePath: string, simplified: boolean): Promise<str
   }
 }
 
-function renderParams(params: Record<string, unknown>): string {
+function renderParams(params: Record<string, unknown>, equipmentCode: string): string {
+  const renderedKeys = new Set<string>();
   let html = '';
+
   for (const [key, val] of Object.entries(params)) {
     if (['conclusion', 'selected_recommendations', 'additional_recommendations'].includes(key)) continue;
+    renderedKeys.add(key);
     const label = PARAM_LABELS[key] || key;
     const isEmpty = val === null || val === undefined || (typeof val === 'string' && val.trim() === '');
     if (isEmpty) {
@@ -282,6 +286,14 @@ function renderParams(params: Record<string, unknown>): string {
       html += `<tr><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${label}</td><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${formatParamValue(key, val)}</td></tr>`;
     }
   }
+
+  const requiredParams = getRequiredParams(equipmentCode);
+  for (const rp of requiredParams) {
+    if (!renderedKeys.has(rp.key)) {
+      html += `<tr><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;">${rp.label}</td><td style="padding:3px 6px;border:1px solid #ddd;font-size:9pt;color:#ff4d4f;background:#fff1f0;font-weight:600;">Не заполнено</td></tr>`;
+    }
+  }
+
   return html;
 }
 
@@ -320,7 +332,8 @@ async function renderPhotosGrid(photos: { fileName: string; filePath: string; mo
 
 async function renderTask(task: UnifiedReportTask, taskIndex: number, recMap: Map<string, string>, simplified: boolean): Promise<string> {
   const params = (task.parameters || {}) as Record<string, unknown>;
-  const paramsHtml = renderParams(params);
+  const eqCode = task.equipmentType?.code || '';
+  const paramsHtml = renderParams(params, eqCode);
   const recsHtml = renderRecommendations(task, recMap);
 
   if (task.taskType === 'group_climate') {
