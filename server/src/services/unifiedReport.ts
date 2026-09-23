@@ -410,12 +410,12 @@ async function renderTask(task: UnifiedReportTask, taskIndex: number, recMap: Ma
   const fieldStyle = (key: string) => errKeys.has(key)
     ? 'padding:2px 6px;border:1px solid #ddd;font-size:9pt;color:#ff4d4f;background:#fff1f0;font-weight:600;'
     : 'padding:2px 6px;border:1px solid #ddd;font-size:9pt;';
-  const equipInfoHtml = (task.brand || task.model || task.serialNumber) ? `
+  const equipInfoHtml = `
     <table style="width:100%;border-collapse:collapse;margin:4px 0;">
       <tr><td style="padding:2px 6px;border:1px solid #ddd;font-size:9pt;font-weight:600;width:120px;">Изготовитель:</td><td style="${fieldStyle('brand')}">${task.brand || '—'}</td></tr>
       <tr><td style="padding:2px 6px;border:1px solid #ddd;font-size:9pt;font-weight:600;">Модель:</td><td style="${fieldStyle('model')}">${task.model || '—'}</td></tr>
       <tr><td style="padding:2px 6px;border:1px solid #ddd;font-size:9pt;font-weight:600;">Сер. №:</td><td style="${fieldStyle('serialNumber')}">${task.serialNumber || '—'}</td></tr>
-    </table>` : '';
+    </table>`;
 
   return `
     <div style="margin:8px 0;padding:8px;border:1px solid #e0e0e0;border-radius:4px;">

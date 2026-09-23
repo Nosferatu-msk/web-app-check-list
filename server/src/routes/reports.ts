@@ -411,12 +411,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
               let phashWarning: string | undefined;
               const anomaly = phashByPhoto.get(p.id);
               if (anomaly) {
-                const d = (anomaly.details || {}) as Record<string, any>;
-                phashWarning = d.scope === 'same_visit_cross_moment'
-                  ? 'Дубликат: фото ДО и ПОСЛЕ идентичны'
-                  : d.scope === 'same_visit'
-                    ? 'Дубликат: одинаковые фото в этом визите'
-                    : `Дубликат: сходство ${d.similarity || '?'}% с фото из другого визита`;
+                phashWarning = 'Дубликат';
               }
               return {
                 fileName: p.fileName,
