@@ -205,6 +205,7 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     // Поиск заявок «ИСЖ объекта» по адресу (визит в статусе awaiting_assignment / planned)
     // Заявки на конкретное оборудование НЕ привязываются при создании визита —
     // они привязываются позже, когда инженер добавит оборудование нужного типа в визит
+    const visitDate = rest.dateStart ? new Date(rest.dateStart) : new Date();
     const requests = await prisma.importedRequest.findMany({
       where: {
         matchedAddressId: rest.addressId,
@@ -212,6 +213,8 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
         visit: {
           status: { in: ['awaiting_assignment', 'planned'] },
         },
+        startDate: { lte: visitDate },
+        deadline: { gte: visitDate },
       },
       include: {
         equipmentType: true,
@@ -221,11 +224,21 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
           },
         },
       },
+      orderBy: { importedAt: 'asc' },
     });
 
-    console.log(`[autoAssign] visit=${visit.id} address=${rest.addressId} engineer=${req.userId} found=${requests.length} requests:`, requests.map(r => ({ id: r.id, ext: r.externalRequestId, visitStatus: r.visit?.status })));
+    // Защита от дубликатов: если несколько заявок с одинаковым адресом и периодом — привязываем только к первой
+    const seenPeriods = new Set<string>();
+    const uniqueRequests = requests.filter(r => {
+      const periodKey = `${r.startDate?.toISOString()}_${r.deadline?.toISOString()}`;
+      if (seenPeriods.has(periodKey)) return false;
+      seenPeriods.add(periodKey);
+      return true;
+    });
 
-    for (const request of requests) {
+    console.log(`[autoAssign] visit=${visit.id} address=${rest.addressId} engineer=${req.userId} found=${uniqueRequests.length} unique requests (from ${requests.length} total)`, uniqueRequests.map(r => ({ id: r.id, ext: r.externalRequestId, visitStatus: r.visit?.status })));
+
+    for (const request of uniqueRequests) {
       const existingLink = await prisma.visitRequest.findUnique({
         where: {
           visitId_importedRequestId: {
@@ -692,22 +705,36 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
     };
 
     // 1. Привязка заявок ИСЖ объекта (одна заявка → много визитов — это нормально)
+    // Фильтр по периоду: дата начала визита должна быть в периоде действия заявки
+    const visitDate = existing.dateStart || new Date();
     const iszhRequests = await prisma.importedRequest.findMany({
       where: {
         matchedAddressId: addressId,
         equipmentType: { code: 'iszh_object' },
         visit: { status: { in: ['awaiting_assignment', 'planned'] } },
+        startDate: { lte: visitDate },
+        deadline: { gte: visitDate },
         NOT: { visitRequests: { some: { visitId } } },
       },
       include: { visit: true },
+      orderBy: { importedAt: 'asc' },
     });
 
-    for (const r of iszhRequests) {
+    // Защита от дубликатов: если несколько заявок с одинаковым периодом — привязываем только к первой
+    const seenPeriods = new Set<string>();
+    const uniqueIszh = iszhRequests.filter(r => {
+      const periodKey = `${r.startDate?.toISOString()}_${r.deadline?.toISOString()}`;
+      if (seenPeriods.has(periodKey)) return false;
+      seenPeriods.add(periodKey);
+      return true;
+    });
+
+    for (const r of uniqueIszh) {
       await bindRequest(r.id, r.visit);
     }
 
     // 2. Привязка заявок на конкретное оборудование (1 заявка → 1 визит)
-    // Фильтр: только заявки, которые ещё НЕ привязаны ни к одному рабочему визиту
+    // Фильтр: только заявки, которые ещё НЕ привязаны ни к одному рабочему визиту + период
     const taskEquipmentTypeIds = [...new Set(existing.tasks.map(t => t.equipmentTypeId).filter(Boolean))] as string[];
     if (taskEquipmentTypeIds.length > 0) {
       const equipRequests = await prisma.importedRequest.findMany({
@@ -716,6 +743,8 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
           equipmentTypeId: { in: taskEquipmentTypeIds },
           equipmentType: { code: { not: 'iszh_object' } },
           visit: { status: { in: ['awaiting_assignment', 'planned'] } },
+          startDate: { lte: visitDate },
+          deadline: { gte: visitDate },
           visitRequests: { none: {} },
         },
         include: { visit: true },
@@ -863,11 +892,12 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
 
   // Автопривязка заявок на конкретное оборудование по типу добавленной задачи
   // Ищем заявки на том же адресе с тем же типом оборудования (не iszh_object),
-  // которые ещё не привязаны к визиту
+  // которые ещё не привязаны к визиту, с проверкой периода действия
   const boundRequests: { requestId: string; externalRequestId: string }[] = [];
   try {
     const addressId = visit.addressId;
     const equipmentTypeId = task.equipmentTypeId;
+    const visitDate = visit.dateStart || new Date();
 
     const matchingRequests = await prisma.importedRequest.findMany({
       where: {
@@ -877,6 +907,8 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
         visit: {
           status: { in: ['awaiting_assignment', 'planned'] },
         },
+        startDate: { lte: visitDate },
+        deadline: { gte: visitDate },
       },
     });
 
