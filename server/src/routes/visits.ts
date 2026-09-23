@@ -210,9 +210,8 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
       where: {
         matchedAddressId: rest.addressId,
         equipmentType: { code: 'iszh_object' },
-        visit: {
-          status: { in: ['awaiting_assignment', 'planned'] },
-        },
+        // Для ИСЖ объекта не фильтруем по статусу виртуального визита —
+        // новые инженеры могут создавать визиты даже после завершения предыдущих
         startDate: { lte: visitDate },
         deadline: { gte: visitDate },
       },
@@ -711,7 +710,7 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
       where: {
         matchedAddressId: addressId,
         equipmentType: { code: 'iszh_object' },
-        visit: { status: { in: ['awaiting_assignment', 'planned'] } },
+        // Для ИСЖ объекта не фильтруем по статусу виртуального визита
         startDate: { lte: visitDate },
         deadline: { gte: visitDate },
         NOT: { visitRequests: { some: { visitId } } },
