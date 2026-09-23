@@ -335,6 +335,10 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
             },
           },
         },
+        anomalies: {
+          where: { type: 'photo_phash_match' },
+          select: { photoId: true, severity: true, details: true },
+        },
         tasks: {
           orderBy: { sortOrder: 'asc' },
           include: {
@@ -364,6 +368,12 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
     const unifiedVisits: UnifiedReportVisit[] = visits.map(v => {
       // Номера связанных заявок
       const requestIds = v.visitRequests.map(vr => vr.importedRequest.externalRequestId).filter(Boolean);
+
+      // pHash-аномалии по photoId
+      const phashByPhoto = new Map<string, { severity: string; details: any }>();
+      for (const a of (v.anomalies || [])) {
+        if (a.photoId) phashByPhoto.set(a.photoId, { severity: a.severity, details: a.details });
+      }
 
       return {
         id: v.id,
@@ -397,19 +407,16 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
             equipmentType: t.equipmentType ? { name: t.equipmentType.name, code: t.equipmentType.code } : undefined,
             roomType: t.roomType ? { name: t.roomType.name } : undefined,
             photos: t.photos.map(p => {
-              // Извлекаем pHash-предупреждение из verificationDetails
+              // Извлекаем pHash-предупреждение из visitAnomalies
               let phashWarning: string | undefined;
-              if (p.verificationDetails && typeof p.verificationDetails === 'object') {
-                const details = p.verificationDetails as Record<string, any>;
-                const phash = details.photo_phash_match;
-                if (phash && (phash.severity === 'critical' || phash.severity === 'warning')) {
-                  const d = phash.details || {};
-                  phashWarning = d.scope === 'same_visit_cross_moment'
-                    ? 'Дубликат: фото ДО и ПОСЛЕ идентичны'
-                    : d.scope === 'same_visit'
-                      ? 'Дубликат: одинаковые фото в этом визите'
-                      : `Дубликат: сходство ${d.similarity || '?'}% с фото из другого визита`;
-                }
+              const anomaly = phashByPhoto.get(p.id);
+              if (anomaly) {
+                const d = (anomaly.details || {}) as Record<string, any>;
+                phashWarning = d.scope === 'same_visit_cross_moment'
+                  ? 'Дубликат: фото ДО и ПОСЛЕ идентичны'
+                  : d.scope === 'same_visit'
+                    ? 'Дубликат: одинаковые фото в этом визите'
+                    : `Дубликат: сходство ${d.similarity || '?'}% с фото из другого визита`;
               }
               return {
                 fileName: p.fileName,
