@@ -35,6 +35,10 @@ export default function SummaryReportPage() {
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [addressSearch, setAddressSearch] = useState('');
 
+  const [contractId, setContractId] = useState<string>('');
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [requestMode, setRequestMode] = useState<'contract' | 'numbers'>('contract');
+
   const [requestNumbers, setRequestNumbers] = useState<string>('');
   const [foundRequests, setFoundRequests] = useState<any[]>([]);
   const [searchingRequests, setSearchingRequests] = useState(false);
@@ -53,6 +57,15 @@ export default function SummaryReportPage() {
   }, []);
 
   useEffect(() => { loadEngineers(); }, [loadEngineers]);
+
+  const loadContracts = useCallback(async () => {
+    try {
+      const data = await api.getContracts({ module: 'to', isActive: 'true' });
+      setContracts(data);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadContracts(); }, [loadContracts]);
 
   const searchAddresses = useCallback(async (q: string) => {
     if (q.length >= 2) {
@@ -142,9 +155,15 @@ export default function SummaryReportPage() {
       message.warning('Выберите хотя бы один объект');
       return;
     }
-    if (reportType === 'requests' && foundRequests.length === 0) {
-      message.warning('Найдите хотя бы одну заявку');
-      return;
+    if (reportType === 'requests') {
+      if (requestMode === 'contract' && !contractId) {
+        message.warning('Выберите договор');
+        return;
+      }
+      if (requestMode === 'numbers' && foundRequests.length === 0) {
+        message.warning('Найдите хотя бы одну заявку');
+        return;
+      }
     }
 
     const totalSize = getTotalScanSize();
@@ -166,7 +185,8 @@ export default function SummaryReportPage() {
         dateFrom: dateRange[0].format('YYYY-MM-DD'),
         dateTo: dateRange[1].format('YYYY-MM-DD'),
         addressIds: reportType === 'objects' ? selectedAddressIds : undefined,
-        requestIds: reportType === 'requests' ? foundRequests.map(r => r.id) : undefined,
+        requestIds: reportType === 'requests' && requestMode === 'numbers' ? foundRequests.map(r => r.id) : undefined,
+        contractId: reportType === 'requests' && requestMode === 'contract' ? contractId : undefined,
         engineerId: engineerId || undefined,
         scanIds: scanIds.length > 0 ? scanIds : undefined,
       });
@@ -238,28 +258,64 @@ export default function SummaryReportPage() {
           )}
 
           {reportType === 'requests' && (
-            <Form.Item label="Номера заявок" required>
-              <Input.TextArea
-                rows={3}
-                placeholder="Введите номера заявок через запятую, пробел или новую строку&#10;Например: IS130366092, IS130366093"
-                value={requestNumbers}
-                onChange={(e) => { setRequestNumbers(e.target.value); setFoundRequests([]); }}
-              />
-              <Button
-                icon={<SearchOutlined />}
-                onClick={handleSearchRequests}
-                loading={searchingRequests}
-                style={{ marginTop: 8 }}
-                disabled={!requestNumbers.trim()}
-              >
-                Найти заявки
-              </Button>
+            <>
+              <Form.Item label="Режим выбора заявок">
+                <Radio.Group value={requestMode} onChange={(e) => { setRequestMode(e.target.value); setFoundRequests([]); setContractId(''); setRequestNumbers(''); }}>
+                  <Radio.Button value="contract">По договору и периоду</Radio.Button>
+                  <Radio.Button value="numbers">Указать номера заявок</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+
+              {requestMode === 'contract' && (
+                <Form.Item label="Договор" required>
+                  <Select
+                    showSearch
+                    placeholder="Выберите договор"
+                    value={contractId || undefined}
+                    onChange={(val) => setContractId(val || '')}
+                    optionFilterProp="label"
+                    allowClear
+                    style={{ width: '100%' }}
+                    options={contracts.map((c: any) => ({ value: c.id, label: `Договор ${c.number}` }))}
+                  />
+                  {contractId && (
+                    <div style={{ marginTop: 8, fontSize: 13, color: '#555' }}>
+                      Все заявки выбранного договора за указанный период будут включены в отчёт.
+                      Заявки без связанных визитов будут отмечены как «Работы не начинались».
+                    </div>
+                  )}
+                </Form.Item>
+              )}
+
+              {requestMode === 'numbers' && (
+                <Form.Item label="Номера заявок" required>
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="Введите номера заявок через запятую, пробел или новую строку&#10;Например: IS130366092, IS130366093"
+                    value={requestNumbers}
+                    onChange={(e) => { setRequestNumbers(e.target.value); setFoundRequests([]); }}
+                  />
+                  <Button
+                    icon={<SearchOutlined />}
+                    onClick={handleSearchRequests}
+                    loading={searchingRequests}
+                    style={{ marginTop: 8 }}
+                    disabled={!requestNumbers.trim()}
+                  >
+                    Найти заявки
+                  </Button>
+                </Form.Item>
+              )}
+
               {foundRequests.length > 0 && (
-                <div style={{ marginTop: 12 }}>
+                <div style={{ marginTop: 4, marginBottom: 16 }}>
                   <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>
                     Найдено заявок: {foundRequests.length}
-                    {foundRequests.filter(r => r.visitId).length > 0 && (
-                      <span style={{ color: '#888' }}> (с визитами: {foundRequests.filter(r => r.visitId).length})</span>
+                    {foundRequests.filter((r: any) => r.hasVisit).length > 0 && (
+                      <span style={{ color: '#888' }}> (с визитами: {foundRequests.filter((r: any) => r.hasVisit).length})</span>
+                    )}
+                    {foundRequests.filter((r: any) => !r.hasVisit).length > 0 && (
+                      <span style={{ color: '#faad14' }}> (без визитов: {foundRequests.filter((r: any) => !r.hasVisit).length})</span>
                     )}
                   </div>
                   {foundRequests.map((r: any) => (
@@ -267,13 +323,12 @@ export default function SummaryReportPage() {
                       <Tag color="blue">{r.externalRequestId}</Tag>
                       <span style={{ color: '#888', marginRight: 8 }}>{r.equipmentType?.name}</span>
                       {r.matchedAddress && <span style={{ color: '#555' }}>{r.matchedAddress.fullAddress}</span>}
-                      {r.visit && <Tag style={{ marginLeft: 4 }}>{r.visit.status}</Tag>}
-                      {!r.visitId && <Tag color="orange" style={{ marginLeft: 4 }}>без визита</Tag>}
+                      {r.hasVisit ? <Tag color="green" style={{ marginLeft: 4 }}>есть визит</Tag> : <Tag color="orange" style={{ marginLeft: 4 }}>без визита</Tag>}
                     </div>
                   ))}
                 </div>
               )}
-            </Form.Item>
+            </>
           )}
 
           <Form.Item label="Период" required>
@@ -358,7 +413,7 @@ export default function SummaryReportPage() {
             loading={loading}
             size="middle"
             block
-            disabled={(reportType === 'objects' && selectedAddressIds.length === 0) || (reportType === 'requests' && foundRequests.length === 0)}
+            disabled={(reportType === 'objects' && selectedAddressIds.length === 0) || (reportType === 'requests' && ((requestMode === 'contract' && !contractId) || (requestMode === 'numbers' && foundRequests.length === 0)))}
           >
             СФОРМИРОВАТЬ И СКАЧАТЬ PDF
           </Button>

@@ -139,6 +139,18 @@ const PARAM_LABELS: Record<string, string> = {
 
 const SEASON_MAP: Record<string, string> = { summer: 'Лето', winter: 'Зима' };
 
+const STATUS_LABELS: Record<string, string> = {
+  planned: 'Запланирован',
+  not_started: 'Не начат',
+  awaiting_assignment: 'Ожидает назначения',
+  in_progress: 'В работе',
+  completed: 'Завершён',
+  sent: 'Отправлен',
+  sent_by_engineer: 'Отправлен инженером',
+  sent_by_tm: 'Отправлен ТМ',
+  corrected_by_tm: 'Откорректирован ТМ',
+};
+
 function formatBool(val: unknown): string { return val ? 'Да' : 'Нет'; }
 
 function formatParamValue(key: string, val: unknown): string {
@@ -203,6 +215,8 @@ export interface UnifiedReportVisit {
   engineerName: string;
   season?: string | null;
   status: string;
+  contractNumber?: string;
+  requestIds?: string[];
   address: { fullAddress: string };
   engineerSpec?: { specializationVik: boolean; specializationIszh: boolean; specializationGpm: boolean; specializationDgu: boolean; specializationIbp: boolean };
   tasks: UnifiedReportTask[];
@@ -214,11 +228,15 @@ export interface UnifiedReportTask {
   conclusion?: string | null;
   comment?: string | null;
   parameters?: unknown;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  fieldErrorKeys?: string[];
   selectedRecommendationIds?: string[];
   additionalRecommendations?: string | null;
   equipmentType?: { name: string; code: string } | null;
   roomType?: { name: string } | null;
-  photos?: { fileName: string; filePath: string; moment: string }[];
+  photos?: { fileName: string; filePath: string; moment: string; phashWarning?: string }[];
   equipmentItems?: {
     id: string;
     status?: string | null;
@@ -311,7 +329,7 @@ function renderPhotosText(photos: { fileName: string; moment: string }[]): strin
   ).join('');
 }
 
-async function renderPhotosGrid(photos: { fileName: string; filePath: string; moment: string }[], simplified: boolean): Promise<string> {
+async function renderPhotosGrid(photos: { fileName: string; filePath: string; moment: string; phashWarning?: string }[], simplified: boolean): Promise<string> {
   if (photos.length === 0) {
     return '<div style="margin:4px 0;"><span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:9pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует</span></div>';
   }
@@ -321,7 +339,7 @@ async function renderPhotosGrid(photos: { fileName: string; filePath: string; mo
     const b64 = await photoToBase64(photo.filePath, false);
     const momentLabel = photo.moment === 'before' ? 'до' : 'после';
     if (b64) {
-      html += `<div style="text-align:center;max-width:200px;"><img src="${b64}" style="max-width:180px;max-height:140px;border:1px solid #ddd;border-radius:3px;" /><div style="font-size:7pt;color:#666;">${photo.fileName} (${momentLabel})</div></div>`;
+      html += `<div style="text-align:center;max-width:200px;"><img src="${b64}" style="max-width:180px;max-height:140px;border:1px solid #ddd;border-radius:3px;" /><div style="font-size:7pt;color:#666;">${photo.fileName} (${momentLabel})</div>${photo.phashWarning ? `<div style="font-size:7pt;color:#ff4d4f;font-weight:600;">⚠ ${photo.phashWarning}</div>` : ''}</div>`;
     } else {
       html += `<span style="display:inline-block;padding:4px 8px;background:#fff1f0;border:1px solid #ffccc7;border-radius:3px;font-size:8pt;color:#ff4d4f;font-weight:600;">📷 Фото отсутствует: ${photo.fileName}</span>`;
     }
@@ -355,7 +373,10 @@ async function renderTask(task: UnifiedReportTask, taskIndex: number, recMap: Ma
       const eq = item.objectEquipment;
       const typeName = ITEM_TYPE_NAMES[eq?.equipmentTypeCode || ''] || eq?.equipmentTypeCode || '—';
       const statusLabel = item.status === 'ok' ? '✅ Исправно' : item.status === 'not_ok' ? '⚠️ Неисправно' : '—';
-      equipTableHtml += `<tr><td style="padding:2px 4px;border:1px solid #ddd;font-size:8pt;">${j + 1}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:8pt;">${typeName}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:8pt;">${eq?.brand || '—'}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:8pt;">${eq?.model || '—'}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:8pt;">${eq?.serialNumber || '—'}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:8pt;">${statusLabel}</td></tr>`;
+      // Подсветка некорректных полей оборудования
+      const cellErr = 'padding:2px 4px;border:1px solid #ddd;font-size:8pt;color:#ff4d4f;background:#fff1f0;font-weight:600;';
+      const cellOk = 'padding:2px 4px;border:1px solid #ddd;font-size:8pt;';
+      equipTableHtml += `<tr><td style="${cellOk}">${j + 1}</td><td style="${cellOk}">${typeName}</td><td style="${cellOk}">${eq?.brand || '—'}</td><td style="${cellOk}">${eq?.model || '—'}</td><td style="${cellOk}">${eq?.serialNumber || '—'}</td><td style="${cellOk}">${statusLabel}</td></tr>`;
     }
     equipTableHtml += '</tbody></table>';
 
@@ -384,10 +405,23 @@ async function renderTask(task: UnifiedReportTask, taskIndex: number, recMap: Ma
   const location = task.roomType?.name || (task.comment || '—');
   const photosHtml = await renderPhotosGrid(task.photos || [], simplified);
 
+  // Brand/model/serialNumber с подсветкой ошибок
+  const errKeys = new Set(task.fieldErrorKeys || []);
+  const fieldStyle = (key: string) => errKeys.has(key)
+    ? 'padding:2px 6px;border:1px solid #ddd;font-size:9pt;color:#ff4d4f;background:#fff1f0;font-weight:600;'
+    : 'padding:2px 6px;border:1px solid #ddd;font-size:9pt;';
+  const equipInfoHtml = (task.brand || task.model || task.serialNumber) ? `
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;">
+      <tr><td style="padding:2px 6px;border:1px solid #ddd;font-size:9pt;font-weight:600;width:120px;">Изготовитель:</td><td style="${fieldStyle('brand')}">${task.brand || '—'}</td></tr>
+      <tr><td style="padding:2px 6px;border:1px solid #ddd;font-size:9pt;font-weight:600;">Модель:</td><td style="${fieldStyle('model')}">${task.model || '—'}</td></tr>
+      <tr><td style="padding:2px 6px;border:1px solid #ddd;font-size:9pt;font-weight:600;">Сер. №:</td><td style="${fieldStyle('serialNumber')}">${task.serialNumber || '—'}</td></tr>
+    </table>` : '';
+
   return `
     <div style="margin:8px 0;padding:8px;border:1px solid #e0e0e0;border-radius:4px;">
       <div style="font-weight:600;font-size:10pt;">${taskIndex}. ${equipName}${task.comment ? ` (${task.comment})` : ''}</div>
       <div style="color:#666;font-size:9pt;">📍 ${location}</div>
+      ${equipInfoHtml}
       ${paramsHtml ? `<table style="width:100%;margin:4px 0;">${paramsHtml}</table>` : ''}
       <div style="margin:4px 0;font-size:9pt;font-weight:600;">📸 Фотофиксация:</div>
       ${photosHtml}
@@ -451,6 +485,9 @@ export async function generateUnifiedReportHtml(
           <h3 style="margin:0 0 6px;">Визит: ${formatDate(v.dateStart)}</h3>
           <p style="margin:2px 0;font-size:9pt;"><strong>Инженер:</strong> ${v.engineerName}${specLabel ? ` (${specLabel})` : ''}</p>
           <p style="margin:2px 0;font-size:9pt;"><strong>Время:</strong> ${v.timeStart}${v.timeEnd ? ` — ${v.timeEnd}` : ''}${v.season ? ` | <strong>Сезон:</strong> ${SEASON_MAP[v.season] || v.season}` : ''}</p>
+          ${v.contractNumber ? `<p style="margin:2px 0;font-size:9pt;"><strong>Договор:</strong> ${v.contractNumber}</p>` : ''}
+          ${v.requestIds?.length ? `<p style="margin:2px 0;font-size:9pt;"><strong>Заявки:</strong> ${v.requestIds.join(', ')}</p>` : ''}
+          <p style="margin:2px 0;font-size:9pt;"><strong>Статус:</strong> ${STATUS_LABELS[v.status] || v.status}</p>
           <p style="margin:2px 0;font-size:9pt;"><strong>Задач:</strong> ${v.tasks.length} | <strong>Замечаний:</strong> ${v.tasks.filter(t => t.conclusion && t.conclusion !== 'ok').length}</p>`;
 
       for (let ti = 0; ti < v.tasks.length; ti++) {

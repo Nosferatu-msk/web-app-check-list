@@ -202,6 +202,7 @@ export const api = {
     dateTo: string;
     addressIds?: string[];
     requestIds?: string[];
+    contractId?: string;
     engineerId?: string;
     scanIds?: string[];
   }): Promise<void> => {

@@ -8,6 +8,7 @@ import { generateReportHtml, generatePdf, buildReportFileName } from '../service
 import { generateMtrReportHtml, buildMtrReportFileName } from '../services/mtrReport.js';
 import { generateUnifiedReportHtml, UnifiedReportVisit } from '../services/unifiedReport.js';
 import { resizeForActScan } from '../services/imageProcessor.js';
+import { validateTaskFields } from '../utils/validation.js';
 import { sendMail } from '../utils/email.js';
 import { logAudit } from '../middleware/audit.js';
 import { PDFDocument } from 'pdf-lib';
@@ -232,6 +233,7 @@ const summaryGenerateSchema = z.object({
   dateTo: z.string(),
   addressIds: z.array(z.string().uuid()).optional(),
   requestIds: z.array(z.string().uuid()).optional(),
+  contractId: z.string().uuid().optional(),
   engineerId: z.string().uuid().optional(),
   scanIds: z.array(z.string().uuid()).optional(),
 });
@@ -243,14 +245,14 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       res.status(400).json({ error: 'Ошибка валидации', details: parsed.error.flatten() });
       return;
     }
-    const { type, dateFrom, dateTo, addressIds, requestIds, engineerId, scanIds } = parsed.data;
+    const { type, dateFrom, dateTo, addressIds, requestIds, contractId, engineerId, scanIds } = parsed.data;
 
     if (type === 'objects' && (!addressIds || addressIds.length === 0)) {
       res.status(400).json({ error: 'Выберите хотя бы один объект' });
       return;
     }
-    if (type === 'requests' && (!requestIds || requestIds.length === 0)) {
-      res.status(400).json({ error: 'Выберите хотя бы одну заявку' });
+    if (type === 'requests' && !contractId && (!requestIds || requestIds.length === 0)) {
+      res.status(400).json({ error: 'Выберите договор или укажите номера заявок' });
       return;
     }
 
@@ -268,23 +270,48 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       where.addressId = { in: addressIds };
     }
     if (type === 'requests') {
-      // Находим визиты через imported_requests.visitId И через visit_requests
-      const importedRequests = await prisma.importedRequest.findMany({
-        where: { id: { in: requestIds } },
-        select: { visitId: true, visitRequests: { select: { visitId: true } } },
-      });
-      const visitIds = new Set<string>();
-      for (const ir of importedRequests) {
-        if (ir.visitId) visitIds.add(ir.visitId);
-        for (const vr of ir.visitRequests) {
-          visitIds.add(vr.visitId);
+      if (contractId) {
+        // Режим «По договору и периоду» — находим все заявки договора за период
+        const contractRequests = await prisma.importedRequest.findMany({
+          where: {
+            contractId,
+            startDate: { lte: to },
+            deadline: { gte: from },
+          },
+          select: { id: true, visitId: true, visitRequests: { select: { visitId: true } } },
+        });
+        const visitIds = new Set<string>();
+        for (const ir of contractRequests) {
+          if (ir.visitId) visitIds.add(ir.visitId);
+          for (const vr of ir.visitRequests) {
+            visitIds.add(vr.visitId);
+          }
         }
+        if (visitIds.size > 0) {
+          where.id = { in: [...visitIds] };
+        } else {
+          // Нет визитов — отчёт будет пустым, но без ошибки
+          where.id = { in: ['00000000-0000-0000-0000-000000000000'] };
+        }
+      } else {
+        // Режим «Указать номера заявок»
+        const importedRequests = await prisma.importedRequest.findMany({
+          where: { id: { in: requestIds } },
+          select: { visitId: true, visitRequests: { select: { visitId: true } } },
+        });
+        const visitIds = new Set<string>();
+        for (const ir of importedRequests) {
+          if (ir.visitId) visitIds.add(ir.visitId);
+          for (const vr of ir.visitRequests) {
+            visitIds.add(vr.visitId);
+          }
+        }
+        if (visitIds.size === 0) {
+          res.status(400).json({ error: 'По указанным заявкам не найдено визитов' });
+          return;
+        }
+        where.id = { in: [...visitIds] };
       }
-      if (visitIds.size === 0) {
-        res.status(400).json({ error: 'По указанным заявкам не найдено визитов' });
-        return;
-      }
-      where.id = { in: [...visitIds] };
     }
     if (req.userRole === 'tm') {
       const engineerIds = await getTmEngineerIds(req.userId!);
@@ -299,13 +326,24 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       orderBy: { dateStart: 'asc' },
       include: {
         address: true,
+        contract: { select: { number: true } },
         user: { select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } },
+        visitRequests: {
+          select: {
+            importedRequest: {
+              select: { externalRequestId: true, startDate: true, deadline: true, equipmentTypeCode: true },
+            },
+          },
+        },
         tasks: {
           orderBy: { sortOrder: 'asc' },
           include: {
             equipmentType: true,
             roomType: true,
-            photos: true,
+            photos: {
+              orderBy: { createdAt: 'asc' },
+              select: { id: true, fileName: true, filePath: true, moment: true, verificationStatus: true, verificationDetails: true },
+            },
             equipmentItems: {
               orderBy: { sortOrder: 'asc' },
               include: {
@@ -323,41 +361,79 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
 
     const user = await prisma.user.findUnique({ where: { id: req.userId! }, select: { fullName: true, role: true } });
 
-    const unifiedVisits: UnifiedReportVisit[] = visits.map(v => ({
-      id: v.id,
-      dateStart: v.dateStart,
-      timeStart: v.timeStart,
-      timeEnd: v.timeEnd,
-      engineerName: v.engineerName,
-      season: v.season,
-      status: v.status,
-      address: { fullAddress: v.address.fullAddress },
-      engineerSpec: v.user ? { specializationVik: v.user.specializationVik, specializationIszh: v.user.specializationIszh, specializationGpm: v.user.specializationGpm, specializationDgu: v.user.specializationDgu, specializationIbp: v.user.specializationIbp } : undefined,
-      tasks: v.tasks.map(t => ({
-        id: t.id,
-        taskType: t.taskType,
-        conclusion: t.conclusion,
-        comment: t.comment,
-        parameters: t.parameters,
-        selectedRecommendationIds: t.selectedRecommendationIds || undefined,
-        additionalRecommendations: t.additionalRecommendations || undefined,
-        equipmentType: t.equipmentType ? { name: t.equipmentType.name, code: t.equipmentType.code } : undefined,
-        roomType: t.roomType ? { name: t.roomType.name } : undefined,
-        photos: t.photos.map(p => ({ fileName: p.fileName, filePath: p.filePath, moment: p.moment })),
-        equipmentItems: t.equipmentItems?.map(ei => ({
-          id: ei.id,
-          status: ei.status,
-          objectEquipment: ei.objectEquipment ? {
-            equipmentTypeCode: ei.objectEquipment.equipmentTypeCode,
-            brand: ei.objectEquipment.brand,
-            model: ei.objectEquipment.model,
-            serialNumber: ei.objectEquipment.serialNumber,
-            isOutdoorUnit: ei.objectEquipment.isOutdoorUnit,
-          } : undefined,
-          photos: ei.photos.map(p => ({ fileName: p.fileName, filePath: p.filePath, moment: p.moment })),
-        })),
-      })),
-    }));
+    const unifiedVisits: UnifiedReportVisit[] = visits.map(v => {
+      // Номера связанных заявок
+      const requestIds = v.visitRequests.map(vr => vr.importedRequest.externalRequestId).filter(Boolean);
+
+      return {
+        id: v.id,
+        dateStart: v.dateStart,
+        timeStart: v.timeStart,
+        timeEnd: v.timeEnd,
+        engineerName: v.engineerName,
+        season: v.season,
+        status: v.status,
+        contractNumber: v.contract?.number || undefined,
+        requestIds: requestIds.length > 0 ? requestIds : undefined,
+        address: { fullAddress: v.address.fullAddress },
+        engineerSpec: v.user ? { specializationVik: v.user.specializationVik, specializationIszh: v.user.specializationIszh, specializationGpm: v.user.specializationGpm, specializationDgu: v.user.specializationDgu, specializationIbp: v.user.specializationIbp } : undefined,
+        tasks: v.tasks.map(t => {
+          // Валидация brand/model/serialNumber
+          const fieldErrors = validateTaskFields({ brand: t.brand, model: t.model, serialNumber: t.serialNumber });
+          const fieldErrorKeys = new Set(fieldErrors.map(e => e.field));
+
+          return {
+            id: t.id,
+            taskType: t.taskType,
+            conclusion: t.conclusion,
+            comment: t.comment,
+            parameters: t.parameters,
+            brand: t.brand || undefined,
+            model: t.model || undefined,
+            serialNumber: t.serialNumber || undefined,
+            fieldErrorKeys: fieldErrorKeys.size > 0 ? [...fieldErrorKeys] : undefined,
+            selectedRecommendationIds: t.selectedRecommendationIds || undefined,
+            additionalRecommendations: t.additionalRecommendations || undefined,
+            equipmentType: t.equipmentType ? { name: t.equipmentType.name, code: t.equipmentType.code } : undefined,
+            roomType: t.roomType ? { name: t.roomType.name } : undefined,
+            photos: t.photos.map(p => {
+              // Извлекаем pHash-предупреждение из verificationDetails
+              let phashWarning: string | undefined;
+              if (p.verificationDetails && typeof p.verificationDetails === 'object') {
+                const details = p.verificationDetails as Record<string, any>;
+                const phash = details.photo_phash_match;
+                if (phash && (phash.severity === 'critical' || phash.severity === 'warning')) {
+                  const d = phash.details || {};
+                  phashWarning = d.scope === 'same_visit_cross_moment'
+                    ? 'Дубликат: фото ДО и ПОСЛЕ идентичны'
+                    : d.scope === 'same_visit'
+                      ? 'Дубликат: одинаковые фото в этом визите'
+                      : `Дубликат: сходство ${d.similarity || '?'}% с фото из другого визита`;
+                }
+              }
+              return {
+                fileName: p.fileName,
+                filePath: p.filePath,
+                moment: p.moment,
+                phashWarning,
+              };
+            }),
+            equipmentItems: t.equipmentItems?.map(ei => ({
+              id: ei.id,
+              status: ei.status,
+              objectEquipment: ei.objectEquipment ? {
+                equipmentTypeCode: ei.objectEquipment.equipmentTypeCode,
+                brand: ei.objectEquipment.brand,
+                model: ei.objectEquipment.model,
+                serialNumber: ei.objectEquipment.serialNumber,
+                isOutdoorUnit: ei.objectEquipment.isOutdoorUnit,
+              } : undefined,
+              photos: ei.photos.map(p => ({ fileName: p.fileName, filePath: p.filePath, moment: p.moment })),
+            })),
+          };
+        }),
+      };
+    });
 
     const html = await generateUnifiedReportHtml(unifiedVisits, {
       type,
