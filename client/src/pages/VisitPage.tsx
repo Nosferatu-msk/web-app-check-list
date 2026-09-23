@@ -374,10 +374,8 @@ export default function VisitPage() {
           timeStart: values.timeStart ? values.timeStart.format('HH:mm') : dayjs().format('HH:mm'),
           season: values.season,
         };
-        // Автопривязка заявок для нового визита инженера
-        if (user?.role === 'engineer') {
-          data.autoAssignRequests = true;
-        }
+        // Автопривязка заявок для нового визита
+        data.autoAssignRequests = true;
         localStorage.setItem('lastEngineerName', values.engineerName);
         const v = isOffline() ? await api.createVisitOffline(data) : await api.createVisit(data);
 
