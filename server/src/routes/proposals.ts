@@ -509,28 +509,55 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
       }
     }
 
-    const created = await prisma.objectEquipment.create({
-      data: {
-        addressId: proposal.addressId,
-        equipmentTypeCode: proposal.equipmentTypeCode,
-        roomTypeCode: proposal.roomTypeCode,
-        brand: proposal.brand,
-        model: proposal.model,
-        serialNumber,
-        locationDescription: proposal.locationDescription,
-        confirmationStatus: 'confirmed',
-        createdBy: proposal.proposedById,
-      },
-    });
+    let created;
+    try {
+      created = await prisma.objectEquipment.create({
+        data: {
+          addressId: proposal.addressId,
+          equipmentTypeCode: proposal.equipmentTypeCode,
+          roomTypeCode: proposal.roomTypeCode,
+          brand: proposal.brand,
+          model: proposal.model,
+          serialNumber,
+          locationDescription: proposal.locationDescription,
+          confirmationStatus: 'confirmed',
+          createdBy: proposal.proposedById,
+        },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        // Оборудование с таким serialNumber уже существует на этом адресе — привязываем к нему
+        created = await prisma.objectEquipment.findFirst({
+          where: {
+            addressId: proposal.addressId,
+            equipmentTypeCode: proposal.equipmentTypeCode,
+            serialNumber,
+          },
+        });
+        if (!created) throw err;
+        // Обновляем существующую запись данными из proposal
+        await prisma.objectEquipment.update({
+          where: { id: created.id },
+          data: {
+            confirmationStatus: 'confirmed',
+            ...(proposal.roomTypeCode ? { roomTypeCode: proposal.roomTypeCode } : {}),
+            ...(proposal.brand ? { brand: proposal.brand } : {}),
+            ...(proposal.model ? { model: proposal.model } : {}),
+            ...(proposal.locationDescription ? { locationDescription: proposal.locationDescription } : {}),
+          },
+        });
+      } else {
+        throw err;
+      }
+    }
 
-    // Связываем proposal с созданным equipment
+    // Связываем proposal с equipment
     await prisma.equipmentProposal.update({
       where: { id: proposal.id },
       data: { objectEquipmentId: created.id },
     });
 
-    // Привязываем задачу к созданному equipment
-    // Сначала ищем по прямому taskId из proposal, иначе — по косвенным признакам
+    // Привязываем задачу к equipment
     let matchingTask = proposal.taskId
       ? await prisma.task.findFirst({ where: { id: proposal.taskId, objectEquipmentId: null } })
       : null;
@@ -728,25 +755,49 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
             }
           }
 
-          const created = await prisma.objectEquipment.create({
-            data: {
-              addressId: proposal.addressId,
-              equipmentTypeCode: proposal.equipmentTypeCode,
-              roomTypeCode: proposal.roomTypeCode,
-              brand: proposal.brand,
-              model: proposal.model,
-              serialNumber,
-              locationDescription: proposal.locationDescription,
-              confirmationStatus: 'confirmed',
-              createdBy: proposal.proposedById,
-            },
-          });
+          let created;
+          try {
+            created = await prisma.objectEquipment.create({
+              data: {
+                addressId: proposal.addressId,
+                equipmentTypeCode: proposal.equipmentTypeCode,
+                roomTypeCode: proposal.roomTypeCode,
+                brand: proposal.brand,
+                model: proposal.model,
+                serialNumber,
+                locationDescription: proposal.locationDescription,
+                confirmationStatus: 'confirmed',
+                createdBy: proposal.proposedById,
+              },
+            });
+          } catch (eqErr: any) {
+            if (eqErr?.code === 'P2002') {
+              created = await prisma.objectEquipment.findFirst({
+                where: {
+                  addressId: proposal.addressId,
+                  equipmentTypeCode: proposal.equipmentTypeCode,
+                  serialNumber,
+                },
+              });
+              if (!created) throw eqErr;
+              await prisma.objectEquipment.update({
+                where: { id: created.id },
+                data: {
+                  confirmationStatus: 'confirmed',
+                  ...(proposal.roomTypeCode ? { roomTypeCode: proposal.roomTypeCode } : {}),
+                  ...(proposal.brand ? { brand: proposal.brand } : {}),
+                  ...(proposal.model ? { model: proposal.model } : {}),
+                  ...(proposal.locationDescription ? { locationDescription: proposal.locationDescription } : {}),
+                },
+              });
+            } else {
+              throw eqErr;
+            }
+          }
           await prisma.equipmentProposal.update({
             where: { id },
             data: { objectEquipmentId: created.id },
           });
-          // Привязываем задачу к созданному equipment
-          // Сначала ищем по прямому taskId из proposal, иначе — по косвенным признакам
           let matchingTask = proposal.taskId
             ? await prisma.task.findFirst({ where: { id: proposal.taskId, objectEquipmentId: null } })
             : null;
