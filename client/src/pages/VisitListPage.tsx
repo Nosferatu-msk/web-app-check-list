@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton, DatePicker } from 'antd';
 import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined, PieChartOutlined } from '@ant-design/icons';
@@ -74,6 +74,7 @@ export default function VisitListPage() {
   const [contractFilter, setContractFilter] = useState('');
   const [contracts, setContracts] = useState<{ id: string; number: string }[]>([]);
   const [period, setPeriod] = useState<dayjs.Dayjs | null>(null);
+  const prevFiltersKeyRef = useRef<string>('');
   const pageSize = 20;
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -113,9 +114,21 @@ export default function VisitListPage() {
     setLoading(false);
   }, [selectedEngineer, isManager, showDeleted, currentPage, selectedStatuses, searchQuery, contractFilter, period]);
 
-  useEffect(() => { load(); }, [load]);
-
-  useEffect(() => { setCurrentPage(1); }, [selectedEngineer, showDeleted, selectedStatuses, searchQuery]);
+  // Единая загрузка: при изменении фильтров сброс на стр.1, при изменении страницы — загрузка
+  useEffect(() => {
+    // При изменении фильтров — сброс на первую страницу
+    const needsReset = [selectedEngineer, showDeleted, selectedStatuses.join(','), searchQuery, contractFilter];
+    const filtersKey = needsReset.join('|');
+    
+    if (filtersKey !== prevFiltersKeyRef.current) {
+      prevFiltersKeyRef.current = filtersKey;
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return; // load вызовется при изменении currentPage
+      }
+    }
+    load();
+  }, [load]);
 
   // Синхронизация фильтров с URL
   useEffect(() => {
