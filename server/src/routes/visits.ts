@@ -150,13 +150,17 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
   }
 
   // Проверка дубликатов: если инженер уже имеет активный визит по этому адресу — вернуть его
+  // Ищем и по userId (основной инженер), и по visitEngineers (назначенный инженер)
   if (req.userRole === 'engineer') {
     const existingVisit = await prisma.visit.findFirst({
       where: {
         addressId: rest.addressId,
-        userId: req.userId,
         isDeleted: false,
         status: { in: ['not_started', 'planned', 'in_progress'] },
+        OR: [
+          { userId: req.userId },
+          { visitEngineers: { some: { engineerId: req.userId } } },
+        ],
       },
       include: { address: true, tasks: { include: taskInclude } },
     });
@@ -564,37 +568,43 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   // Снимаем привязки к заявкам и назначения инженеров перед удалением
   const visitRequests = await prisma.visitRequest.findMany({
     where: { visitId: req.params.id as string },
-    select: { importedRequestId: true },
+    include: { importedRequest: { select: { equipmentTypeId: true } } },
   });
 
   if (visitRequests.length > 0) {
-    const requestIds = visitRequests.map(vr => vr.importedRequestId);
-
     // Удаляем связи VisitRequest
     await prisma.visitRequest.deleteMany({ where: { visitId: req.params.id as string } });
 
     // Удаляем назначения инженеров (VisitEngineer)
     await prisma.visitEngineer.deleteMany({ where: { visitId: req.params.id as string } });
 
-    // Создаём виртуальный визит для освобождённых заявок (как при импорте)
-    const virtualVisit = await prisma.visit.create({
-      data: {
-        addressId: existing.addressId,
-        contractId: existing.contractId,
-        engineerName: '',
-        userId: null,
-        dateStart: existing.dateStart,
-        timeStart: existing.timeStart,
-        season: existing.season,
-        status: 'awaiting_assignment',
-      },
-    });
+    // Группируем заявки по типу оборудования — для каждой группы свой виртуальный визит
+    const byType = new Map<string, string[]>();
+    for (const vr of visitRequests) {
+      const type = vr.importedRequest.equipmentTypeId;
+      if (!byType.has(type)) byType.set(type, []);
+      byType.get(type)!.push(vr.importedRequestId);
+    }
 
-    // Возвращаем заявки на виртуальный визит
-    await prisma.importedRequest.updateMany({
-      where: { id: { in: requestIds } },
-      data: { visitId: virtualVisit.id },
-    });
+    for (const [, requestIds] of byType) {
+      const virtualVisit = await prisma.visit.create({
+        data: {
+          addressId: existing.addressId,
+          contractId: existing.contractId,
+          engineerName: '',
+          userId: null,
+          dateStart: existing.dateStart,
+          timeStart: existing.timeStart,
+          season: existing.season,
+          status: 'awaiting_assignment',
+        },
+      });
+
+      await prisma.importedRequest.updateMany({
+        where: { id: { in: requestIds } },
+        data: { visitId: virtualVisit.id },
+      });
+    }
   }
 
   await prisma.visit.update({

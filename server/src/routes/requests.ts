@@ -11,11 +11,18 @@ router.use(authMiddleware);
 
 // ─── ВЫЧИСЛЕНИЕ СТАТУСА ЗАЯВКИ ──────────────────────────────
 // Для обычных заявок (не ИСЖ объекта)
-function computeExecutionStatus(visit: any, isISZH: boolean): string {
+function computeExecutionStatus(visit: any, isISZH: boolean, equipmentTypeId?: string): string {
   if (!visit || visit.status === 'awaiting_assignment') return 'not_assigned';
   if (visit.status === 'planned') return 'assigned';
   if (visit.status === 'in_progress') return 'in_progress';
-  if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) return 'completed';
+  if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) {
+    // Проверка: есть ли задача по типу оборудования заявки в визите
+    if (equipmentTypeId && visit.tasks && !isISZH) {
+      const hasMatchingTask = visit.tasks.some((t: any) => t.equipmentTypeId === equipmentTypeId);
+      if (!hasMatchingTask) return 'not_assigned';
+    }
+    return 'completed';
+  }
   return 'not_assigned';
 }
 
@@ -325,6 +332,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           visit: {
             select: {
               id: true, status: true, isMultiSpecialist: true,
+              tasks: { select: { equipmentTypeId: true } },
               visitEngineers: {
                 select: {
                   id: true, engineerId: true, isPrimary: true,
@@ -367,7 +375,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
       let executionStatus: string;
       if (!isISZHObject) {
-        executionStatus = computeExecutionStatus(req.visit, false);
+        executionStatus = computeExecutionStatus(req.visit, false, req.equipmentTypeId);
       } else {
         const allVisits = req.visitRequests?.map(vr => vr.visit).filter(Boolean) || [];
         executionStatus = computeISZHExecutionStatus(allVisits);
