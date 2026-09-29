@@ -398,6 +398,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         { address: { objectCode: { contains: search, mode: 'insensitive' } } },
       ]}
     ];
+    console.log('[SEARCH] role:', req.userRole, 'userId:', req.userId, 'search:', JSON.stringify(search), 'page:', page);
   }
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
@@ -432,6 +433,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       _count: { status: true },
     }),
   ]);
+
+  if (search) {
+    console.log('[SEARCH] result: total =', total, 'data.length =', dataRaw.length);
+  }
 
   // Объединяем заявки из importedRequests и visitRequests
   const data = dataRaw.map(v => {
