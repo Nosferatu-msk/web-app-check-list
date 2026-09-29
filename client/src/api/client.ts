@@ -22,7 +22,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers, cache: 'no-store' });
   if (res.status === 401 && token) {
     // Try refresh
     const refresh = localStorage.getItem('refreshToken');
