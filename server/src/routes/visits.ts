@@ -405,7 +405,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       ...(where.AND || []),
       { addressId: { in: matchedIds } },
     ];
-    console.log('[SEARCH] WHERE:', JSON.stringify(where, null, 2));
   }
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
@@ -440,10 +439,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       _count: { status: true },
     }),
   ]);
-
-  if (search) {
-    console.log('[SEARCH] result: total =', total, 'data.length =', dataRaw.length);
-  }
 
   // Объединяем заявки из importedRequests и visitRequests
   const data = dataRaw.map(v => {
