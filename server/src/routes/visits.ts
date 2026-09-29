@@ -397,8 +397,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       `%${search}%`
     );
     const matchedIds = matchedAddresses.map(a => a.id);
-    where.addressId = { in: matchedIds };
-    console.log('[SEARCH] role:', req.userRole, 'userId:', req.userId, 'search:', JSON.stringify(search), 'matched:', matchedIds.length, 'page:', page);
+    where.AND = [
+      ...(where.AND || []),
+      { addressId: { in: matchedIds } },
+    ];
+    console.log('[SEARCH] role:', req.userRole, 'userId:', req.userId, 'search:', JSON.stringify(search), 'matched:', matchedIds.length, 'ids:', matchedIds, 'page:', page);
   }
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
