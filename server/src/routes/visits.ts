@@ -391,14 +391,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     where.status = { not: 'awaiting_assignment' };
   }
   if (search) {
-    where.AND = [
-      ...(where.AND || []),
-      { OR: [
-        { address: { fullAddress: { contains: search, mode: 'insensitive' } } },
-        { address: { objectCode: { contains: search, mode: 'insensitive' } } },
-      ]}
-    ];
-    console.log('[SEARCH] role:', req.userRole, 'userId:', req.userId, 'search:', JSON.stringify(search), 'page:', page);
+    // Используем сырой SQL для поиска — Prisma contains с mode: insensitive работает некорректно
+    const matchedAddresses = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM addresses WHERE full_address ILIKE $1 OR object_code ILIKE $1`,
+      `%${search}%`
+    );
+    const matchedIds = matchedAddresses.map(a => a.id);
+    where.addressId = { in: matchedIds };
+    console.log('[SEARCH] role:', req.userRole, 'userId:', req.userId, 'search:', JSON.stringify(search), 'matched:', matchedIds.length, 'page:', page);
   }
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
