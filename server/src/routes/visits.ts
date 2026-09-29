@@ -364,19 +364,23 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const contractIds = tmContracts.map(c => c.id);
 
     const engineerIds = await getTmEngineerIds(req.userId!);
-    if (req.query.user_id && engineerIds.includes(req.query.user_id as string)) {
-      where.userId = req.query.user_id;
-    } else {
-      where.userId = { in: engineerIds };
-    }
     // ТМ видит визиты по своим договорам ИЛИ визиты своих инженеров
-    where.AND = [
-      ...(where.AND || []),
-      { OR: [
-        { contractId: { in: contractIds } },
-        { userId: { in: engineerIds } },
-      ]},
-    ];
+    if (req.query.user_id && engineerIds.includes(req.query.user_id as string)) {
+      // Фильтр по конкретному инженеру
+      where.AND = [
+        ...(where.AND || []),
+        { userId: req.query.user_id },
+      ];
+    } else {
+      // Все визиты ТМ: по договорам или по инженерам
+      where.AND = [
+        ...(where.AND || []),
+        { OR: [
+          { contractId: { in: contractIds } },
+          { userId: { in: engineerIds } },
+        ]},
+      ];
+    }
   } else if (req.userRole === 'admin') {
     if (req.query.user_id) where.userId = req.query.user_id;
   }
