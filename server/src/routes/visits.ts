@@ -401,7 +401,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       ...(where.AND || []),
       { addressId: { in: matchedIds } },
     ];
-    console.log('[SEARCH] role:', req.userRole, 'userId:', req.userId, 'search:', JSON.stringify(search), 'matched:', matchedIds.length, 'ids:', matchedIds, 'page:', page);
+    console.log('[SEARCH] WHERE:', JSON.stringify(where, null, 2));
   }
   if (dateFrom) where.dateStart = { ...where.dateStart, gte: new Date(dateFrom) };
   if (dateTo) where.dateStart = { ...where.dateStart, lte: new Date(dateTo) };
