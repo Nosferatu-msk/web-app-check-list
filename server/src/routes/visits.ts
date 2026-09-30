@@ -1097,10 +1097,17 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
       if (roomType) syncData.roomTypeCode = roomType.code;
     }
     if (Object.keys(syncData).length > 0) {
-      await prisma.objectEquipment.update({
-        where: { id: task.objectEquipmentId },
-        data: syncData,
-      });
+      try {
+        await prisma.objectEquipment.update({
+          where: { id: task.objectEquipmentId },
+          data: syncData,
+        });
+      } catch (syncError: any) {
+        // Игнорируем конфликт уникальности — может возникнуть при дублирующихся serialNumber
+        if (syncError?.code !== 'P2002') {
+          throw syncError;
+        }
+      }
     }
   }
 
