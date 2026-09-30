@@ -223,7 +223,6 @@ router.get('/users', async (req: AuthRequest, res: Response) => {
     where,
     select: { id: true, fullName: true, email: true, role: true, isActive: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true, createdAt: true },
     orderBy: { fullName: 'asc' },
-    take: 50,
   });
   res.json(data);
 });
