@@ -53,9 +53,8 @@ const getModelError = (value: string): string | null => {
     return 'Модель: указан некорректный ответ';
   }
   const hasLetter = /\p{L}/u.test(trimmed);
-  const hasDigit = /\p{N}/u.test(trimmed);
-  if (!hasLetter || !hasDigit) {
-    return 'Модель должна содержать и буквы, и цифры (например, Меркурий 230, SC-125A)';
+  if (!hasLetter) {
+    return 'Модель должна содержать буквы (например, Меркурий 230, SC-125A)';
   }
   return null;
 };

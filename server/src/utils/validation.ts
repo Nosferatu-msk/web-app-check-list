@@ -53,17 +53,15 @@ export function containsPlaceholder(value: unknown): boolean {
 }
 
 /**
- * Проверяет, что модель содержит и буквы, и цифры.
- * Реальные модели оборудования почти всегда — комбинация (MXM80RV, Меркурий 230, SC-125A).
- * Только буквы или только цифры — признак некорректного заполнения.
+ * Проверяет, что модель содержит буквы.
+ * Реальные модели оборудования — комбинация букв и цифр (MXM80RV, Меркурий 230, SC-125A)
+ * или только буквы. Только цифры — признак некорректного заполнения.
  */
 export function isModelFormatValid(value: unknown): boolean {
   if (!value) return false;
   const str = String(value).trim();
   if (str.length === 0) return false;
-  const hasLetter = /\p{L}/u.test(str);
-  const hasDigit = /\p{N}/u.test(str);
-  return hasLetter && hasDigit;
+  return /\p{L}/u.test(str);
 }
 
 /**
@@ -218,9 +216,9 @@ export function validateTaskFields(fields: {
     errors.push({ field: 'serialNumber', message: 'Серийный номер: указан некорректный ответ' });
   }
 
-  // Модель должна содержать и буквы, и цифры
+  // Модель должна содержать буквы
   if (fields.model && startsWithValidChar(fields.model) && !containsPlaceholder(fields.model) && !isModelFormatValid(fields.model)) {
-    errors.push({ field: 'model', message: 'Модель должна содержать и буквы, и цифры (например, Меркурий 230, SC-125A)' });
+    errors.push({ field: 'model', message: 'Модель должна содержать буквы (например, Меркурий 230, SC-125A)' });
   }
 
   // Детектор копипаста: все три поля не должны быть одинаковыми
