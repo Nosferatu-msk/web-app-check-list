@@ -582,7 +582,12 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
     if (matchingTask) {
       await prisma.task.update({
         where: { id: matchingTask.id },
-        data: { objectEquipmentId: created.id },
+        data: {
+          objectEquipmentId: created.id,
+          ...(proposal.brand ? { brand: proposal.brand } : {}),
+          ...(proposal.model ? { model: proposal.model } : {}),
+          ...(serialNumber ? { serialNumber } : {}),
+        },
       });
     }
   }
@@ -823,7 +828,12 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
           if (matchingTask) {
             await prisma.task.update({
               where: { id: matchingTask.id },
-              data: { objectEquipmentId: created.id },
+              data: {
+                objectEquipmentId: created.id,
+                ...(proposal.brand ? { brand: proposal.brand } : {}),
+                ...(proposal.model ? { model: proposal.model } : {}),
+                ...(serialNumber ? { serialNumber } : {}),
+              },
             });
           }
         }
