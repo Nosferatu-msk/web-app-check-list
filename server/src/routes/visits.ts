@@ -627,13 +627,14 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
-  const existing = await prisma.visit.findUnique({ 
+  const existing = await prisma.visit.findUnique({
     where: { id: req.params.id as string },
     include: {
       tasks: {
         include: {
           equipmentType: { select: { photosRequired: true, name: true, code: true } },
           photos: { select: { id: true } },
+          equipmentItems: { include: { photos: { select: { id: true } } } },
         },
       },
     },
@@ -641,10 +642,12 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
-  // Проверка обязательных фото
+  // Проверка обязательных фото (учитываем фото через equipmentItems для group_climate)
   const tasksMissingPhotos = existing.tasks.filter(task => {
     const required = task.equipmentType?.photosRequired || 0;
-    const actual = task.photos?.length || 0;
+    const directPhotos = task.photos?.length || 0;
+    const itemPhotos = task.equipmentItems?.reduce((sum, item) => sum + (item.photos?.length || 0), 0) || 0;
+    const actual = Math.max(directPhotos, itemPhotos);
     return required > 0 && actual < required;
   });
 
@@ -652,12 +655,16 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
     const taskNames = tasksMissingPhotos.map(t => t.equipmentType?.name || 'оборудование').join(', ');
     res.status(400).json({
       error: `Нельзя завершить визит: для оборудования (${taskNames}) не загружены обязательные фото`,
-      tasksMissingPhotos: tasksMissingPhotos.map(t => ({
-        taskId: t.id,
-        equipmentName: t.equipmentType?.name,
-        required: t.equipmentType?.photosRequired,
-        actual: t.photos?.length || 0,
-      })),
+      tasksMissingPhotos: tasksMissingPhotos.map(t => {
+        const directPhotos = t.photos?.length || 0;
+        const itemPhotos = t.equipmentItems?.reduce((sum, item) => sum + (item.photos?.length || 0), 0) || 0;
+        return {
+          taskId: t.id,
+          equipmentName: t.equipmentType?.name,
+          required: t.equipmentType?.photosRequired,
+          actual: Math.max(directPhotos, itemPhotos),
+        };
+      }),
     });
     return;
   }
@@ -682,11 +689,10 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
     if (task.status === 'completed' || task.status === 'in_progress') {
       const eqCode = task.equipmentType?.code || '';
       const paramErrors = validateTaskParameters(task.parameters as Record<string, any> | null, eqCode);
-      const fieldErrs = validateTaskFields({
-        brand: task.brand,
-        model: task.model,
-        serialNumber: task.serialNumber,
-      });
+      // Для group_climate задач brand/model/serial хранятся в equipmentItems, не в задаче
+      const fieldErrs = task.taskType === 'group_climate'
+        ? []
+        : validateTaskFields({ brand: task.brand, model: task.model, serialNumber: task.serialNumber });
       const allErrors = [...paramErrors.map(e => e.message), ...fieldErrs.map(e => e.message)];
       if (allErrors.length > 0) {
         tasksWithInvalidParams.push({
