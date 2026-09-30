@@ -61,21 +61,18 @@ export const REQUIRED_PARAMS_CONFIG: Record<string, RequiredParam[]> = {
   // ─── Климатическое оборудование (сплит-системы) ────────────
   splitvn: [
     { key: 'room_temperature', type: 'number', label: 'Температура помещения' },
-    { key: 'cooling_capacity_kw', type: 'number', label: 'Холодопроизводительность, кВт' },
   ],
   splitnar: [
     { key: 'outdoor_temperature', type: 'number', label: 'Температура наружного воздуха' },
   ],
   mssvn: [
     { key: 'room_temperature', type: 'number', label: 'Температура помещения' },
-    { key: 'cooling_capacity_kw', type: 'number', label: 'Холодопроизводительность, кВт' },
   ],
   mssnar: [
     { key: 'outdoor_temperature', type: 'number', label: 'Температура наружного воздуха' },
   ],
   vrv_vn: [
     { key: 'room_temperature', type: 'number', label: 'Температура помещения' },
-    { key: 'cooling_capacity_kw', type: 'number', label: 'Холодопроизводительность, кВт' },
   ],
   vrv_nar: [
     { key: 'outdoor_temperature', type: 'number', label: 'Температура наружного воздуха' },
@@ -101,7 +98,6 @@ export const REQUIRED_PARAMS_CONFIG: Record<string, RequiredParam[]> = {
   // ─── Мобильный кондиционер ─────────────────────────────────
   cond_mobile: [
     { key: 'room_temperature', type: 'number', label: 'Температура помещения' },
-    { key: 'cooling_capacity_kw', type: 'number', label: 'Холодопроизводительность, кВт' },
   ],
 
   // ─── ИБП ────────────────────────────────────────────────────

@@ -25,7 +25,6 @@ const CONCLUSION_OPTIONS = [
 // Параметры для групповой задачи климата (внутренние блоки)
 const GROUP_CLIMATE_PARAMS = [
   { key: 'room_temperature', label: 'Температура помещения на уровне 1,2м от пола, °C', type: 'number' as const, required: true },
-  { key: 'cooling_capacity_kw', label: 'Холодопроизводительность, кВт', type: 'number' as const, required: true },
 ];
 
 // Параметры для групповой задачи наружных блоков

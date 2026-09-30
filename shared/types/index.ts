@@ -389,6 +389,7 @@ export interface ObjectEquipment {
   model?: string;
   serialNumber?: string;
   locationDescription?: string;
+  coolingCapacityKw?: number;
   isOutdoorUnit: boolean;
   isActive: boolean;
   confirmationStatus: ConfirmationStatus;

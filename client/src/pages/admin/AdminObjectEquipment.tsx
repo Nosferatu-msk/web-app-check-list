@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Space, App, Popconfirm, Tag, Divider, List, AutoComplete } from 'antd';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, Space, App, Popconfirm, Tag, Divider, List, AutoComplete } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, WarningOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
 
@@ -130,6 +130,7 @@ export default function AdminObjectEquipment() {
         { title: 'Модель', dataIndex: 'model' },
         { title: 'Серийный №', dataIndex: 'serialNumber' },
         { title: 'Местоположение', dataIndex: 'locationDescription', ellipsis: true },
+        { title: 'Холодопроизв., кВт', dataIndex: 'coolingCapacityKw', render: (v: number | null) => v != null ? v : '—' },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (
           <Space>
             <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
@@ -239,6 +240,7 @@ export default function AdminObjectEquipment() {
           </Form.Item>
           <Form.Item name="serialNumber" label="Серийный номер"><Input /></Form.Item>
           <Form.Item name="locationDescription" label="Местоположение"><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="coolingCapacityKw" label="Холодопроизводительность, кВт"><InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="Не указано" /></Form.Item>
         </Form>
       </Modal>
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Form, Input, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, Segmented, List, Empty, AutoComplete, Dropdown, Steps, Card } from 'antd';
+import { Form, Input, InputNumber, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, Segmented, List, Empty, AutoComplete, Dropdown, Steps, Card } from 'antd';
 import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -552,6 +552,7 @@ export default function VisitPage() {
           model: values.model || '',
           serialNumber: values.serialNumber || '',
           locationDescription: values.comment || '',
+          coolingCapacityKw: values.coolingCapacityKw ?? null,
           taskId: createdTaskId,
         });
         message.success('Предложение отправлено администратору');
@@ -1399,6 +1400,20 @@ export default function VisitPage() {
                           placeholder={isMeter ? 'Введите серийный номер' : 'Обязательно для счётчиков, иначе сгенерируется автоматически'}
                           style={isMeter ? { borderColor: undefined } : undefined}
                         />
+                      </Form.Item>
+                    );
+                  }}
+                </Form.Item>
+                <Form.Item noStyle dependencies={['equipmentTypeId']}>
+                  {({ getFieldValue }) => {
+                    const eqTypeId = getFieldValue('equipmentTypeId');
+                    const eqType = equipmentTypes.find(e => e.id === eqTypeId);
+                    const CLIMATE_CODES = ['splitvn', 'mssvn', 'vrv_vn', 'cond_mobile'];
+                    const showCooling = eqType && CLIMATE_CODES.includes(eqType.code);
+                    if (!showCooling) return null;
+                    return (
+                      <Form.Item name="coolingCapacityKw" label="Холодопроизводительность, кВт">
+                        <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="Не указано" />
                       </Form.Item>
                     );
                   }}

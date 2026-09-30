@@ -400,6 +400,7 @@ const objectEquipmentSchema = z.object({
   model: z.string().optional().or(z.literal('')),
   serialNumber: z.string().nullish(),
   locationDescription: z.string().nullish(),
+  coolingCapacityKw: z.number().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

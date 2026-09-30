@@ -444,6 +444,7 @@ model ObjectEquipment {
   model               String?
   serialNumber        String?   @map("serial_number")
   locationDescription String?   @map("location_description")
+  coolingCapacityKw   Float?    @map("cooling_capacity_kw")
   isOutdoorUnit       Boolean   @default(false) @map("is_outdoor_unit")
   isActive            Boolean   @default(true) @map("is_active")
   roomConfirmedAt     DateTime? @map("room_confirmed_at")
@@ -480,6 +481,7 @@ model EquipmentProposal {
   model               String?
   serialNumber        String?   @map("serial_number")
   locationDescription String?   @map("location_description")
+  coolingCapacityKw   Float?    @map("cooling_capacity_kw")
   proposedById        String    @map("proposed_by_id")
   proposedBy          User      @relation("proposedBy", fields: [proposedById], references: [id])
   status              String    @default("pending")

@@ -140,7 +140,6 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
     { key: 'filter_condition', label: 'Состояние фильтра', type: 'select', options: [{ label: 'Чистый', value: 'clean' }, { label: 'Необходима очистка', value: 'needs_cleaning' }], defaultValue: 'needs_cleaning' },
     { key: 'drain_flush_needed', label: 'Необходимость внеплановой промывки дренажной системы', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'refrigerant_leaks', label: 'Наличие утечек хладагента', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
-    { key: 'cooling_capacity_kw', label: 'Холодопроизводительность, кВт', type: 'number', required: true },
   ],
   splitnar: [
     { key: 'operability', label: 'Работоспособность', type: 'select', options: SATISFACTORY_OPTIONS, defaultValue: 'satisfactory' },
@@ -156,7 +155,6 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
     { key: 'filter_condition', label: 'Состояние фильтра', type: 'select', options: [{ label: 'Чистый', value: 'clean' }, { label: 'Необходима очистка', value: 'needs_cleaning' }], defaultValue: 'needs_cleaning' },
     { key: 'drain_flush_needed', label: 'Необходимость внеплановой промывки дренажной системы', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'refrigerant_leaks', label: 'Наличие утечек хладагента', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
-    { key: 'cooling_capacity_kw', label: 'Холодопроизводительность, кВт', type: 'number', required: true },
   ],
   mssnar: [
     { key: 'operability', label: 'Работоспособность', type: 'select', options: SATISFACTORY_OPTIONS, defaultValue: 'satisfactory' },
@@ -172,7 +170,6 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
     { key: 'filter_condition', label: 'Состояние фильтра', type: 'select', options: [{ label: 'Чистый', value: 'clean' }, { label: 'Необходима очистка', value: 'needs_cleaning' }], defaultValue: 'needs_cleaning' },
     { key: 'drain_flush_needed', label: 'Необходимость внеплановой промывки дренажной системы', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'refrigerant_leaks', label: 'Наличие утечек хладагента', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
-    { key: 'cooling_capacity_kw', label: 'Холодопроизводительность, кВт', type: 'number', required: true },
   ],
   vrv_nar: [
     { key: 'operability', label: 'Работоспособность', type: 'select', options: SATISFACTORY_OPTIONS, defaultValue: 'satisfactory' },
@@ -357,7 +354,6 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
     { key: 'drain_flush_needed', label: 'Необходимость промывки дренажной системы', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'duct_condition', label: 'Состояние гофрированного воздуховода', type: 'select', options: [{ label: 'Целый, герметичный', value: 'ok' }, { label: 'Повреждён/негерметичен', value: 'damaged' }], defaultValue: 'ok' },
     { key: 'remote_control', label: 'Пульт ДУ исправен', type: 'select', options: BOOL_OPTIONS, defaultValue: true },
-    { key: 'cooling_capacity_kw', label: 'Холодопроизводительность, кВт', type: 'number', required: true },
   ],
   barrier_roller: [
     { key: 'unit_present', label: 'Наличие оборудования', type: 'select', options: BOOL_OPTIONS, defaultValue: true },

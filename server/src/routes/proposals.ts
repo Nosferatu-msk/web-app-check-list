@@ -60,6 +60,7 @@ const createProposalSchema = z.object({
   model: z.string().optional().or(z.literal('')),
   serialNumber: z.string().optional(),
   locationDescription: z.string().optional(),
+  coolingCapacityKw: z.number().nullable().optional(),
   taskId: z.string().uuid().optional(),
   newManufacturer: z.object({
     name: z.string().min(1),
@@ -72,7 +73,7 @@ const createProposalSchema = z.object({
 });
 
 router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: Response) => {
-  const { addressId, equipmentTypeCode, roomTypeCode, brand, model, serialNumber, locationDescription, taskId, newManufacturer, newModel } = req.body;
+  const { addressId, equipmentTypeCode, roomTypeCode, brand, model, serialNumber, locationDescription, coolingCapacityKw, taskId, newManufacturer, newModel } = req.body;
 
   // Обработка нового производителя
   if (newManufacturer) {
@@ -125,6 +126,7 @@ router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: R
       model: model || null,
       serialNumber: serialNumber || null,
       locationDescription: locationDescription || null,
+      coolingCapacityKw: coolingCapacityKw ?? null,
       proposedById: req.userId!,
       status: 'pending',
       requestType: 'new_equipment',
@@ -520,6 +522,7 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
           model: proposal.model,
           serialNumber,
           locationDescription: proposal.locationDescription,
+          coolingCapacityKw: proposal.coolingCapacityKw,
           confirmationStatus: 'confirmed',
           createdBy: proposal.proposedById,
         },
@@ -766,6 +769,7 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
                 model: proposal.model,
                 serialNumber,
                 locationDescription: proposal.locationDescription,
+                coolingCapacityKw: proposal.coolingCapacityKw,
                 confirmationStatus: 'confirmed',
                 createdBy: proposal.proposedById,
               },
