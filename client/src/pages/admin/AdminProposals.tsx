@@ -38,6 +38,7 @@ export default function AdminProposals() {
   const [rejectReason, setRejectReason] = useState('');
   const [editingSerialId, setEditingSerialId] = useState<string | null>(null);
   const [editSerialValue, setEditSerialValue] = useState('');
+  const [editingField, setEditingField] = useState<{ proposalId: string; field: 'brand' | 'model'; value: string } | null>(null);
   const [meterPhotos, setMeterPhotos] = useState<any[]>([]);
   const [meterPhotosModal, setMeterPhotosModal] = useState<string | null>(null);
   const [meterPhotosLoading, setMeterPhotosLoading] = useState(false);
@@ -127,6 +128,18 @@ export default function AdminProposals() {
       message.success('Серийный номер обновлён');
       setEditingSerialId(null);
       setEditSerialValue('');
+      load();
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка обновления');
+    }
+  };
+
+  const handleSaveField = async () => {
+    if (!editingField) return;
+    try {
+      await api.updateProposal(editingField.proposalId, { [editingField.field]: editingField.value || null });
+      message.success(editingField.field === 'brand' ? 'Изготовитель обновлён' : 'Модель обновлена');
+      setEditingField(null);
       load();
     } catch (err: any) {
       message.error(err.message || 'Ошибка обновления');
@@ -258,20 +271,66 @@ export default function AdminProposals() {
             </div>
 
             {/* Производитель */}
-            {r.brand && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                <TagOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
-                <span style={{ color: '#555' }}>{r.brand}</span>
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+              <TagOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
+              {editingField?.proposalId === r.id && editingField?.field === 'brand' ? (
+                <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+                  <Input
+                    size="small"
+                    value={editingField.value}
+                    onChange={(e) => setEditingField({ proposalId: r.id, field: 'brand', value: e.target.value })}
+                    placeholder="Изготовитель"
+                    autoFocus
+                  />
+                  <Button size="small" type="primary" icon={<CheckOutlined />} onClick={handleSaveField} />
+                  <Button size="small" icon={<CloseOutlined />} onClick={() => setEditingField(null)} />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                  <span style={{ color: r.brand ? '#555' : '#ccc' }}>{r.brand || 'не указан'}</span>
+                  <Tooltip title="Редактировать изготовителя">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined style={{ fontSize: 12 }} />}
+                      onClick={() => setEditingField({ proposalId: r.id, field: 'brand', value: r.brand || '' })}
+                      style={{ padding: 0, minWidth: 'auto', color: '#888' }}
+                    />
+                  </Tooltip>
+                </div>
+              )}
+            </div>
 
             {/* Модель */}
-            {r.model && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                <BarcodeOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
-                <span style={{ color: '#555' }}>{r.model}</span>
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+              <BarcodeOutlined style={{ color: '#888', marginTop: 2, flexShrink: 0 }} />
+              {editingField?.proposalId === r.id && editingField?.field === 'model' ? (
+                <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+                  <Input
+                    size="small"
+                    value={editingField.value}
+                    onChange={(e) => setEditingField({ proposalId: r.id, field: 'model', value: e.target.value })}
+                    placeholder="Модель"
+                    autoFocus
+                  />
+                  <Button size="small" type="primary" icon={<CheckOutlined />} onClick={handleSaveField} />
+                  <Button size="small" icon={<CloseOutlined />} onClick={() => setEditingField(null)} />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                  <span style={{ color: r.model ? '#555' : '#ccc' }}>{r.model || 'не указана'}</span>
+                  <Tooltip title="Редактировать модель">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined style={{ fontSize: 12 }} />}
+                      onClick={() => setEditingField({ proposalId: r.id, field: 'model', value: r.model || '' })}
+                      style={{ padding: 0, minWidth: 'auto', color: '#888' }}
+                    />
+                  </Tooltip>
+                </div>
+              )}
+            </div>
 
             {/* Серийный номер — всегда показываем */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
