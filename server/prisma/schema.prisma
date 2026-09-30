@@ -116,6 +116,8 @@ model User {
   mtrTmEngineersAsTm       MtrTmEngineer[]        @relation("MtrTmEngineerTmRelation")
   mtrEngineersAsTm         MtrTmEngineer[]        @relation("MtrTmEngineerEngineerRelation")
   reviewedAnomalies        VisitAnomaly[]         @relation("AnomalyReviewer")
+  tmTeamAsMember           TmTeamMember?          @relation("TmTeamMemberRelation")
+  tmTeamAsLead             TmTeamMember[]         @relation("TmTeamLeadRelation")
 
   @@map("users")
 }
@@ -382,6 +384,19 @@ model TmEngineer {
   @@index([tmId])
   @@index([engineerId])
   @@map("tm_engineers")
+}
+
+model TmTeamMember {
+  id         String   @id @default(uuid())
+  memberTmId String   @unique @map("member_tm_id")
+  leadTmId   String   @map("lead_tm_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  memberTm User @relation("TmTeamMemberRelation", fields: [memberTmId], references: [id], onDelete: Cascade)
+  leadTm   User @relation("TmTeamLeadRelation", fields: [leadTmId], references: [id], onDelete: Cascade)
+
+  @@index([leadTmId])
+  @@map("tm_team_member")
 }
 
 model Contract {

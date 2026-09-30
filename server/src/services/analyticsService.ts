@@ -1,6 +1,7 @@
 import prisma from '../models/prisma.js';
 import fs from 'fs';
 import path from 'path';
+import { getTeamEngineerIds } from '../utils/tmTeam.js';
 
 /**
  * Получить список визитов с отклонениями.
@@ -23,11 +24,7 @@ export async function getAnalyticsVisits(params: {
   // Определяем список engineerId для ТМ
   let allowedEngineerIds: string[] | null = null;
   if (role === 'tm') {
-    const tmEngineers = await prisma.tmEngineer.findMany({
-      where: { tmId: userId },
-      select: { engineerId: true },
-    });
-    allowedEngineerIds = tmEngineers.map(te => te.engineerId);
+    allowedEngineerIds = await getTeamEngineerIds(userId);
   }
 
   // Период
@@ -200,10 +197,8 @@ export async function getAnalyticsVisitDetails(visitId: string, userId: string, 
 
   // Проверка доступа для ТМ
   if (role === 'tm') {
-    const tmEngineer = await prisma.tmEngineer.findFirst({
-      where: { tmId: userId, engineerId: visit.userId || undefined },
-    });
-    if (!tmEngineer) return null;
+    const teamEngineerIds = await getTeamEngineerIds(userId);
+    if (!visit.userId || !teamEngineerIds.includes(visit.userId)) return null;
   }
 
   // Собираем все фото визита

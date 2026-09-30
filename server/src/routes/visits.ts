@@ -18,10 +18,7 @@ import {
 const router = Router();
 router.use(authMiddleware);
 
-async function getTmEngineerIds(tmId: string): Promise<string[]> {
-  const assignments = await prisma.tmEngineer.findMany({ where: { tmId }, select: { engineerId: true } });
-  return assignments.map(a => a.engineerId);
-}
+import { getTeamEngineerIds } from '../utils/tmTeam.js';
 
 async function canAccessVisit(visitUserId: string | null, req: AuthRequest, visitId?: string): Promise<boolean> {
   if (req.userRole === 'admin') return true;
@@ -38,11 +35,11 @@ async function canAccessVisit(visitUserId: string | null, req: AuthRequest, visi
     if (ve) return true;
   }
   if (req.userRole === 'tm') {
-    const engineerIds = await getTmEngineerIds(req.userId!);
+    const engineerIds = await getTeamEngineerIds(req.userId!);
     if (engineerIds.includes(visitUserId)) return true;
     // ТМ также имеет доступ, если его инженеры назначены через visitEngineers
     if (visitId) {
-      const tmEngineerIds = await getTmEngineerIds(req.userId!);
+      const tmEngineerIds = await getTeamEngineerIds(req.userId!);
       const ve = await prisma.visitEngineer.findFirst({
         where: { visitId, engineerId: { in: tmEngineerIds } },
       });
@@ -363,7 +360,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     });
     const contractIds = tmContracts.map(c => c.id);
 
-    const engineerIds = await getTmEngineerIds(req.userId!);
+    const engineerIds = await getTeamEngineerIds(req.userId!);
     // ТМ видит визиты по своим договорам ИЛИ визиты своих инженеров
     if (req.query.user_id && engineerIds.includes(req.query.user_id as string)) {
       // Фильтр по конкретному инженеру
@@ -819,7 +816,7 @@ router.post('/:id/reassign', validate(reassignSchema), async (req: AuthRequest, 
   }
 
   if (req.userRole === 'tm') {
-    const engineerIds = await getTmEngineerIds(req.userId!);
+    const engineerIds = await getTeamEngineerIds(req.userId!);
     if (!engineerIds.includes(newUserId)) {
       res.status(403).json({ error: 'Инженер не в вашей группе' });
       return;

@@ -120,10 +120,7 @@ router.post('/:id/report/send', async (req: AuthRequest, res: Response) => {
 
 // ─── Helpers ────────────────────────────────────────────────────
 
-async function getTmEngineerIds(tmId: string): Promise<string[]> {
-  const assignments = await prisma.tmEngineer.findMany({ where: { tmId }, select: { engineerId: true } });
-  return assignments.map(a => a.engineerId);
-}
+import { getTeamEngineerIds } from '../utils/tmTeam.js';
 
 const actScansDir = path.resolve('./uploads/act-scans');
 if (!fs.existsSync(actScansDir)) fs.mkdirSync(actScansDir, { recursive: true });
@@ -314,7 +311,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       }
     }
     if (req.userRole === 'tm') {
-      const engineerIds = await getTmEngineerIds(req.userId!);
+      const engineerIds = await getTeamEngineerIds(req.userId!);
       where.userId = { in: engineerIds };
     }
     if (engineerId) {

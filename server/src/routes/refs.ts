@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import prisma from '../models/prisma.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { generateSerialNumber, isMeterEquipment } from '../utils/serialNumber.js';
+import { getTeamEngineerIds } from '../utils/tmTeam.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -253,11 +254,17 @@ router.get('/engineers', async (req: AuthRequest, res: Response) => {
     });
     res.json(data);
   } else if (role === 'tm') {
-    const assignments = await prisma.tmEngineer.findMany({
-      where: { tmId: req.userId as string },
-      select: { engineer: { select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } } },
+    const engineerIds = await getTeamEngineerIds(req.userId as string);
+    if (engineerIds.length === 0) {
+      res.json([]);
+      return;
+    }
+    const data = await prisma.user.findMany({
+      where: { id: { in: engineerIds }, isActive: true, role: 'engineer' },
+      select: { id: true, fullName: true, email: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
+      orderBy: { fullName: 'asc' },
     });
-    res.json(assignments.map(a => a.engineer));
+    res.json(data);
   } else {
     res.json([]);
   }

@@ -5,6 +5,7 @@ import prisma from '../models/prisma.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/audit.js';
 import { parseRequestsExcel, importRequests, validateRequestsFile } from '../services/requestImport.js';
+import { getTeamEngineerIds } from '../utils/tmTeam.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -273,11 +274,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       where.contractId = { in: contractIds };
 
       // ТМ видит только заявки, назначенные на своих инженеров (или неназначенные)
-      const tmEngineers = await prisma.tmEngineer.findMany({
-        where: { tmId: req.userId! },
-        select: { engineerId: true },
-      });
-      const tmEngineerIds = tmEngineers.map(te => te.engineerId);
+      const tmEngineerIds = await getTeamEngineerIds(req.userId!);
       if (tmEngineerIds.length > 0) {
         where.visit = {
           ...(where.visit || {}),

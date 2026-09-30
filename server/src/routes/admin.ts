@@ -377,6 +377,69 @@ router.delete('/tm-engineers/:id', async (req: AuthRequest, res: Response) => {
   res.json({ message: 'Удалено' });
 });
 
+// ─── TM TEAM (команды ТМ) ────────────────────────────────────
+const tmTeamSchema = z.object({
+  memberTmId: z.string().uuid(),
+  leadTmId: z.string().uuid(),
+});
+
+router.get('/tm-team', async (req: AuthRequest, res: Response) => {
+  const data = await prisma.tmTeamMember.findMany({
+    include: {
+      memberTm: { select: { id: true, fullName: true, email: true } },
+      leadTm: { select: { id: true, fullName: true, email: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(data);
+});
+
+router.post('/tm-team', validate(tmTeamSchema), async (req: AuthRequest, res: Response) => {
+  const { memberTmId, leadTmId } = req.body;
+
+  if (memberTmId === leadTmId) {
+    res.status(400).json({ error: 'ТМ не может быть членом своей команды' });
+    return;
+  }
+
+  const [member, lead] = await Promise.all([
+    prisma.user.findUnique({ where: { id: memberTmId } }),
+    prisma.user.findUnique({ where: { id: leadTmId } }),
+  ]);
+
+  if (!member || member.role !== 'tm') {
+    res.status(400).json({ error: 'Пользователь не является ТМ' });
+    return;
+  }
+  if (!lead || lead.role !== 'tm') {
+    res.status(400).json({ error: 'Лидер не является ТМ' });
+    return;
+  }
+
+  const existing = await prisma.tmTeamMember.findUnique({ where: { memberTmId } });
+  if (existing) {
+    res.status(400).json({ error: 'ТМ уже состоит в команде' });
+    return;
+  }
+
+  const item = await prisma.tmTeamMember.create({
+    data: { memberTmId, leadTmId },
+    include: {
+      memberTm: { select: { id: true, fullName: true, email: true } },
+      leadTm: { select: { id: true, fullName: true, email: true } },
+    },
+  });
+
+  await logAudit({ userId: req.userId, action: 'create', entityType: 'tm_team_member', entityId: item.id, newValue: { memberTmId, leadTmId }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.status(201).json(item);
+});
+
+router.delete('/tm-team/:memberTmId', async (req: AuthRequest, res: Response) => {
+  await prisma.tmTeamMember.delete({ where: { memberTmId: req.params.memberTmId as string } });
+  await logAudit({ userId: req.userId, action: 'delete', entityType: 'tm_team_member', entityId: req.params.memberTmId as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  res.json({ message: 'Удалено' });
+});
+
 // ─── IMPORT LOGS ─────────────────────────────────────────────
 router.get('/import-logs', async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
