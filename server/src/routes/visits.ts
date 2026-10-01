@@ -872,6 +872,35 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
   if (data.roomTypeId === '') data.roomTypeId = undefined;
   if (data.objectEquipmentId === '') data.objectEquipmentId = undefined;
 
+  // Автопривязка к оборудованию объекта, если objectEquipmentId не передан
+  if (!data.objectEquipmentId && data.taskType !== 'group_climate') {
+    const existingTaskEquipIds = (await prisma.task.findMany({
+      where: { visitId },
+      select: { objectEquipmentId: true },
+    })).map(t => t.objectEquipmentId).filter((id): id is string => id !== null);
+
+    const eqTypeCode = (await prisma.equipmentType.findUnique({
+      where: { id: data.equipmentTypeId },
+      select: { code: true },
+    }))?.code;
+
+    if (eqTypeCode) {
+      const freeEquipment = await prisma.objectEquipment.findFirst({
+        where: {
+          addressId: visit.addressId,
+          equipmentTypeCode: eqTypeCode,
+          isActive: true,
+          id: existingTaskEquipIds.length > 0 ? { notIn: existingTaskEquipIds } : undefined,
+        },
+        select: { id: true },
+      });
+
+      if (freeEquipment) {
+        data.objectEquipmentId = freeEquipment.id;
+      }
+    }
+  }
+
   // Валидация: brand, model, serialNumber не могут начинаться со спецсимволов/пробелов
   const createFieldErrors = validateTaskFields({
     brand: data.brand,
