@@ -611,8 +611,8 @@ router.get('/metrics', async (req: AuthRequest, res: Response) => {
       (SELECT COUNT(*) FROM yesterday_users yu WHERE EXISTS (SELECT 1 FROM today_users tu WHERE tu.user_id = yu.user_id)) as both_days
   `;
 
-  const retention = retentionData[0]?.yesterday_only > 0
-    ? Math.round((retentionData[0].both_days / retentionData[0].yesterday_only) * 100)
+  const retention = Number(retentionData[0]?.yesterday_only || 0) > 0
+    ? Math.round((Number(retentionData[0].both_days) / Number(retentionData[0].yesterday_only)) * 100)
     : 0;
 
   // По ролям — DAU за период
