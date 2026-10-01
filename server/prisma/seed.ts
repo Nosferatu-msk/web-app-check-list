@@ -429,6 +429,7 @@ async function main() {
     { name: 'F.G.Wilson', country: 'Великобритания' },
     { name: 'APC', country: 'США' },
     { name: 'KONE', country: 'Финляндия' },
+    { name: 'ЦРКСП', country: 'Россия' },
   ];
 
   for (const m of manufacturers) {
@@ -451,6 +452,7 @@ async function main() {
     { eqCode: 'schetchik_gvs', mfr: 'Тайпит', model: 'НЕВА 103 1SO' },
     { eqCode: 'rsch', mfr: 'ABB', model: 'GS420' },
     { eqCode: 'rsch', mfr: 'Schneider Electric', model: 'Prisma iPM' },
+    { eqCode: 'rsch', mfr: 'ЦРКСП', model: 'РЩ/ГРЩ' },
     { eqCode: 'splitvn', mfr: 'Daikin', model: 'FTXS35K' },
     { eqCode: 'splitnar', mfr: 'Daikin', model: 'RXS35K' },
     { eqCode: 'splitvn', mfr: 'Ballu', model: 'BSW/in-07HN1_24Y' },
