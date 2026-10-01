@@ -103,6 +103,8 @@ export default function VisitPage() {
   const [newRoomObjectEquipment, setNewRoomObjectEquipment] = useState<any[]>([]);
   const [newRoomSelectedEquipIds, setNewRoomSelectedEquipIds] = useState<string[]>([]);
   const [newRoomTransferring, setNewRoomTransferring] = useState(false);
+  const [tmEngineers, setTmEngineers] = useState<any[]>([]);
+  const [selectedEngineerId, setSelectedEngineerId] = useState<string | null>(null);
 
   const handleAutoSave = useCallback(async () => {
     if (isNew) return;
@@ -168,6 +170,12 @@ export default function VisitPage() {
       });
     } else {
       const now = dayjs();
+      // Загрузка инженеров для ТМ
+      if (user?.role === 'tm') {
+        api.getEngineers().then(engineers => {
+          setTmEngineers(engineers || []);
+        }).catch(() => {});
+      }
       form.setFieldsValue({
         dateStart: now,
         timeStart: now,
@@ -218,6 +226,11 @@ export default function VisitPage() {
         timeStart: values.timeStart ? values.timeStart.format('HH:mm') : dayjs().format('HH:mm'),
         season: values.season,
       };
+
+      // ТМ передаёт userId выбранного инженера
+      if (user?.role === 'tm' && selectedEngineerId) {
+        data.userId = selectedEngineerId;
+      }
 
       // Автопривязка заявок для нового визита
       if (isNew) {
@@ -854,8 +867,27 @@ export default function VisitPage() {
 
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <Form form={form} layout="vertical" onValuesChange={markAutoSaveDirty}>
-          <Form.Item label="Инженер" name="engineerName" rules={[{ required: true, message: 'Введите ФИО' }]}>
-            <Input placeholder="Иванов П.С." />
+          <Form.Item label="Инженер" name="engineerName" rules={[{ required: true, message: 'Выберите инженера' }]}>
+            {user?.role === 'tm' && isNew ? (
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="Выберите инженера или создайте визит под собой"
+                allowClear
+                onChange={(value: string, option: any) => {
+                  setSelectedEngineerId(option?.engineerId || null);
+                  form.setFieldsValue({ engineerName: value });
+                }}
+                options={[
+                  { label: '— Без инженера (визит под собой) —', value: user?.fullName || '', engineerId: null },
+                  ...tmEngineers.map((e: any) => ({ label: e.fullName, value: e.fullName, engineerId: e.id })),
+                ]}
+              />
+            ) : user?.role === 'engineer' ? (
+              <Input disabled placeholder={user?.fullName || ''} />
+            ) : (
+              <Input placeholder="Иванов П.С." />
+            )}
           </Form.Item>
           <Form.Item label="Адрес" name="addressSearch" rules={[{ required: true, message: 'Выберите адрес' }]}>
             <Select

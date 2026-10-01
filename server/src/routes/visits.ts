@@ -177,11 +177,13 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
 
   // Автоподстановка contractId из tm_objects (инженер → ТМ → адрес → договор)
   let autoContractId: string | null = null;
-  if (req.userRole === 'engineer' && !rest.contractId) {
-    const tmAssignment = await prisma.tmEngineer.findUnique({ where: { engineerId: req.userId as string } });
-    if (tmAssignment) {
+  if (!rest.contractId) {
+    const tmId = req.userRole === 'engineer'
+      ? (await prisma.tmEngineer.findUnique({ where: { engineerId: req.userId as string } }))?.tmId
+      : req.userRole === 'tm' ? req.userId as string : null;
+    if (tmId) {
       const tmObject = await prisma.tmObject.findFirst({
-        where: { tmId: tmAssignment.tmId, addressId: rest.addressId },
+        where: { tmId, addressId: rest.addressId },
         select: { contractId: true },
       });
       if (tmObject?.contractId) autoContractId = tmObject.contractId;
