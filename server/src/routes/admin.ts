@@ -540,6 +540,122 @@ router.delete('/object-equipment/:id', async (req: AuthRequest, res: Response) =
   res.json({ message: 'Удалено' });
 });
 
+// ─── METRICS (DAU/WAU/MAU/Retention) ────────────────────────
+router.get('/metrics', async (req: AuthRequest, res: Response) => {
+  const period = parseInt(req.query.period as string) || 30;
+  const periodStart = new Date();
+  periodStart.setDate(periodStart.getDate() - period);
+
+  // DAU по дням за период
+  const dauByDay: { date: string; count: number }[] = await prisma.$queryRaw`
+    SELECT DATE(created_at) as date, COUNT(DISTINCT user_id) as count
+    FROM audit_log
+    WHERE created_at >= ${periodStart}
+      AND action != 'login'
+      AND user_id IS NOT NULL
+    GROUP BY DATE(created_at)
+    ORDER BY date
+  `;
+
+  // Текущий DAU (сегодня)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const dauToday: { count: number }[] = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT user_id) as count
+    FROM audit_log
+    WHERE created_at >= ${todayStart}
+      AND action != 'login'
+      AND user_id IS NOT NULL
+  `;
+
+  // WAU (последние 7 дней)
+  const wauStart = new Date();
+  wauStart.setDate(wauStart.getDate() - 7);
+  const wau: { count: number }[] = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT user_id) as count
+    FROM audit_log
+    WHERE created_at >= ${wauStart}
+      AND action != 'login'
+      AND user_id IS NOT NULL
+  `;
+
+  // MAU (последние 30 дней)
+  const mau: { count: number }[] = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT user_id) as count
+    FROM audit_log
+    WHERE created_at >= ${periodStart}
+      AND action != 'login'
+      AND user_id IS NOT NULL
+  `;
+
+  // Retention — % пользователей, активных вчера И сегодня
+  const yesterdayStart = new Date();
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  yesterdayStart.setHours(0, 0, 0, 0);
+  const yesterdayEnd = new Date(yesterdayStart);
+  yesterdayEnd.setDate(yesterdayEnd.getDate() + 1);
+
+  const retentionData: { both_days: number; yesterday_only: number }[] = await prisma.$queryRaw`
+    WITH yesterday_users AS (
+      SELECT DISTINCT user_id FROM audit_log
+      WHERE created_at >= ${yesterdayStart} AND created_at < ${yesterdayEnd}
+        AND action != 'login' AND user_id IS NOT NULL
+    ),
+    today_users AS (
+      SELECT DISTINCT user_id FROM audit_log
+      WHERE created_at >= ${todayStart}
+        AND action != 'login' AND user_id IS NOT NULL
+    )
+    SELECT
+      (SELECT COUNT(*) FROM yesterday_users) as yesterday_only,
+      (SELECT COUNT(*) FROM yesterday_users yu WHERE EXISTS (SELECT 1 FROM today_users tu WHERE tu.user_id = yu.user_id)) as both_days
+  `;
+
+  const retention = retentionData[0]?.yesterday_only > 0
+    ? Math.round((retentionData[0].both_days / retentionData[0].yesterday_only) * 100)
+    : 0;
+
+  // По ролям — DAU за период
+  const byRole: { role: string; count: number }[] = await prisma.$queryRaw`
+    SELECT u.role, COUNT(DISTINCT al.user_id) as count
+    FROM audit_log al
+    JOIN users u ON u.id = al.user_id
+    WHERE al.created_at >= ${periodStart}
+      AND al.action != 'login'
+      AND al.user_id IS NOT NULL
+    GROUP BY u.role
+    ORDER BY count DESC
+  `;
+
+  // Топ-10 действий за период
+  const topActions: { action: string; count: number }[] = await prisma.$queryRaw`
+    SELECT action, COUNT(*) as count
+    FROM audit_log
+    WHERE created_at >= ${periodStart}
+      AND action != 'login'
+    GROUP BY action
+    ORDER BY count DESC
+    LIMIT 10
+  `;
+
+  // Средний DAU за период
+  const avgDau = dauByDay.length > 0
+    ? Math.round(dauByDay.reduce((sum, d) => sum + Number(d.count), 0) / dauByDay.length)
+    : 0;
+
+  res.json({
+    dau: Number(dauToday[0]?.count || 0),
+    wau: Number(wau[0]?.count || 0),
+    mau: Number(mau[0]?.count || 0),
+    avgDau,
+    retention,
+    dauByDay: dauByDay.map(d => ({ date: d.date, count: Number(d.count) })),
+    byRole: byRole.map(r => ({ role: r.role, count: Number(r.count) })),
+    topActions: topActions.map(a => ({ action: a.action, count: Number(a.count) })),
+    period,
+  });
+});
+
 // ─── AUDIT LOG ───────────────────────────────────────────────
 function buildAuditWhere(req: any) {
   const where: any = {};
