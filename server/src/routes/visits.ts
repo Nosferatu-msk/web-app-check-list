@@ -130,6 +130,14 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     visitUserId = req.userId!;
   } else if (targetUserId) {
     visitUserId = targetUserId;
+  } else if (req.userRole === 'tm' && rest.engineerName) {
+    // ТМ не передал userId инженера — ищем по имени из списка инженеров ТМ
+    const { getTeamEngineerIds } = await import('../utils/tmTeam.js');
+    const engineerIds = await getTeamEngineerIds(req.userId as string);
+    const engineer = await prisma.user.findFirst({
+      where: { id: { in: engineerIds }, fullName: rest.engineerName },
+    });
+    visitUserId = engineer?.id || req.userId!;
   } else {
     visitUserId = req.userId!;
   }
