@@ -42,13 +42,20 @@ const PLACEHOLDER_WORDS = [
   'n/a', 'null', 'none', 'unknown', 'no data', 'not filled',
 ];
 
+// Одиночные спецсимволы, которые инженеры вводят вместо пустого значения
+const PLACEHOLDER_PATTERNS = [/^\.+$/, /^-+$/, /^_+$/, /^\/+$/, /^\\+$/];
+
 /**
  * Проверяет, содержит ли значение placeholder-слово из блок-листа.
  * Регистронезависимо, проверяет вхождение подстроки (включая «нет123», «Нет_2222»).
  */
 export function containsPlaceholder(value: unknown): boolean {
   if (!value) return false;
-  const normalized = String(value).trim().toLowerCase().replace(/[_\s-]+/g, ' ');
+  const str = String(value).trim();
+  if (!str) return false;
+  // Проверка одиночных спецсимволов (., -, _, /, \)
+  if (PLACEHOLDER_PATTERNS.some(p => p.test(str))) return true;
+  const normalized = str.toLowerCase().replace(/[_\s-]+/g, ' ');
   return PLACEHOLDER_WORDS.some(word => normalized.includes(word));
 }
 

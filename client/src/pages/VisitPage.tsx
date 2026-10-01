@@ -30,8 +30,13 @@ const PLACEHOLDER_WORDS = [
   'n/a', 'null', 'none', 'unknown', 'no data', 'not filled',
 ];
 
+const PLACEHOLDER_PATTERNS = [/^\.+$/, /^-+$/, /^_+$/, /^\/+$/, /^\\+$/];
+
 const containsPlaceholder = (value: string): boolean => {
-  const normalized = value.trim().toLowerCase().replace(/[_\s-]+/g, ' ');
+  const str = value.trim();
+  if (!str) return false;
+  if (PLACEHOLDER_PATTERNS.some(p => p.test(str))) return true;
+  const normalized = str.toLowerCase().replace(/[_\s-]+/g, ' ');
   return PLACEHOLDER_WORDS.some(word => normalized.includes(word));
 };
 
