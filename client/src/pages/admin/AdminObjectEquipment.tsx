@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Table, Button, Modal, Form, Input, InputNumber, Select, Space, App, Popconfirm, Tag, Divider, List, AutoComplete } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, WarningOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, WarningOutlined, ReloadOutlined } from '@ant-design/icons';
 import { api } from '../../api/client';
+
+const CLIMATE_CODES = ['splitvn', 'splitnar', 'mssvn', 'mssnar', 'vrv_vn', 'vrv_nar', 'cond_mobile'];
 
 export default function AdminObjectEquipment() {
   const { message } = App.useApp();
@@ -18,11 +20,19 @@ export default function AdminObjectEquipment() {
   const [modalAddressId, setModalAddressId] = useState<string>('');
   const [mfrOptions, setMfrOptions] = useState<{ value: string; label: string }[]>([]);
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
+  const [filterTypeCode, setFilterTypeCode] = useState<string>('');
+  const [filterBrand, setFilterBrand] = useState<string>('');
+  const [filterModel, setFilterModel] = useState<string>('');
+  const brandTimer = useRef<ReturnType<typeof setTimeout>>();
+  const modelTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const load = async () => {
     setLoading(true);
     const params: Record<string, string> = {};
     if (selectedAddressId) params.address_id = selectedAddressId;
+    if (filterTypeCode) params.equipment_type_code = filterTypeCode;
+    if (filterBrand) params.brand = filterBrand;
+    if (filterModel) params.model = filterModel;
     setData(await api.adminGet('object-equipment', params));
     setLoading(false);
   };
@@ -42,7 +52,8 @@ export default function AdminObjectEquipment() {
     setAddresses(data || []);
   };
 
-  useEffect(() => { load(); loadRefs(); }, [selectedAddressId]);
+  useEffect(() => { load(); }, [selectedAddressId, filterTypeCode, filterBrand, filterModel]);
+  useEffect(() => { loadRefs(); }, []);
 
   const handleSave = async () => {
     const values = await form.validateFields();
@@ -107,21 +118,50 @@ export default function AdminObjectEquipment() {
     <div>
       <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h2>Оборудование объектов</h2>
-        <Space>
-          <Select
-            showSearch
-            allowClear
-            placeholder="Фильтр по объекту..."
-            style={{ width: 300 }}
-            onSearch={searchAddresses}
-            onChange={(v) => setSelectedAddressId(v || '')}
-            filterOption={false}
-            options={addresses.map((a: any) => ({ value: a.id, label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress }))}
-            notFoundContent="Введите минимум 2 символа"
-          />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew}>Добавить</Button>
-        </Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew}>Добавить</Button>
       </div>
+
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Select
+          showSearch
+          allowClear
+          placeholder="Объект..."
+          style={{ width: 280 }}
+          onSearch={searchAddresses}
+          onChange={(v) => setSelectedAddressId(v || '')}
+          filterOption={false}
+          options={addresses.map((a: any) => ({ value: a.id, label: a.objectCode ? `[${a.objectCode}] ${a.fullAddress}` : a.fullAddress }))}
+          notFoundContent="Введите минимум 2 символа"
+        />
+        <Select
+          showSearch
+          allowClear
+          placeholder="Тип оборудования"
+          style={{ width: 220 }}
+          onChange={(v) => setFilterTypeCode(v || '')}
+          filterOption={(input, option) => (option?.label as string || '').toLowerCase().includes(input.toLowerCase())}
+          options={equipmentTypes.map((e: any) => ({ value: e.code, label: e.name }))}
+        />
+        <Input
+          allowClear
+          placeholder="Марка..."
+          style={{ width: 180 }}
+          onChange={(e) => {
+            clearTimeout(brandTimer.current);
+            brandTimer.current = setTimeout(() => setFilterBrand(e.target.value), 300);
+          }}
+        />
+        <Input
+          allowClear
+          placeholder="Модель..."
+          style={{ width: 180 }}
+          onChange={(e) => {
+            clearTimeout(modelTimer.current);
+            modelTimer.current = setTimeout(() => setFilterModel(e.target.value), 300);
+          }}
+        />
+        <Button icon={<ReloadOutlined />} onClick={() => { setSelectedAddressId(''); setFilterTypeCode(''); setFilterBrand(''); setFilterModel(''); }}>Сбросить</Button>
+      </Space>
 
       <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }} columns={[
         { title: 'Тип оборудования', dataIndex: 'equipmentTypeCode', render: (v: string) => eqTypeMap.get(v) || v },
@@ -129,8 +169,6 @@ export default function AdminObjectEquipment() {
         { title: 'Марка', dataIndex: 'brand' },
         { title: 'Модель', dataIndex: 'model' },
         { title: 'Серийный №', dataIndex: 'serialNumber' },
-        { title: 'Местоположение', dataIndex: 'locationDescription', ellipsis: true },
-        { title: 'Холодопроизв., кВт', dataIndex: 'coolingCapacityKw', render: (v: number | null) => v != null ? v : '—' },
         { title: '', key: 'actions', width: 100, render: (_: any, r: any) => (
           <Space>
             <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
@@ -240,7 +278,17 @@ export default function AdminObjectEquipment() {
           </Form.Item>
           <Form.Item name="serialNumber" label="Серийный номер"><Input /></Form.Item>
           <Form.Item name="locationDescription" label="Местоположение"><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="coolingCapacityKw" label="Холодопроизводительность, кВт"><InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="Не указано" /></Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.equipmentTypeCode !== cur.equipmentTypeCode}>
+            {({ getFieldValue }) => {
+              const code = getFieldValue('equipmentTypeCode');
+              if (!code || !CLIMATE_CODES.includes(code)) return null;
+              return (
+                <Form.Item name="coolingCapacityKw" label="Холодопроизводительность, кВт">
+                  <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="Не указано" />
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
         </Form>
       </Modal>
     </div>

@@ -468,7 +468,16 @@ const objectEquipmentSchema = z.object({
 
 router.get('/object-equipment', async (req: AuthRequest, res: Response) => {
   const addressId = req.query.address_id as string;
-  const where = addressId ? { addressId } : {};
+  const equipmentTypeCode = req.query.equipment_type_code as string;
+  const brand = req.query.brand as string;
+  const model = req.query.model as string;
+
+  const where: any = {};
+  if (addressId) where.addressId = addressId;
+  if (equipmentTypeCode) where.equipmentTypeCode = equipmentTypeCode;
+  if (brand) where.brand = { contains: brand, mode: 'insensitive' };
+  if (model) where.model = { contains: model, mode: 'insensitive' };
+
   const data = await prisma.objectEquipment.findMany({
     where,
     orderBy: { createdAt: 'asc' },
