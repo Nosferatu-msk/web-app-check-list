@@ -284,6 +284,20 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
             visitIds.add(vr.visitId);
           }
         }
+        // Также включаем визиты с прямым contract_id в периоде (без привязки к заявкам)
+        const directVisits = await prisma.visit.findMany({
+          where: {
+            contractId,
+            isDeleted: false,
+            dateStart: { gte: from, lte: to },
+            status: { in: ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm', 'awaiting_assignment', 'planned', 'not_started', 'in_progress'] },
+            userId: { not: null },
+          },
+          select: { id: true },
+        });
+        for (const v of directVisits) {
+          visitIds.add(v.id);
+        }
         if (visitIds.size > 0) {
           where.id = { in: [...visitIds] };
         } else {
