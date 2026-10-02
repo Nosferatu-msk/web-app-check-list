@@ -23,6 +23,8 @@ export default function AdminObjectEquipment() {
   const [filterTypeCode, setFilterTypeCode] = useState<string>('');
   const [filterBrand, setFilterBrand] = useState<string>('');
   const [filterModel, setFilterModel] = useState<string>('');
+  const [queryBrand, setQueryBrand] = useState<string>('');
+  const [queryModel, setQueryModel] = useState<string>('');
   const brandTimer = useRef<ReturnType<typeof setTimeout>>();
   const modelTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -31,8 +33,8 @@ export default function AdminObjectEquipment() {
     const params: Record<string, string> = {};
     if (selectedAddressId) params.address_id = selectedAddressId;
     if (filterTypeCode) params.equipment_type_code = filterTypeCode;
-    if (filterBrand) params.brand = filterBrand;
-    if (filterModel) params.model = filterModel;
+    if (queryBrand) params.brand = queryBrand;
+    if (queryModel) params.model = queryModel;
     setData(await api.adminGet('object-equipment', params));
     setLoading(false);
   };
@@ -52,8 +54,18 @@ export default function AdminObjectEquipment() {
     setAddresses(data || []);
   };
 
-  useEffect(() => { load(); }, [selectedAddressId, filterTypeCode, filterBrand, filterModel]);
+  useEffect(() => { load(); }, [selectedAddressId, filterTypeCode, queryBrand, queryModel]);
   useEffect(() => { loadRefs(); }, []);
+
+  useEffect(() => {
+    clearTimeout(brandTimer.current);
+    brandTimer.current = setTimeout(() => setQueryBrand(filterBrand), 300);
+  }, [filterBrand]);
+
+  useEffect(() => {
+    clearTimeout(modelTimer.current);
+    modelTimer.current = setTimeout(() => setQueryModel(filterModel), 300);
+  }, [filterModel]);
 
   const handleSave = async () => {
     const values = await form.validateFields();
@@ -136,6 +148,7 @@ export default function AdminObjectEquipment() {
         <Select
           showSearch
           allowClear
+          value={filterTypeCode || undefined}
           placeholder="Тип оборудования"
           style={{ width: 220 }}
           onChange={(v) => setFilterTypeCode(v || '')}
@@ -144,23 +157,19 @@ export default function AdminObjectEquipment() {
         />
         <Input
           allowClear
+          value={filterBrand}
           placeholder="Марка..."
           style={{ width: 180 }}
-          onChange={(e) => {
-            clearTimeout(brandTimer.current);
-            brandTimer.current = setTimeout(() => setFilterBrand(e.target.value), 300);
-          }}
+          onChange={(e) => setFilterBrand(e.target.value)}
         />
         <Input
           allowClear
+          value={filterModel}
           placeholder="Модель..."
           style={{ width: 180 }}
-          onChange={(e) => {
-            clearTimeout(modelTimer.current);
-            modelTimer.current = setTimeout(() => setFilterModel(e.target.value), 300);
-          }}
+          onChange={(e) => setFilterModel(e.target.value)}
         />
-        <Button icon={<ReloadOutlined />} onClick={() => { setSelectedAddressId(''); setFilterTypeCode(''); setFilterBrand(''); setFilterModel(''); }}>Сбросить</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => { clearTimeout(brandTimer.current); clearTimeout(modelTimer.current); setSelectedAddressId(''); setFilterTypeCode(''); setFilterBrand(''); setFilterModel(''); setQueryBrand(''); setQueryModel(''); }}>Сбросить</Button>
       </Space>
 
       <Table dataSource={data} rowKey="id" loading={loading} pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50, 100], showTotal: (total: number) => `Всего: ${total}` }} columns={[
