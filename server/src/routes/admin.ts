@@ -457,7 +457,7 @@ router.get('/import-logs', async (req: AuthRequest, res: Response) => {
 const objectEquipmentSchema = z.object({
   addressId: z.string().uuid(),
   equipmentTypeCode: z.string().min(1),
-  roomTypeCode: z.string().min(1).optional().or(z.literal('')),
+  roomTypeCode: z.string().min(1).optional().or(z.literal('')).nullable(),
   brand: z.string().optional().or(z.literal('')),
   model: z.string().optional().or(z.literal('')),
   serialNumber: z.string().nullish(),
