@@ -185,7 +185,9 @@ export default function VisitPage() {
         dateStart: now,
         timeStart: now,
         season: determineSeason(now),
-        engineerName: localStorage.getItem('lastEngineerName') || user?.fullName || '',
+        engineerName: user?.role === 'engineer'
+          ? (user?.fullName || '')
+          : (localStorage.getItem('lastEngineerName') || user?.fullName || ''),
       });
       setLoading(false);
     }
