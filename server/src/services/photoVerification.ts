@@ -7,6 +7,7 @@ const PHASH_WARNING_THRESHOLD = 10;
 const GPS_MAX_DISTANCE_METERS = 500;
 const TIMESTAMP_BEFORE_TOLERANCE_MIN = 30;
 const TIMESTAMP_AFTER_TOLERANCE_MIN = 5;
+const TIMESTAMP_CRITICAL_THRESHOLD_MIN = 10000; // Критическое отклонение только если > 10000 минут
 
 interface AnomalyInput {
   visitId: string;
@@ -100,8 +101,9 @@ export async function verifyPhoto(photoId: string): Promise<void> {
     // 2. Timestamp — окно визита
     const tsResult = checkTimestamp(photo, visitId || '');
     if (tsResult) {
-      if (visitId) anomalies.push({ visitId, photoId, type: 'photo_timestamp_mismatch', severity: 'critical', details: tsResult });
-      verificationDetails.push({ check: 'timestamp', passed: false, severity: 'critical', message: 'Фото сделано вне окна визита', data: tsResult });
+      const severity = (tsResult as any).severity || 'critical';
+      if (visitId) anomalies.push({ visitId, photoId, type: 'photo_timestamp_mismatch', severity, details: tsResult });
+      verificationDetails.push({ check: 'timestamp', passed: false, severity, message: 'Фото сделано вне окна визита', data: tsResult });
     } else {
       verificationDetails.push({ check: 'timestamp', passed: true, message: 'В окне визита' });
     }
@@ -395,14 +397,22 @@ function checkTimestamp(photo: any, visitId: string): Record<string, unknown> | 
   windowEnd = new Date(windowEnd.getTime() + TIMESTAMP_AFTER_TOLERANCE_MIN * 60 * 1000);
 
   if (capturedAt < windowStart || capturedAt > windowEnd) {
+    const differenceMinutes = capturedAt < windowStart
+      ? Math.round((windowStart.getTime() - capturedAt.getTime()) / 60000)
+      : Math.round((capturedAt.getTime() - windowEnd.getTime()) / 60000);
+    
+    const timingType = capturedAt < windowStart ? 'before_visit' : 'after_visit';
+    
+    // Критическое отклонение только если > 10000 минут, иначе warning
+    const severity = differenceMinutes > TIMESTAMP_CRITICAL_THRESHOLD_MIN ? 'critical' : 'warning';
+    
     return {
       capturedAt: capturedAt.toISOString(),
       visitWindowStart: windowStart.toISOString(),
       visitWindowEnd: windowEnd.toISOString(),
-      differenceMinutes: capturedAt < windowStart
-        ? Math.round((windowStart.getTime() - capturedAt.getTime()) / 60000)
-        : Math.round((capturedAt.getTime() - windowEnd.getTime()) / 60000),
-      timingType: capturedAt < windowStart ? 'before_visit' : 'after_visit',
+      differenceMinutes,
+      timingType,
+      severity,
     };
   }
 
