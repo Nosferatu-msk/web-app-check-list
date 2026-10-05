@@ -38,7 +38,8 @@ const resetPasswordSchema = z.object({
 // POST /api/auth/login
 router.post('/login', authLimiter, validate(loginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
-  const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } } });
   if (!user || !user.isActive) {
     res.status(401).json({ error: 'Неверный email или пароль' });
     return;
@@ -98,7 +99,8 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), async (req: Request, res: Response) => {
   const { email } = req.body;
-  const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } } });
   if (!user) {
     res.json({ message: 'Если email зарегистрирован, письмо будет отправлено' });
     return;
