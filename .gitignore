@@ -90,6 +90,7 @@ build/
 
 # Загруженные файлы
 uploads/
+upload/
 reports/
 
 # Мобильное приложение
