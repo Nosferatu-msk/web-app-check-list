@@ -213,16 +213,13 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
       select: { fullName: true },
     });
 
-    // Поиск заявок «ИСЖ объекта» по адресу (визит в статусе awaiting_assignment / planned)
-    // Заявки на конкретное оборудование НЕ привязываются при создании визита —
-    // они привязываются позже, когда инженер добавит оборудование нужного типа в визит
     const visitDate = rest.dateStart ? new Date(rest.dateStart) : new Date();
+    
+    // 1. Поиск заявок «ИСЖ объекта» по адресу
     const requests = await prisma.importedRequest.findMany({
       where: {
         matchedAddressId: rest.addressId,
         equipmentType: { code: 'iszh_object' },
-        // Для ИСЖ объекта не фильтруем по статусу виртуального визита —
-        // новые инженеры могут создавать визиты даже после завершения предыдущих
         startDate: { lte: visitDate },
         deadline: { gte: visitDate },
       },
@@ -237,7 +234,7 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
       orderBy: { importedAt: 'asc' },
     });
 
-    // Защита от дубликатов: если несколько заявок с одинаковым адресом и периодом — привязываем только к первой
+    // Защита от дубликатов по периоду
     const seenPeriods = new Set<string>();
     const uniqueRequests = requests.filter(r => {
       const periodKey = `${r.startDate?.toISOString()}_${r.deadline?.toISOString()}`;
