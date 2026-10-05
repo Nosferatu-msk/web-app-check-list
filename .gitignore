@@ -21,6 +21,26 @@ QWEN.md
 АНТИФРОД-АЛГОРИТМ.md
 screenshots/
 
+# Временная документация и скрипты (не синхронизируется)
+FIX-SSL-*.md
+SSL-*.md
+UPDATE-SSL-*.md
+DEPLOY-*.md
+DIAGNOSTICS-*.md
+SUMMARY-*.md
+README-DEPLOY-*.md
+fix-ssl-*.bat
+update-ssl.bat
+$null
+'2026-*
+Объекты_ТМ_МБ.xlsx
+Проект-Команды-ТМ.md
+scripts/diagnose-*.bat
+scripts/diagnose-*.sql
+scripts/fix-ssl-*.sh
+scripts/renew-ssl.sh
+scripts/update-ssl*
+
 # Инструменты и настройки
 .qwen/
 .vscode/
