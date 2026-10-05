@@ -148,7 +148,7 @@ async function main() {
           importedRequestId: request.id,
           action: 'assigned',
           engineerId: visit.visitEngineers[0]?.engineerId || null,
-          performedBy: 'system',
+          performedBy: null,
           reason: 'Автоматическая привязка октябрьских визитов (скрипт)',
         },
       });
@@ -210,7 +210,7 @@ async function main() {
             importedRequestId: request.id,
             action: 'assigned',
             engineerId: visit.visitEngineers[0]?.engineerId || null,
-            performedBy: 'system',
+            performedBy: null,
             reason: 'Автоматическая привязка октябрьских визитов (скрипт)',
           },
         });
