@@ -206,8 +206,30 @@ export default function VisitPage() {
 
   const searchAddresses = async (q: string) => {
     if (q.length >= 2) {
-      const results = await api.searchAddresses(q);
-      setAddressOptions(results);
+      try {
+        // Retry-логика для нестабильного мобильного интернета
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const results = await api.searchAddresses(q);
+            setAddressOptions(results);
+            return;
+          } catch (err: any) {
+            // Если это сетевая ошибка (status 0), пробуем ещё раз
+            if (err.status === 0 && attempt === 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Ждём 1 секунду
+              continue;
+            }
+            throw err;
+          }
+        }
+      } catch (err: any) {
+        // Показываем понятное сообщение пользователю
+        const errorMessage = err.status === 0 
+          ? 'Нет соединения с сервером. Проверьте интернет-подключение и попробуйте снова.'
+          : err.message || 'Ошибка поиска адресов';
+        message.error(errorMessage);
+        setAddressOptions([]);
+      }
     }
   };
 

@@ -22,22 +22,38 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers, cache: 'no-store' });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers, cache: 'no-store' });
+  } catch (networkError) {
+    // Сетевая ошибка (Failed to fetch) — нет соединения с сервером
+    throw new ApiError('Ошибка соединения с сервером. Проверьте интернет-подключение.', 0);
+  }
+  
   if (res.status === 401 && token) {
     // Try refresh
     const refresh = localStorage.getItem('refreshToken');
     if (refresh) {
-      const r = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: refresh }),
-      });
-      if (r.ok) {
-        const data = await r.json();
-        localStorage.setItem('accessToken', data.accessToken);
-        headers['Authorization'] = `Bearer ${data.accessToken}`;
-        const retry = await fetch(`${API_BASE}${path}`, { ...options, headers });
-        if (retry.ok) return retry.json();
+      try {
+        const r = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: refresh }),
+        });
+        if (r.ok) {
+          const data = await r.json();
+          localStorage.setItem('accessToken', data.accessToken);
+          headers['Authorization'] = `Bearer ${data.accessToken}`;
+          try {
+            const retry = await fetch(`${API_BASE}${path}`, { ...options, headers });
+            if (retry.ok) return retry.json();
+          } catch (retryError) {
+            throw new ApiError('Ошибка соединения при повторной попытке', 0);
+          }
+        }
+      } catch (refreshError) {
+        // Ошибка при обновлении токена
+        throw new ApiError('Ошибка обновления сессии', 0);
       }
     }
     localStorage.clear();
