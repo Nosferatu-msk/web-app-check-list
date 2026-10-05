@@ -143,15 +143,16 @@ async function main() {
         data: { visitId: visit.id },
       });
 
-      await prisma.requestAssignmentLog.create({
-        data: {
-          importedRequestId: request.id,
-          action: 'assigned',
-          engineerId: visit.visitEngineers[0]?.engineerId || null,
-          performedBy: null,
-          reason: 'Автоматическая привязка октябрьских визитов (скрипт)',
-        },
-      });
+      // Логирование в request_assignment_log опционально
+      // await prisma.requestAssignmentLog.create({
+      //   data: {
+      //     importedRequestId: request.id,
+      //     action: 'assigned',
+      //     engineerId: visit.visitEngineers[0]?.engineerId || null,
+      //     performedBy: null,
+      //     reason: 'Автоматическая привязка октябрьских визитов (скрипт)',
+      //   },
+      // });
 
       linkedRequestIds.push(request.externalRequestId);
       console.log(`    ✓ Привязана заявка ИСЖ: ${request.externalRequestId}`);
@@ -205,15 +206,16 @@ async function main() {
           data: { visitId: visit.id },
         });
 
-        await prisma.requestAssignmentLog.create({
-          data: {
-            importedRequestId: request.id,
-            action: 'assigned',
-            engineerId: visit.visitEngineers[0]?.engineerId || null,
-            performedBy: null,
-            reason: 'Автоматическая привязка октябрьских визитов (скрипт)',
-          },
-        });
+        // Логирование в request_assignment_log опционально
+        // await prisma.requestAssignmentLog.create({
+        //   data: {
+        //     importedRequestId: request.id,
+        //     action: 'assigned',
+        //     engineerId: visit.visitEngineers[0]?.engineerId || null,
+        //     performedBy: null,
+        //     reason: 'Автоматическая привязка октябрьских визитов (скрипт)',
+        //   },
+        // });
 
         linkedRequestIds.push(request.externalRequestId);
         console.log(`    ✓ Привязана заявка: ${request.externalRequestId} (${request.equipmentType.code})`);
