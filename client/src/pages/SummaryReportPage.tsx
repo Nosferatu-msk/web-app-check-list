@@ -8,8 +8,6 @@ import { useAuthStore } from '../store/authStore';
 import MobileHeader from '../components/MobileHeader';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-const { MonthPicker } = DatePicker;
-
 interface ScanFile {
   uid: string;
   name: string;
@@ -337,29 +335,34 @@ export default function SummaryReportPage() {
             </>
           )}
 
-          <Form.Item label="Период (с — по)" required>
-            <Space style={{ width: '100%' }}>
+          <Form.Item label="Период" required>
+            {reportType === 'requests' ? (
               <DatePicker
                 picker="month"
                 value={startMonth}
                 onChange={(date) => {
-                  if (date) setStartMonth(date.startOf('month'));
+                  if (date) {
+                    setStartMonth(date.startOf('month'));
+                    setEndMonth(date.endOf('month'));
+                  }
                 }}
                 format="MM.YYYY"
-                placeholder="С"
-                style={{ width: '50%' }}
+                placeholder="Выберите месяц"
+                style={{ width: '100%' }}
               />
-              <DatePicker
-                picker="month"
-                value={endMonth}
-                onChange={(date) => {
-                  if (date) setEndMonth(date.endOf('month'));
+            ) : (
+              <DatePicker.RangePicker
+                value={[startMonth, endMonth]}
+                onChange={(dates) => {
+                  if (dates && dates[0] && dates[1]) {
+                    setStartMonth(dates[0].startOf('month'));
+                    setEndMonth(dates[1].endOf('month'));
+                  }
                 }}
-                format="MM.YYYY"
-                placeholder="По"
-                style={{ width: '50%' }}
+                format="DD.MM.YYYY"
+                style={{ width: '100%' }}
               />
-            </Space>
+            )}
           </Form.Item>
 
           <Form.Item label="Инженер (фильтр, необязательно)">
