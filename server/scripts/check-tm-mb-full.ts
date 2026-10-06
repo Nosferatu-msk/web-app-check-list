@@ -67,27 +67,31 @@ async function check() {
 
   // 1. Прямые инженеры
   console.log('\n=== 1. ПРЯМЫЕ ИНЖЕНЕРЫ (tm_engineer.tmId = tmMb.id) ===');
-  console.log('Количество:', tmMb.engineersAsTm.length);
-  if (tmMb.engineersAsTm.length > 0) {
-    const petrovLinked = tmMb.engineersAsTm.some(e => e.engineer.email === 'psv.sovteh@gmail.com');
+  const directEngineers = tmMb.engineersAsTm || [];
+  console.log('Количество:', directEngineers.length);
+  if (directEngineers.length > 0) {
+    const petrovLinked = directEngineers.some((e: any) => e.engineer.email === 'psv.sovteh@gmail.com');
     console.log('Петров С.В. в списке:', petrovLinked ? '✅ ДА' : '❌ НЕТ');
-    if (tmMb.engineersAsTm.length <= 40) {
-      tmMb.engineersAsTm.forEach(e => {
+    if (directEngineers.length <= 40) {
+      directEngineers.forEach((e: any) => {
         console.log(`  - ${e.engineer.fullName} (${e.engineer.email})`);
       });
     }
+  } else {
+    console.log('У ТМ_МБ нет прямых инженеров');
   }
 
   // 2. Команды, где ТМ_МБ — лидер
   console.log('\n=== 2. КОМАНДЫ, ГДЕ ТМ_МБ — ЛИДЕР (tm_team_member.leadTmId = tmMb.id) ===');
-  console.log('Количество членов команды:', tmMb.tmTeamAsLead.length);
-  if (tmMb.tmTeamAsLead.length > 0) {
-    tmMb.tmTeamAsLead.forEach(m => {
+  const leadTeams = tmMb.tmTeamAsLead || [];
+  console.log('Количество членов команды:', leadTeams.length);
+  if (leadTeams.length > 0) {
+    leadTeams.forEach((m: any) => {
       console.log(`  - ${m.memberTm.fullName} (${m.memberTm.email}), роль: ${m.memberTm.role}`);
     });
     
     // Получаем инженеров всех членов команды
-    const memberIds = tmMb.tmTeamAsLead.map(m => m.memberTmId);
+    const memberIds = leadTeams.map((m: any) => m.memberTmId);
     const teamEngineers = await prisma.tmEngineer.findMany({
       where: { tmId: { in: memberIds } },
       select: {
@@ -103,20 +107,23 @@ async function check() {
     
     console.log('\nИнженеры членов команды:');
     console.log('Количество:', teamEngineers.length);
-    const petrovInTeam = teamEngineers.some(e => e.engineer.email === 'psv.sovteh@gmail.com');
+    const petrovInTeam = teamEngineers.some((e: any) => e.engineer.email === 'psv.sovteh@gmail.com');
     console.log('Петров С.В. в списке:', petrovInTeam ? '✅ ДА' : '❌ НЕТ');
+  } else {
+    console.log('ТМ_МБ не является лидером никакой команды');
   }
 
   // 3. Команды, где ТМ_МБ — член
   console.log('\n=== 3. КОМАНДЫ, ГДЕ ТМ_МБ — ЧЛЕН (tm_team_member.memberTmId = tmMb.id) ===');
-  console.log('Количество:', tmMb.tmTeamAsMember.length);
-  if (tmMb.tmTeamAsMember.length > 0) {
-    tmMb.tmTeamAsMember.forEach(m => {
+  const memberTeams = tmMb.tmTeamAsMember || [];
+  console.log('Количество:', memberTeams.length);
+  if (memberTeams.length > 0) {
+    memberTeams.forEach((m: any) => {
       console.log(`  - Лидер: ${m.leadTm.fullName} (${m.leadTm.email}), роль: ${m.leadTm.role}`);
     });
     
     // Получаем инженеров лидера
-    const leadIds = tmMb.tmTeamAsMember.map(m => m.leadTmId);
+    const leadIds = memberTeams.map((m: any) => m.leadTmId);
     const leadEngineers = await prisma.tmEngineer.findMany({
       where: { tmId: { in: leadIds } },
       select: {
@@ -132,8 +139,10 @@ async function check() {
     
     console.log('\nИнженеры лидера:');
     console.log('Количество:', leadEngineers.length);
-    const petrovInLead = leadEngineers.some(e => e.engineer.email === 'psv.sovteh@gmail.com');
+    const petrovInLead = leadEngineers.some((e: any) => e.engineer.email === 'psv.sovteh@gmail.com');
     console.log('Петров С.В. в списке:', petrovInLead ? '✅ ДА' : '❌ НЕТ');
+  } else {
+    console.log('ТМ_МБ не является членом никакой команды');
   }
 
   // 4. Прямая проверка связи Петров С.В. → ТМ_МБ
