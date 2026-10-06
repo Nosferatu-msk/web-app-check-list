@@ -6,14 +6,14 @@ async function check() {
   console.log('=== Проверка инженера Петров С.В. ===\n');
 
   // Находим инженера
-  const petrov = await prisma.user.findFirst({
+  const petrov: any = await prisma.user.findFirst({
     where: { email: 'psv.sovteh@gmail.com' },
     select: { 
       id: true, 
       fullName: true, 
       email: true, 
       role: true,
-      tmEngineer: {
+      tmEngineers: {
         select: {
           tmId: true,
           tm: {
