@@ -326,6 +326,10 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
     }
     if (req.userRole === 'tm') {
       const engineerIds = await getTeamEngineerIds(req.userId!);
+      // Включаем визиты самого ТМ (если ТМ тоже выполнял работы)
+      if (!engineerIds.includes(req.userId!)) {
+        engineerIds.push(req.userId!);
+      }
       where.userId = { in: engineerIds };
     }
     if (engineerId) {
