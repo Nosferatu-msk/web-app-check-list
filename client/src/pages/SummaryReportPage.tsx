@@ -24,9 +24,12 @@ export default function SummaryReportPage() {
   const isMobile = useIsMobile();
 
   const [reportType, setReportType] = useState<'period' | 'objects' | 'requests'>('period');
-  const [selectedMonths, setSelectedMonths] = useState<dayjs.Dayjs[]>([
-    dayjs().subtract(1, 'month').startOf('month'),
-  ]);
+  const [startMonth, setStartMonth] = useState<dayjs.Dayjs>(
+    dayjs().subtract(1, 'month').startOf('month')
+  );
+  const [endMonth, setEndMonth] = useState<dayjs.Dayjs>(
+    dayjs().subtract(1, 'month').endOf('month')
+  );
   const [engineerId, setEngineerId] = useState<string>('');
   const [engineers, setEngineers] = useState<any[]>([]);
 
@@ -146,7 +149,7 @@ export default function SummaryReportPage() {
   };
 
   const handleGenerate = async () => {
-    if (selectedMonths.length === 0) {
+    if (!startMonth || !endMonth) {
       message.warning('Укажите период');
       return;
     }
@@ -180,9 +183,8 @@ export default function SummaryReportPage() {
       }
 
       // Вычисляем диапазон дат на основе выбранных месяцев
-      const sortedMonths = [...selectedMonths].sort((a, b) => a.valueOf() - b.valueOf());
-      const dateFrom = sortedMonths[0].startOf('month').format('YYYY-MM-DD');
-      const dateTo = sortedMonths[sortedMonths.length - 1].endOf('month').format('YYYY-MM-DD');
+      const dateFrom = startMonth.startOf('month').format('YYYY-MM-DD');
+      const dateTo = endMonth.endOf('month').format('YYYY-MM-DD');
 
       await api.generateUnifiedReport({
         type: reportType,
@@ -335,30 +337,29 @@ export default function SummaryReportPage() {
             </>
           )}
 
-          <Form.Item label="Период (месяцы)" required>
-            <Select
-              mode="multiple"
-              placeholder="Выберите месяцы"
-              value={selectedMonths.map(m => m.format('YYYY-MM'))}
-              onChange={(values) => {
-                setSelectedMonths(values.map((v: string) => dayjs(v).startOf('month')));
-              }}
-              style={{ width: '100%' }}
-              options={(() => {
-                const options = [];
-                const currentYear = dayjs().year();
-                for (let year = currentYear; year >= currentYear - 1; year--) {
-                  for (let month = 11; month >= 0; month--) {
-                    const date = dayjs(`${year}-${String(month + 1).padStart(2, '0')}-01`);
-                    options.push({
-                      value: date.format('YYYY-MM'),
-                      label: date.format('MMMM YYYY'),
-                    });
-                  }
-                }
-                return options;
-              })()}
-            />
+          <Form.Item label="Период (с — по)" required>
+            <Space style={{ width: '100%' }}>
+              <DatePicker
+                picker="month"
+                value={startMonth}
+                onChange={(date) => {
+                  if (date) setStartMonth(date.startOf('month'));
+                }}
+                format="MM.YYYY"
+                placeholder="С"
+                style={{ width: '50%' }}
+              />
+              <DatePicker
+                picker="month"
+                value={endMonth}
+                onChange={(date) => {
+                  if (date) setEndMonth(date.endOf('month'));
+                }}
+                format="MM.YYYY"
+                placeholder="По"
+                style={{ width: '50%' }}
+              />
+            </Space>
           </Form.Item>
 
           <Form.Item label="Инженер (фильтр, необязательно)">
