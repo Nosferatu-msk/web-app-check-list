@@ -262,7 +262,6 @@ export interface UnifiedReportOptions {
     total: number;
     completed: number;
     inProgress: number;
-    assigned: number;
     notStarted: number;
   };
   pendingRequests?: Array<{
@@ -538,10 +537,6 @@ export async function generateUnifiedReportHtml(
         <div style="flex:1;padding:16px;border:2px solid #faad14;border-radius:8px;text-align:center;background:#fffbe6;">
           <div style="font-size:28pt;font-weight:bold;color:#faad14;">${options.requestStats.inProgress}</div>
           <div style="font-size:10pt;color:#666;margin-top:4px;">В работе</div>
-        </div>
-        <div style="flex:1;padding:16px;border:2px solid #722ed1;border-radius:8px;text-align:center;background:#f9f0ff;">
-          <div style="font-size:28pt;font-weight:bold;color:#722ed1;">${options.requestStats.assigned}</div>
-          <div style="font-size:10pt;color:#666;margin-top:4px;">Назначены</div>
         </div>
         <div style="flex:1;padding:16px;border:2px solid #d9d9d9;border-radius:8px;text-align:center;background:#fafafa;">
           <div style="font-size:28pt;font-weight:bold;color:#8c8c8c;">${options.requestStats.notStarted}</div>

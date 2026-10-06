@@ -326,7 +326,6 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
           total: allContractRequests.length,
           completed: 0,
           inProgress: 0,
-          assigned: 0,
           notStarted: 0,
         };
 
@@ -357,10 +356,9 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
 
               if (status === 'completed') {
                 requestStats.completed++;
-              } else if (status === 'in_progress') {
+              } else if (status === 'in_progress' || status === 'assigned') {
+                // В RequestsPage статус 'assigned' попадает во вкладку "В работе" вместе с 'in_progress'
                 requestStats.inProgress++;
-              } else if (status === 'assigned') {
-                requestStats.assigned++;
               } else {
                 requestStats.notStarted++;
               }
@@ -375,11 +373,10 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
         // Сохраняем статистику для передачи в HTML-генератор
         (req as any).requestStats = requestStats;
 
-        // Отладка: выводим первые 10 заявок из каждой категории
-        console.log('[report-debug] Статистика по заявкам:');
+        // Отладка: выводим статистику по заявкам
+        console.log('[report-debug] Статистика по заявкам (как в RequestsPage):');
         console.log(`  Завершены: ${requestStats.completed}`);
         console.log(`  В работе: ${requestStats.inProgress}`);
-        console.log(`  Назначены: ${requestStats.assigned}`);
         console.log(`  Не начаты: ${requestStats.notStarted}`);
 
         // Собираем информацию о заявках в работе и не начатых для вывода в конце отчёта
