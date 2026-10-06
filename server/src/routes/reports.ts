@@ -235,6 +235,38 @@ const summaryGenerateSchema = z.object({
   scanIds: z.array(z.string().uuid()).optional(),
 });
 
+// Логика определения статуса заявки (скопировано из requests.ts для единообразия)
+function computeRequestStatus(
+  req: { visitId: string | null; visitRequests: { visitId: string }[]; equipmentTypeCode: string | null },
+  visits: Array<{ status: string; _count?: { tasks: number } }>
+): 'completed' | 'in_progress' | 'not_started' {
+  const isISZH = req.equipmentTypeCode === 'iszh_object';
+  
+  if (isISZH) {
+    // Для ИСЖ объекта — агрегированный статус по всем визитам
+    const realVisits = visits.filter(v => v._count?.tasks && v._count.tasks > 0);
+    if (realVisits.length === 0) {
+      return visits.length > 0 ? 'in_progress' : 'not_started';
+    }
+    const statuses = realVisits.map(v => v.status);
+    const completedStatuses = ['completed', 'sent', 'corrected_by_tm'];
+    const allCompleted = statuses.every(s => completedStatuses.includes(s));
+    if (allCompleted) return 'completed';
+    const hasInProgress = statuses.includes('in_progress');
+    if (hasInProgress) return 'in_progress';
+    const hasCompleted = statuses.some(s => completedStatuses.includes(s));
+    if (hasCompleted) return 'in_progress';
+    return 'in_progress';
+  } else {
+    // Для обычных заявок — статус по первому визиту
+    const visit = visits[0];
+    if (!visit) return 'not_started';
+    if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) return 'completed';
+    if (['in_progress', 'planned'].includes(visit.status)) return 'in_progress';
+    return 'not_started';
+  }
+}
+
 router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = summaryGenerateSchema.safeParse(req.body);
@@ -307,23 +339,20 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
                 where: {
                   id: { in: visitIdsToCheck },
                 },
-                select: { status: true },
+                select: { 
+                  status: true,
+                  _count: {
+                    select: { tasks: true },
+                  },
+                },
               });
+
+              // Определяем статус заявки с использованием той же логики, что и в RequestsPage
+              const status = computeRequestStatus(req, visits);
               
-              // Определяем итоговый статус заявки по приоритету визитов
-              // Если хотя бы один визит завершён — заявка завершена
-              // Если есть визиты в работе — заявка в работе
-              // Иначе — не начата
-              const hasCompleted = visits.some(v => 
-                ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(v.status)
-              );
-              const hasInProgress = visits.some(v => 
-                ['in_progress', 'planned', 'awaiting_assignment'].includes(v.status)
-              );
-              
-              if (hasCompleted) {
+              if (status === 'completed') {
                 requestStats.completed++;
-              } else if (hasInProgress) {
+              } else if (status === 'in_progress') {
                 requestStats.inProgress++;
               } else {
                 requestStats.notStarted++;
@@ -367,18 +396,18 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
             if (visitIdsToCheck.length > 0) {
               const visits = await prisma.visit.findMany({
                 where: { id: { in: visitIdsToCheck } },
-                select: { status: true },
+                select: { 
+                  status: true,
+                  _count: {
+                    select: { tasks: true },
+                  },
+                },
               });
-              
-              const hasCompleted = visits.some(v => 
-                ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(v.status)
-              );
-              const hasInProgress = visits.some(v => 
-                ['in_progress', 'planned', 'awaiting_assignment'].includes(v.status)
-              );
-              
+
+              const status = computeRequestStatus(req, visits);
+
               // Если заявка не завершена полностью — добавляем в список
-              if (!hasCompleted && hasInProgress) {
+              if (status === 'in_progress') {
                 pendingRequests.push({
                   externalRequestId: req.externalRequestId,
                   externalStatus: req.externalStatus,
