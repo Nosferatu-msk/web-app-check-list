@@ -15,8 +15,7 @@ async function check() {
       id: true,
       tmId: true,
       engineerId: true,
-      createdAt: true,
-      updatedAt: true
+      createdAt: true
     }
   });
 
