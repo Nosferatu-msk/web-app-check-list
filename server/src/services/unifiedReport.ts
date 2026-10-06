@@ -264,6 +264,12 @@ export interface UnifiedReportOptions {
     inProgress: number;
     notStarted: number;
   };
+  pendingRequests?: Array<{
+    externalRequestId: string;
+    externalStatus: string | null;
+    equipmentTypeCode: string | null;
+    status: 'in_progress' | 'not_started';
+  }>;
 }
 
 const MAX_PHOTOS = 1000;
@@ -583,6 +589,36 @@ export async function generateUnifiedReportHtml(
   ${requestStatsHtml}
 
   ${sectionsHtml}
+
+  ${options.pendingRequests && options.pendingRequests.length > 0 && type === 'requests' ? `
+    <div style="page-break-before:always;">
+      <h2 style="border-bottom:2px solid #faad14;padding-bottom:8px;margin-bottom:20px;color:#d48806;">Заявки в работе и не начатые</h2>
+      <p style="font-size:10pt;color:#666;margin-bottom:16px;">Перечень заявок, которые не имеют завершённых визитов</p>
+      <table style="width:100%;border-collapse:collapse;font-size:9pt;">
+        <thead>
+          <tr style="background:#fafafa;border-bottom:2px solid #d9d9d9;">
+            <th style="padding:8px;text-align:left;border:1px solid #d9d9d9;">№ заявки</th>
+            <th style="padding:8px;text-align:left;border:1px solid #d9d9d9;">Тип оборудования</th>
+            <th style="padding:8px;text-align:center;border:1px solid #d9d9d9;">Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${options.pendingRequests.map(req => `
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:8px;border:1px solid #d9d9d9;"><strong>${req.externalRequestId}</strong></td>
+              <td style="padding:8px;border:1px solid #d9d9d9;">${req.equipmentTypeCode || '—'}</td>
+              <td style="padding:8px;text-align:center;border:1px solid #d9d9d9;">
+                ${req.status === 'in_progress' 
+                  ? '<span style="color:#faad14;font-weight:bold;">В работе</span>' 
+                  : '<span style="color:#8c8c8c;">Не начата</span>'}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <p style="margin-top:16px;font-size:9pt;color:#999;">Всего невыполненных заявок: ${options.pendingRequests.length}</p>
+    </div>
+  ` : ''}
 
   <div class="meta">
     <p>Отчёт сформирован: ${new Date().toLocaleString('ru-RU', { timeZone: TZ })}</p>

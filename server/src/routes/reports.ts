@@ -338,6 +338,59 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
         // Сохраняем статистику для передачи в HTML-генератор
         (req as any).requestStats = requestStats;
 
+        // Собираем информацию о заявках в работе и не начатых для вывода в конце отчёта
+        const pendingRequests: Array<{
+          externalRequestId: string;
+          externalStatus: string | null;
+          equipmentTypeCode: string | null;
+          status: 'in_progress' | 'not_started';
+        }> = [];
+
+        for (const req of allContractRequests) {
+          const hasVisit = req.visitId || req.visitRequests.length > 0;
+          if (!hasVisit) {
+            // Заявка без визитов — не начата
+            pendingRequests.push({
+              externalRequestId: req.externalRequestId,
+              externalStatus: req.externalStatus,
+              equipmentTypeCode: req.equipmentTypeCode,
+              status: 'not_started',
+            });
+          } else {
+            // Проверяем, есть ли визиты в работе
+            const visitIdsToCheck = [
+              req.visitId,
+              ...req.visitRequests.map(vr => vr.visitId),
+            ].filter((id): id is string => id !== null && id !== undefined);
+
+            if (visitIdsToCheck.length > 0) {
+              const visits = await prisma.visit.findMany({
+                where: { id: { in: visitIdsToCheck } },
+                select: { status: true },
+              });
+              
+              const hasCompleted = visits.some(v => 
+                ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(v.status)
+              );
+              const hasInProgress = visits.some(v => 
+                ['in_progress', 'planned', 'awaiting_assignment'].includes(v.status)
+              );
+              
+              // Если заявка не завершена полностью — добавляем в список
+              if (!hasCompleted && hasInProgress) {
+                pendingRequests.push({
+                  externalRequestId: req.externalRequestId,
+                  externalStatus: req.externalStatus,
+                  equipmentTypeCode: req.equipmentTypeCode,
+                  status: 'in_progress',
+                });
+              }
+            }
+          }
+        }
+
+        (req as any).pendingRequests = pendingRequests;
+
         // Получаем visitIds для загрузки визитов
         const visitIds = new Set<string>();
         for (const ir of allContractRequests) {
@@ -522,6 +575,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       generatedBy: { fullName: user?.fullName || 'Неизвестно', role: user?.role || 'unknown' },
       recMap,
       requestStats: (req as any).requestStats,
+      pendingRequests: (req as any).pendingRequests,
     });
 
     const dateStr = new Date().toISOString().slice(0, 10);
