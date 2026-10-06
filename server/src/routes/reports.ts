@@ -237,8 +237,8 @@ const summaryGenerateSchema = z.object({
 
 // Логика определения статуса заявки (скопировано из requests.ts для единообразия)
 function computeRequestStatus(
-  req: { visitId: string | null; visitRequests: { visitId: string }[]; equipmentTypeCode: string | null },
-  visits: Array<{ id: string; status: string; _count?: { tasks: number } }>
+  req: { visitId: string | null; visitRequests: { visitId: string }[]; equipmentTypeId: string; equipmentTypeCode: string | null },
+  visits: Array<{ id: string; status: string; tasks?: Array<{ equipmentTypeId: string }>; _count?: { tasks: number } }>
 ): 'completed' | 'in_progress' | 'assigned' | 'not_started' {
   const isISZH = req.equipmentTypeCode === 'iszh_object';
   
@@ -273,7 +273,14 @@ function computeRequestStatus(
       if (visit.status === 'awaiting_assignment') return 'not_started';
       if (visit.status === 'planned') return 'assigned';
       if (visit.status === 'in_progress') return 'in_progress';
-      if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) return 'completed';
+      if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) {
+        // Проверка: есть ли задача по типу оборудования заявки в визите
+        if (req.equipmentTypeId && visit.tasks) {
+          const hasMatchingTask = visit.tasks.some(t => t.equipmentTypeId === req.equipmentTypeId);
+          if (!hasMatchingTask) return 'not_started';
+        }
+        return 'completed';
+      }
       return 'not_started';
     }
     
@@ -283,7 +290,14 @@ function computeRequestStatus(
     if (visit.status === 'awaiting_assignment') return 'not_started';
     if (visit.status === 'planned') return 'assigned';
     if (visit.status === 'in_progress') return 'in_progress';
-    if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) return 'completed';
+    if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) {
+      // Проверка: есть ли задача по типу оборудования заявки в визите
+      if (req.equipmentTypeId && visit.tasks) {
+        const hasMatchingTask = visit.tasks.some(t => t.equipmentTypeId === req.equipmentTypeId);
+        if (!hasMatchingTask) return 'not_started';
+      }
+      return 'completed';
+    }
     return 'not_started';
   }
 }
@@ -322,16 +336,17 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
     if (type === 'requests') {
       if (contractId) {
         // Режим «По договору и периоду» — находим ВСЕ заявки договора за период
+        // Используем тот же фильтр, что и в RequestsPage — по startDate в пределах периода
         const allContractRequests = await prisma.importedRequest.findMany({
           where: {
             contractId,
-            startDate: { lte: to },
-            deadline: { gte: from },
+            startDate: { gte: from, lte: to },
           },
           select: {
             id: true,
             externalRequestId: true,
             externalStatus: true,
+            equipmentTypeId: true,
             equipmentTypeCode: true,
             visitId: true,
             visitRequests: { select: { visitId: true } },
@@ -363,6 +378,9 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
                 select: {
                   id: true,
                   status: true,
+                  tasks: {
+                    select: { equipmentTypeId: true },
+                  },
                   _count: {
                     select: { tasks: true },
                   },
@@ -428,6 +446,9 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
                 select: {
                   id: true,
                   status: true,
+                  tasks: {
+                    select: { equipmentTypeId: true },
+                  },
                   _count: {
                     select: { tasks: true },
                   },
