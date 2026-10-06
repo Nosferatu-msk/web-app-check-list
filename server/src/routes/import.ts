@@ -569,10 +569,12 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
     // Set для проверки дубликатов: используем префиксы SN/LOC для различения типов ключей
     const existingKeys = new Set<string>();
     for (const e of existingEquipment) {
+      // Уникальное ограничение 1: (addressId, equipmentTypeCode, serialNumber)
       if (e.serialNumber) {
-        existingKeys.add(`${e.addressId}|${e.equipmentTypeCode}|SN|${e.serialNumber}`);
+        existingKeys.add(`SN|${e.addressId}|${e.equipmentTypeCode}|${e.serialNumber}`);
       }
-      existingKeys.add(`${e.addressId}|${e.equipmentTypeCode}|LOC|${e.locationDescription || '__NULL__'}`);
+      // Уникальное ограничение 2: (addressId, equipmentTypeCode, locationDescription)
+      existingKeys.add(`LOC|${e.addressId}|${e.equipmentTypeCode}|${e.locationDescription || '__NULL_LOCATION__'}`);
     }
 
     for (let i = 0; i < rows.length; i++) {
@@ -625,14 +627,21 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         }
       }
 
-      // Проверка дубликатов по обоим уникальным ограничениям
-      // Ключи должны точно соответствовать структуре БД (с учётом NULL)
+      // Проверка дубликатов по уникальным ограничениям БД:
+      // 1. @@unique([addressId, equipmentTypeCode, serialNumber])
+      // 2. @@unique([addressId, equipmentTypeCode, locationDescription])
+      // Дубликат только если СОВПАДАЮТ все три поля в одной из комбинаций
       const keyBySerial = serialNumber
-        ? `${addressId}|${eqTypeCode}|SN|${serialNumber}`
+        ? `${addressId}|${eqTypeCode}|${serialNumber}`
         : null;
-      const keyByLocation = `${addressId}|${eqTypeCode}|LOC|${locationDescription || '__NULL__'}`;
+      const keyByLocation = `${addressId}|${eqTypeCode}|${locationDescription || '__NULL_LOCATION__'}`;
 
-      if ((keyBySerial && existingKeys.has(keyBySerial)) || existingKeys.has(keyByLocation)) {
+      // Проверяем: если есть запись с таким же (addressId, eqTypeCode, serialNumber) — дубликат
+      // ИЛИ если есть запись с таким же (addressId, eqTypeCode, locationDescription) — дубликат
+      const isDuplicateBySerial = keyBySerial && existingKeys.has(`SN|${keyBySerial}`);
+      const isDuplicateByLocation = existingKeys.has(`LOC|${keyByLocation}`);
+
+      if (isDuplicateBySerial || isDuplicateByLocation) {
         result.duplicates++;
         dupRows.push(i + 2);
         continue;
@@ -654,8 +663,8 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         });
 
         // Добавляем в Set для проверки дубликатов внутри файла
-        if (keyBySerial) existingKeys.add(keyBySerial);
-        existingKeys.add(keyByLocation);
+        if (keyBySerial) existingKeys.add(`SN|${keyBySerial}`);
+        existingKeys.add(`LOC|${keyByLocation}`);
 
         result.success++;
       } catch (err: any) {
