@@ -239,14 +239,14 @@ const summaryGenerateSchema = z.object({
 function computeRequestStatus(
   req: { visitId: string | null; visitRequests: { visitId: string }[]; equipmentTypeCode: string | null },
   visits: Array<{ status: string; _count?: { tasks: number } }>
-): 'completed' | 'in_progress' | 'not_started' {
+): 'completed' | 'in_progress' | 'assigned' | 'not_started' {
   const isISZH = req.equipmentTypeCode === 'iszh_object';
   
   if (isISZH) {
     // Для ИСЖ объекта — агрегированный статус по всем визитам
     const realVisits = visits.filter(v => v._count?.tasks && v._count.tasks > 0);
     if (realVisits.length === 0) {
-      return visits.length > 0 ? 'in_progress' : 'not_started';
+      return visits.length > 0 ? 'assigned' : 'not_started';
     }
     const statuses = realVisits.map(v => v.status);
     const completedStatuses = ['completed', 'sent', 'corrected_by_tm'];
@@ -254,15 +254,19 @@ function computeRequestStatus(
     if (allCompleted) return 'completed';
     const hasInProgress = statuses.includes('in_progress');
     if (hasInProgress) return 'in_progress';
+    const hasAssigned = statuses.includes('planned');
+    if (hasAssigned) return 'assigned';
     const hasCompleted = statuses.some(s => completedStatuses.includes(s));
     if (hasCompleted) return 'in_progress';
-    return 'in_progress';
+    return 'assigned';
   } else {
     // Для обычных заявок — статус по первому визиту
     const visit = visits[0];
     if (!visit) return 'not_started';
+    if (visit.status === 'awaiting_assignment') return 'not_started';
+    if (visit.status === 'planned') return 'assigned';
+    if (visit.status === 'in_progress') return 'in_progress';
     if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) return 'completed';
-    if (['in_progress', 'planned'].includes(visit.status)) return 'in_progress';
     return 'not_started';
   }
 }
@@ -322,6 +326,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
           total: allContractRequests.length,
           completed: 0,
           inProgress: 0,
+          assigned: 0,
           notStarted: 0,
         };
 
@@ -349,11 +354,13 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
 
               // Определяем статус заявки с использованием той же логики, что и в RequestsPage
               const status = computeRequestStatus(req, visits);
-              
+
               if (status === 'completed') {
                 requestStats.completed++;
               } else if (status === 'in_progress') {
                 requestStats.inProgress++;
+              } else if (status === 'assigned') {
+                requestStats.assigned++;
               } else {
                 requestStats.notStarted++;
               }
@@ -367,6 +374,13 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
 
         // Сохраняем статистику для передачи в HTML-генератор
         (req as any).requestStats = requestStats;
+
+        // Отладка: выводим первые 10 заявок из каждой категории
+        console.log('[report-debug] Статистика по заявкам:');
+        console.log(`  Завершены: ${requestStats.completed}`);
+        console.log(`  В работе: ${requestStats.inProgress}`);
+        console.log(`  Назначены: ${requestStats.assigned}`);
+        console.log(`  Не начаты: ${requestStats.notStarted}`);
 
         // Собираем информацию о заявках в работе и не начатых для вывода в конце отчёта
         const pendingRequests: Array<{
