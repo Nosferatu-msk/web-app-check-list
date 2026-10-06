@@ -39,9 +39,9 @@ async function check() {
   console.log('  Email:', petrov.email);
   console.log('  Роль:', petrov.role);
 
-  if (petrov.tmEngineer.length > 0) {
+  if (petrov.tmEngineers && petrov.tmEngineers.length > 0) {
     console.log('\n👥 Привязки к ТМ:');
-    petrov.tmEngineer.forEach(te => {
+    petrov.tmEngineers.forEach((te: any) => {
       console.log(`  - ТМ: ${te.tm.fullName} (${te.tm.email}), роль: ${te.tm.role}`);
     });
   } else {
@@ -56,7 +56,7 @@ async function check() {
 
   if (tmMb) {
     console.log('\n=== Проверка привязки к ТМ_МБ ===');
-    const isLinked = petrov.tmEngineer.some(te => te.tmId === tmMb.id);
+    const isLinked = petrov.tmEngineers && petrov.tmEngineers.some((te: any) => te.tmId === tmMb.id);
     if (isLinked) {
       console.log('✅ Инженер привязан к ТМ_МБ');
     } else {
