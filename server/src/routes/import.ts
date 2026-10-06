@@ -568,10 +568,16 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
     }
     // Set для проверки дубликатов: используем префиксы SN/LOC для различения типов ключей
     const existingKeys = new Set<string>();
+    const existingSerialsByType = new Map<string, Set<string>>(); // equipmentTypeCode -> Set<serialNumber>
+    
     for (const e of existingEquipment) {
-      // Уникальное ограничение 1: (addressId, equipmentTypeCode, serialNumber)
+      // Уникальное ограничение 1: (equipmentTypeCode, serialNumber) — глобальная уникальность серийного номера
       if (e.serialNumber) {
-        existingKeys.add(`SN|${e.addressId}|${e.equipmentTypeCode}|${e.serialNumber}`);
+        existingKeys.add(`SN|${e.equipmentTypeCode}|${e.serialNumber}`);
+        if (!existingSerialsByType.has(e.equipmentTypeCode)) {
+          existingSerialsByType.set(e.equipmentTypeCode, new Set());
+        }
+        existingSerialsByType.get(e.equipmentTypeCode)!.add(e.serialNumber);
       }
       // Уникальное ограничение 2: (addressId, equipmentTypeCode, locationDescription)
       existingKeys.add(`LOC|${e.addressId}|${e.equipmentTypeCode}|${e.locationDescription || '__NULL_LOCATION__'}`);
@@ -628,16 +634,15 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       }
 
       // Проверка дубликатов по уникальным ограничениям БД:
-      // 1. @@unique([addressId, equipmentTypeCode, serialNumber])
-      // 2. @@unique([addressId, equipmentTypeCode, locationDescription])
-      // Дубликат только если СОВПАДАЮТ все три поля в одной из комбинаций
+      // 1. @@unique([equipmentTypeCode, serialNumber]) — глобальная уникальность серийного номера для типа оборудования
+      // 2. @@unique([addressId, equipmentTypeCode, locationDescription]) — уникальность в рамках объекта
       const keyBySerial = serialNumber
-        ? `${addressId}|${eqTypeCode}|${serialNumber}`
+        ? `${eqTypeCode}|${serialNumber}`
         : null;
       const keyByLocation = `${addressId}|${eqTypeCode}|${locationDescription || '__NULL_LOCATION__'}`;
 
-      // Проверяем: если есть запись с таким же (addressId, eqTypeCode, serialNumber) — дубликат
-      // ИЛИ если есть запись с таким же (addressId, eqTypeCode, locationDescription) — дубликат
+      // Проверяем: если есть запись с таким же (eqTypeCode, serialNumber) — дубликат (глобальная проверка)
+      // ИЛИ если есть запись с таким же (addressId, eqTypeCode, locationDescription) — дубликат (в рамках объекта)
       const isDuplicateBySerial = keyBySerial && existingKeys.has(`SN|${keyBySerial}`);
       const isDuplicateByLocation = existingKeys.has(`LOC|${keyByLocation}`);
 
@@ -665,6 +670,14 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         // Добавляем в Set для проверки дубликатов внутри файла
         if (keyBySerial) existingKeys.add(`SN|${keyBySerial}`);
         existingKeys.add(`LOC|${keyByLocation}`);
+        
+        // Также добавляем в Map для отслеживания серийных номеров по типу оборудования
+        if (serialNumber) {
+          if (!existingSerialsByType.has(eqTypeCode)) {
+            existingSerialsByType.set(eqTypeCode, new Set());
+          }
+          existingSerialsByType.get(eqTypeCode)!.add(serialNumber);
+        }
 
         result.success++;
       } catch (err: any) {

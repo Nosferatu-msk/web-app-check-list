@@ -479,7 +479,7 @@ model ObjectEquipment {
   taskEquipmentItems  TaskEquipmentItem[]
   equipmentProposals  EquipmentProposal[]
 
-  @@unique([addressId, equipmentTypeCode, serialNumber])
+  @@unique([equipmentTypeCode, serialNumber])
   @@unique([addressId, equipmentTypeCode, locationDescription])
   @@index([addressId])
   @@index([equipmentTypeCode])
