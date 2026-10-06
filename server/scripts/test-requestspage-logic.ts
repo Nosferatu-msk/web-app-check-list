@@ -92,11 +92,31 @@ async function test() {
   for (const req of allRequests) {
     const isISZHObject = req.equipmentType?.code === 'iszh_object';
     
+    // Загружаем задачи для визита
+    let visitWithTasks = req.visit;
+    if (req.visit) {
+      const tasks = await prisma.task.findMany({
+        where: { visitId: req.visit.id },
+        select: { equipmentTypeId: true },
+      });
+      visitWithTasks = { ...req.visit, tasks };
+    }
+    
     let executionStatus: string;
     if (!isISZHObject) {
-      executionStatus = computeExecutionStatus(req.visit, false, req.equipmentTypeId);
+      executionStatus = computeExecutionStatus(visitWithTasks, false, req.equipmentTypeId);
     } else {
-      const allVisits = req.visitRequests?.map(vr => vr.visit).filter(Boolean) || [];
+      // Для ИСЖ загружаем задачи для всех визитов
+      const allVisits = [];
+      for (const vr of req.visitRequests) {
+        if (vr.visit) {
+          const tasks = await prisma.task.findMany({
+            where: { visitId: vr.visit.id },
+            select: { equipmentTypeId: true },
+          });
+          allVisits.push({ ...vr.visit, tasks, _count: { tasks: tasks.length } });
+        }
+      }
       executionStatus = computeISZHExecutionStatus(allVisits);
     }
     
