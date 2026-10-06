@@ -103,6 +103,7 @@ async function diagnose() {
   const teamEngineerIds = await getTeamEngineerIds(tmMb.id);
   
   console.log('\n👥 Инженеры команды ТМ_МБ:', teamEngineerIds.length);
+  console.log('ID инженеров:', teamEngineerIds);
   
   if (teamEngineerIds.length > 0) {
     const teamEngineers = await prisma.user.findMany({
@@ -130,6 +131,13 @@ async function diagnose() {
   if (otherVisits.length > 0) {
     console.log('⚠️  Инженеры вне команды ТМ_МБ, которые работали по договору:\n');
     
+    // Отладка: проверяем, есть ли userId из otherVisits в teamEngineerIds
+    console.log('🔍 Отладка — проверка teamEngineerIds:');
+    const firstOtherUserId = otherVisits[0].userId;
+    console.log(`  Первый userId из otherVisits: ${firstOtherUserId}`);
+    console.log(`  Есть ли он в teamEngineerIds: ${teamEngineerIds.includes(firstOtherUserId!)}`);
+    console.log(`  Всего teamEngineerIds: ${teamEngineerIds.length}`);
+    
     // Группируем по инженеру
     const byEngineer = new Map<string, { name: string; count: number; visits: any[] }>();
     for (const v of otherVisits) {
@@ -140,7 +148,7 @@ async function diagnose() {
       eng.count++;
       eng.visits.push(v);
     }
-    
+
     byEngineer.forEach((data, engineerId) => {
       console.log(`  👤 ${data.name} — ${data.count} визит(ов)`);
       data.visits.forEach(v => {
