@@ -101,6 +101,10 @@ async function diagnose() {
   
   // 3. Получаем инженеров ТМ_МБ
   const teamEngineerIds = await getTeamEngineerIds(tmMb.id);
+  // Включаем визиты самого ТМ (если ТМ тоже выполнял работы)
+  if (!teamEngineerIds.includes(tmMb.id)) {
+    teamEngineerIds.push(tmMb.id);
+  }
   
   console.log('\n👥 Инженеры команды ТМ_МБ:', teamEngineerIds.length);
   console.log('ID инженеров:', teamEngineerIds);
