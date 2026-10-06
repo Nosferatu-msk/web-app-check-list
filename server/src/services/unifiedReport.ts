@@ -258,6 +258,12 @@ export interface UnifiedReportOptions {
   generatedBy: { fullName: string; role: string };
   recMap: Map<string, string>;
   simplifiedMode?: boolean;
+  requestStats?: {
+    total: number;
+    completed: number;
+    inProgress: number;
+    notStarted: number;
+  };
 }
 
 const MAX_PHOTOS = 1000;
@@ -461,8 +467,10 @@ export async function generateUnifiedReportHtml(
 
   // Title page
   const roleLabel = generatedBy.role === 'admin' ? 'Администратор' : generatedBy.role === 'tm' ? 'Территориальный менеджер' : generatedBy.role;
-  const reportTitle = type === 'period' ? 'СВОДНЫЙ ОТЧЁТ ЗА ПЕРИОД' : 'ОТЧЁТ ПО ОБЪЕКТАМ';
+  const reportTitle = type === 'period' ? 'СВОДНЫЙ ОТЧЁТ ЗА ПЕРИОД' : type === 'requests' ? 'ОТЧЁТ ПО ЗАЯВКАМ' : 'ОТЧЁТ ПО ОБЪЕКТАМ';
   const subtitle = type === 'period'
+    ? `Период: ${dateFrom} — ${dateTo}`
+    : type === 'requests'
     ? `Период: ${dateFrom} — ${dateTo}`
     : `Объекты: ${[...byAddress.keys()].join('; ')}<br>Период: ${dateFrom} — ${dateTo}`;
 
@@ -507,6 +515,36 @@ export async function generateUnifiedReportHtml(
     ? `<p style="color:#faad14;font-size:9pt;text-align:center;">⚠ Отчёт сформирован в упрощённом режиме: превью фотографий заменены текстовыми ссылками (${totalPhotos} фото). Фотографии доступны в отдельном архиве.</p>`
     : '';
 
+  // Сводная статистика по заявкам для режима requests
+  const requestStatsHtml = options.requestStats && type === 'requests' ? `
+    <div style="page-break-after:always;">
+      <h2 style="border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:20px;">Сводная информация по заявкам</h2>
+      <div style="display:flex;gap:16px;margin:20px 0;">
+        <div style="flex:1;padding:16px;border:2px solid #1890ff;border-radius:8px;text-align:center;background:#f0f5ff;">
+          <div style="font-size:28pt;font-weight:bold;color:#1890ff;">${options.requestStats.total}</div>
+          <div style="font-size:10pt;color:#666;margin-top:4px;">Всего заявок</div>
+        </div>
+        <div style="flex:1;padding:16px;border:2px solid #52c41a;border-radius:8px;text-align:center;background:#f6ffed;">
+          <div style="font-size:28pt;font-weight:bold;color:#52c41a;">${options.requestStats.completed}</div>
+          <div style="font-size:10pt;color:#666;margin-top:4px;">Завершены</div>
+        </div>
+        <div style="flex:1;padding:16px;border:2px solid #faad14;border-radius:8px;text-align:center;background:#fffbe6;">
+          <div style="font-size:28pt;font-weight:bold;color:#faad14;">${options.requestStats.inProgress}</div>
+          <div style="font-size:10pt;color:#666;margin-top:4px;">В работе</div>
+        </div>
+        <div style="flex:1;padding:16px;border:2px solid #d9d9d9;border-radius:8px;text-align:center;background:#fafafa;">
+          <div style="font-size:28pt;font-weight:bold;color:#8c8c8c;">${options.requestStats.notStarted}</div>
+          <div style="font-size:10pt;color:#666;margin-top:4px;">Не начаты</div>
+        </div>
+      </div>
+      <div style="margin-top:20px;padding:12px;background:#f5f5f5;border-radius:6px;font-size:10pt;color:#666;">
+        <strong>Визитов в отчёте:</strong> ${visits.length} | 
+        <strong>Задач:</strong> ${totalTasks} | 
+        <strong>Замечаний:</strong> ${totalIssues}
+      </div>
+    </div>
+  ` : '';
+
   return `<!DOCTYPE html>
 <html lang="ru">
 <head><meta charset="UTF-8"><title>${reportTitle}</title>
@@ -541,6 +579,8 @@ export async function generateUnifiedReportHtml(
     <div class="stat-box"><div class="stat-value" style="color:#faad14;">${totalIssues}</div><div class="stat-label">Замечаний</div></div>
     <div class="stat-box"><div class="stat-value">${byAddress.size}</div><div class="stat-label">Объектов</div></div>
   </div>
+
+  ${requestStatsHtml}
 
   ${sectionsHtml}
 

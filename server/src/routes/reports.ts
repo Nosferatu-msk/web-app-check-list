@@ -268,17 +268,61 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
     }
     if (type === 'requests') {
       if (contractId) {
-        // Режим «По договору и периоду» — находим все заявки договора за период
-        const contractRequests = await prisma.importedRequest.findMany({
+        // Режим «По договору и периоду» — находим ВСЕ заявки договора за период
+        const allContractRequests = await prisma.importedRequest.findMany({
           where: {
             contractId,
             startDate: { lte: to },
             deadline: { gte: from },
           },
-          select: { id: true, visitId: true, visitRequests: { select: { visitId: true } } },
+          select: {
+            id: true,
+            externalRequestId: true,
+            externalStatus: true,
+            visitId: true,
+            visitRequests: { select: { visitId: true } },
+          },
         });
+
+        // Подсчёт сводной статистики по заявкам
+        const requestStats = {
+          total: allContractRequests.length,
+          completed: 0,
+          inProgress: 0,
+          notStarted: 0,
+        };
+
+        for (const req of allContractRequests) {
+          const hasVisit = req.visitId || req.visitRequests.length > 0;
+          if (hasVisit) {
+            // Проверяем статус визита
+            const visit = await prisma.visit.findFirst({
+              where: {
+                OR: [
+                  { id: req.visitId },
+                  { id: { in: req.visitRequests.map(vr => vr.visitId) } },
+                ],
+              },
+              select: { status: true },
+            });
+            if (visit && ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(visit.status)) {
+              requestStats.completed++;
+            } else if (visit && ['in_progress', 'planned', 'awaiting_assignment'].includes(visit.status)) {
+              requestStats.inProgress++;
+            } else {
+              requestStats.notStarted++;
+            }
+          } else {
+            requestStats.notStarted++;
+          }
+        }
+
+        // Сохраняем статистику для передачи в HTML-генератор
+        (req as any).requestStats = requestStats;
+
+        // Получаем visitIds для загрузки визитов
         const visitIds = new Set<string>();
-        for (const ir of contractRequests) {
+        for (const ir of allContractRequests) {
           if (ir.visitId) visitIds.add(ir.visitId);
           for (const vr of ir.visitRequests) {
             visitIds.add(vr.visitId);
@@ -324,7 +368,8 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
         where.id = { in: [...visitIds] };
       }
     }
-    if (req.userRole === 'tm') {
+    // Фильтрация по команде ТМ НЕ применяется для режима заявок (ТМ должен видеть все заявки договора)
+    if (req.userRole === 'tm' && type !== 'requests') {
       const engineerIds = await getTeamEngineerIds(req.userId!);
       // Включаем визиты самого ТМ (если ТМ тоже выполнял работы)
       if (!engineerIds.includes(req.userId!)) {
@@ -458,6 +503,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       dateTo: to.toLocaleDateString('ru-RU', { timeZone: TZ }),
       generatedBy: { fullName: user?.fullName || 'Неизвестно', role: user?.role || 'unknown' },
       recMap,
+      requestStats: (req as any).requestStats,
     });
 
     const dateStr = new Date().toISOString().slice(0, 10);

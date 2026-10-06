@@ -93,8 +93,6 @@ async function main() {
         importedAt: 'asc',
       },
     });
-
-    // Защита от дубликатов по периоду
     const seenPeriods = new Set<string>();
     const uniqueIszh = iszhRequests.filter(r => {
       const periodKey = `${r.startDate?.toISOString()}_${r.deadline?.toISOString()}`;

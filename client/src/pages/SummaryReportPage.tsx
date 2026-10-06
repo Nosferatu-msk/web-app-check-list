@@ -8,7 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import MobileHeader from '../components/MobileHeader';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-const { RangePicker } = DatePicker;
+const { MonthPicker } = DatePicker;
 
 interface ScanFile {
   uid: string;
@@ -24,9 +24,9 @@ export default function SummaryReportPage() {
   const isMobile = useIsMobile();
 
   const [reportType, setReportType] = useState<'period' | 'objects' | 'requests'>('period');
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
-    dayjs().subtract(30, 'day'),
-    dayjs(),
+  const [monthRange, setMonthRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
+    dayjs().subtract(1, 'month').startOf('month'),
+    dayjs().subtract(1, 'month').endOf('month'),
   ]);
   const [engineerId, setEngineerId] = useState<string>('');
   const [engineers, setEngineers] = useState<any[]>([]);
@@ -147,7 +147,7 @@ export default function SummaryReportPage() {
   };
 
   const handleGenerate = async () => {
-    if (!dateRange[0] || !dateRange[1]) {
+    if (!monthRange[0] || !monthRange[1]) {
       message.warning('Укажите период');
       return;
     }
@@ -182,8 +182,8 @@ export default function SummaryReportPage() {
 
       await api.generateUnifiedReport({
         type: reportType,
-        dateFrom: dateRange[0].format('YYYY-MM-DD'),
-        dateTo: dateRange[1].format('YYYY-MM-DD'),
+        dateFrom: monthRange[0].format('YYYY-MM-DD'),
+        dateTo: monthRange[1].format('YYYY-MM-DD'),
         addressIds: reportType === 'objects' ? selectedAddressIds : undefined,
         requestIds: reportType === 'requests' && requestMode === 'numbers' ? foundRequests.map(r => r.id) : undefined,
         contractId: reportType === 'requests' && requestMode === 'contract' ? contractId : undefined,
@@ -332,13 +332,16 @@ export default function SummaryReportPage() {
           )}
 
           <Form.Item label="Период" required>
-            <RangePicker
-              value={dateRange}
-              onChange={(dates) => {
-                if (dates && dates[0] && dates[1]) setDateRange([dates[0], dates[1]]);
+            <MonthPicker
+              value={monthRange[0]}
+              onChange={(date) => {
+                if (date) {
+                  setMonthRange([date.startOf('month'), date.endOf('month')]);
+                }
               }}
-              format="DD.MM.YYYY"
+              format="MM.YYYY"
               style={{ width: '100%' }}
+              placeholder="Выберите месяц"
             />
           </Form.Item>
 
