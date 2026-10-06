@@ -238,7 +238,7 @@ const summaryGenerateSchema = z.object({
 // Логика определения статуса заявки (скопировано из requests.ts для единообразия)
 function computeRequestStatus(
   req: { visitId: string | null; visitRequests: { visitId: string }[]; equipmentTypeCode: string | null },
-  visits: Array<{ status: string; _count?: { tasks: number } }>
+  visits: Array<{ id: string; status: string; _count?: { tasks: number } }>
 ): 'completed' | 'in_progress' | 'assigned' | 'not_started' {
   const isISZH = req.equipmentTypeCode === 'iszh_object';
   
@@ -260,8 +260,25 @@ function computeRequestStatus(
     if (hasCompleted) return 'in_progress';
     return 'assigned';
   } else {
-    // Для обычных заявок — статус по первому визиту
-    const visit = visits[0];
+    // Для обычных заявок — статус по прямому визиту (req.visitId)
+    // Это тот же подход, что и в RequestsPage
+    const directVisitId = req.visitId;
+    if (!directVisitId) {
+      // Если нет прямого визита, проверяем через visitRequests
+      if (req.visitRequests.length === 0) return 'not_started';
+      // Берём первый визит из visitRequests
+      const firstVisitId = req.visitRequests[0].visitId;
+      const visit = visits.find(v => v.id === firstVisitId);
+      if (!visit) return 'not_started';
+      if (visit.status === 'awaiting_assignment') return 'not_started';
+      if (visit.status === 'planned') return 'assigned';
+      if (visit.status === 'in_progress') return 'in_progress';
+      if (['completed', 'sent', 'corrected_by_tm'].includes(visit.status)) return 'completed';
+      return 'not_started';
+    }
+    
+    // Есть прямой визит — используем его
+    const visit = visits.find(v => v.id === directVisitId);
     if (!visit) return 'not_started';
     if (visit.status === 'awaiting_assignment') return 'not_started';
     if (visit.status === 'planned') return 'assigned';
@@ -343,7 +360,8 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
                 where: {
                   id: { in: visitIdsToCheck },
                 },
-                select: { 
+                select: {
+                  id: true,
                   status: true,
                   _count: {
                     select: { tasks: true },
@@ -407,7 +425,8 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
             if (visitIdsToCheck.length > 0) {
               const visits = await prisma.visit.findMany({
                 where: { id: { in: visitIdsToCheck } },
-                select: { 
+                select: {
+                  id: true,
                   status: true,
                   _count: {
                     select: { tasks: true },
