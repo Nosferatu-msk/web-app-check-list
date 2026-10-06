@@ -279,6 +279,7 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
             id: true,
             externalRequestId: true,
             externalStatus: true,
+            equipmentTypeCode: true,
             visitId: true,
             visitRequests: { select: { visitId: true } },
           },
