@@ -296,19 +296,25 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
           const hasVisit = req.visitId || req.visitRequests.length > 0;
           if (hasVisit) {
             // Проверяем статус визита
-            const visit = await prisma.visit.findFirst({
-              where: {
-                OR: [
-                  { id: req.visitId },
-                  { id: { in: req.visitRequests.map(vr => vr.visitId) } },
-                ],
-              },
-              select: { status: true },
-            });
-            if (visit && ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(visit.status)) {
-              requestStats.completed++;
-            } else if (visit && ['in_progress', 'planned', 'awaiting_assignment'].includes(visit.status)) {
-              requestStats.inProgress++;
+            const visitIdsToCheck = [
+              req.visitId,
+              ...req.visitRequests.map(vr => vr.visitId),
+            ].filter((id): id is string => id !== null && id !== undefined);
+            
+            if (visitIdsToCheck.length > 0) {
+              const visit = await prisma.visit.findFirst({
+                where: {
+                  id: { in: visitIdsToCheck },
+                },
+                select: { status: true },
+              });
+              if (visit && ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(visit.status)) {
+                requestStats.completed++;
+              } else if (visit && ['in_progress', 'planned', 'awaiting_assignment'].includes(visit.status)) {
+                requestStats.inProgress++;
+              } else {
+                requestStats.notStarted++;
+              }
             } else {
               requestStats.notStarted++;
             }
