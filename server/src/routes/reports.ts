@@ -832,6 +832,24 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       where: { contractId },
       include: {
         matchedAddress: { select: { fullAddress: true } },
+        visit: {
+          include: {
+            user: { select: { fullName: true } },
+            tasks: {
+              include: {
+                equipmentType: true,
+                roomType: true,
+                photos: true,
+                equipmentItems: {
+                  include: {
+                    objectEquipment: true,
+                    photos: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         visitRequests: {
           include: {
             visit: {
@@ -918,20 +936,35 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
     let totalCompletedTasks = 0;
     const servicedAddresses = new Set<string>();
 
+    // Отладка: подсчёт статусов
+    let statusCompleted = 0;
+    let statusInProgress = 0;
+    let statusNotStarted = 0;
+
     for (const r of filteredRequests) {
-      // Получаем все визиты для заявки
+      // Получаем все визиты для заявки (включая прямой visit)
       const visits = r.visitRequests.map((vr: any) => vr.visit);
       
+      // Добавляем прямой визит, если он есть и его нет в visitRequests
+      if ((r as any).visit && !visits.find((v: any) => v.id === (r as any).visit.id)) {
+        visits.push((r as any).visit);
+      }
+
       // Определяем статус заявки
       const status = computeRequestStatus(
-        { 
-          visitId: r.visitId, 
-          visitRequests: r.visitRequests.map((vr: any) => ({ visitId: vr.visitId })), 
-          equipmentTypeId: r.equipmentTypeId, 
-          equipmentTypeCode: r.equipmentTypeCode 
+        {
+          visitId: r.visitId,
+          visitRequests: r.visitRequests.map((vr: any) => ({ visitId: vr.visitId })),
+          equipmentTypeId: r.equipmentTypeId,
+          equipmentTypeCode: r.equipmentTypeCode
         },
         visits
       );
+
+      // Подсчитываем статусы для отладки
+      if (status === 'completed') statusCompleted++;
+      else if (status === 'in_progress' || status === 'assigned') statusInProgress++;
+      else statusNotStarted++;
       
       // Фильтруем визиты по статусам (только завершённые и в работе)
       const validVisits = visits.filter((v: any) => 
@@ -1002,6 +1035,9 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       const order = { completed: 0, in_progress: 1, not_started: 2 };
       return order[a.status] - order[b.status];
     });
+
+    // Отладка: выводим подсчитанные статусы
+    console.log(`[requests-report] Статусы заявок: Завершены=${statusCompleted}, В работе=${statusInProgress}, Не начаты=${statusNotStarted}`);
 
     // Рассчитываем SLA
     const completedRequests = requestsData.filter(r => r.status === 'completed');
