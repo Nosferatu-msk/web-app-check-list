@@ -273,23 +273,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       const contractIds = tmContracts.map(c => c.id);
       where.contractId = { in: contractIds };
 
-      // ТМ видит только заявки, назначенные на своих инженеров (или неназначенные)
-      const tmEngineerIds = await getTeamEngineerIds(req.userId!);
-      if (tmEngineerIds.length > 0) {
-        where.visit = {
-          ...(where.visit || {}),
-          OR: [
-            { visitEngineers: { none: {} } },
-            { visitEngineers: { none: { engineerId: { notIn: tmEngineerIds } } } },
-          ],
-        };
-      } else {
-        // У ТМ нет инженеров — показываем только неназначенные заявки
-        where.visit = {
-          ...(where.visit || {}),
-          visitEngineers: { none: {} },
-        };
-      }
+      // ТМ видит все заявки своего договора (не только назначенные инженерам)
+      // Включая: заявки без визитов, заявки с визитами без visitEngineers, заявки с визитами с visitEngineers
+      // Фильтрация по инженерам не нужна — ТМ видит все заявки своего договора
     } else if (req.userRole === 'engineer') {
       // Инженер видит только назначенные ему заявки (через visit_engineers)
       const visitEngineers = await prisma.visitEngineer.findMany({
