@@ -249,6 +249,40 @@ export const api = {
     URL.revokeObjectURL(url);
   },
 
+  // Requests report (new)
+  generateRequestsReport: async (data: {
+    contractId: string;
+    dateFrom: string;
+    dateTo: string;
+    periodType: 'created' | 'closed';
+  }): Promise<void> => {
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${API_BASE}/reports/requests-generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || res.statusText);
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition') || '';
+    const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)/i);
+    const fileName = match ? decodeURIComponent(match[1]) : `Отчет-по-заявкам-${Date.now()}.pdf`;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
   uploadActScans: async (files: File[]): Promise<{ scanIds: string[] }> => {
     const formData = new FormData();
     files.forEach(f => formData.append('files', f));

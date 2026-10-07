@@ -184,16 +184,26 @@ export default function SummaryReportPage() {
       const dateFrom = startMonth.startOf('month').format('YYYY-MM-DD');
       const dateTo = endMonth.endOf('month').format('YYYY-MM-DD');
 
-      await api.generateUnifiedReport({
-        type: reportType,
-        dateFrom,
-        dateTo,
-        addressIds: reportType === 'objects' ? selectedAddressIds : undefined,
-        requestIds: reportType === 'requests' && requestMode === 'numbers' ? foundRequests.map(r => r.id) : undefined,
-        contractId: reportType === 'requests' && requestMode === 'contract' ? contractId : undefined,
-        engineerId: engineerId || undefined,
-        scanIds: scanIds.length > 0 ? scanIds : undefined,
-      });
+      // Для отчёта по заявкам используем новый метод
+      if (reportType === 'requests' && requestMode === 'contract') {
+        await api.generateRequestsReport({
+          contractId,
+          dateFrom,
+          dateTo,
+          periodType: 'created', // По умолчанию дата создания
+        });
+      } else {
+        await api.generateUnifiedReport({
+          type: reportType,
+          dateFrom,
+          dateTo,
+          addressIds: reportType === 'objects' ? selectedAddressIds : undefined,
+          requestIds: reportType === 'requests' && requestMode === 'numbers' ? foundRequests.map(r => r.id) : undefined,
+          contractId: reportType === 'requests' && requestMode === 'contract' ? contractId : undefined,
+          engineerId: engineerId || undefined,
+          scanIds: scanIds.length > 0 ? scanIds : undefined,
+        });
+      }
 
       message.success('Отчёт сформирован и скачан');
       setScanFiles([]);

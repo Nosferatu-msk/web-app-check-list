@@ -7,6 +7,7 @@ import prisma from '../models/prisma.js';
 import { generateReportHtml, generatePdf, buildReportFileName } from '../services/report.js';
 import { generateMtrReportHtml, buildMtrReportFileName } from '../services/mtrReport.js';
 import { generateUnifiedReportHtml, UnifiedReportVisit } from '../services/unifiedReport.js';
+import { generateRequestsReportHtml, RequestsReportRequest, RequestsReportKPI } from '../services/requestsReport.js';
 import { resizeForActScan } from '../services/imageProcessor.js';
 import { validateTaskFields } from '../utils/validation.js';
 import { sendMail } from '../utils/email.js';
@@ -795,6 +796,268 @@ router.get('/mtr/:id/report/download', async (req: AuthRequest, res: Response) =
   } catch (err: any) {
     console.error('MTR Report download error:', err);
     res.status(500).json({ error: 'Ошибка скачивания отчёта МТР', details: err.message });
+  }
+});
+
+// POST /api/reports/requests-generate — новый отчёт по заявкам
+router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { contractId, dateFrom, dateTo, periodType } = req.body;
+    
+    if (!contractId) {
+      res.status(400).json({ error: 'Не указан договор' });
+      return;
+    }
+    
+    if (!dateFrom || !dateTo) {
+      res.status(400).json({ error: 'Не указан период' });
+      return;
+    }
+
+    const from = new Date(dateFrom);
+    const to = new Date(dateTo);
+
+    // Загружаем пользователя для информации о сформировавшем
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { fullName: true, role: true },
+    });
+    if (!user) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    // Загружаем все заявки договора
+    const allRequests = await prisma.importedRequest.findMany({
+      where: { contractId },
+      include: {
+        matchedAddress: { select: { fullAddress: true } },
+        visitRequests: {
+          include: {
+            visit: {
+              include: {
+                user: { select: { fullName: true } },
+                tasks: {
+                  include: {
+                    equipmentType: true,
+                    roomType: true,
+                    photos: true,
+                    equipmentItems: {
+                      include: {
+                        objectEquipment: true,
+                        photos: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Фильтруем по периоду (дата создания или закрытия)
+    const filteredRequests = allRequests.filter(r => {
+      if (periodType === 'closed') {
+        // Для закрытых заявок — дата последнего завершённого визита
+        const completedVisits = r.visitRequests
+          .map((vr: any) => vr.visit)
+          .filter((v: any) => ['completed', 'sent', 'corrected_by_tm'].includes(v.status));
+        
+        if (completedVisits.length === 0) return false; // Нет завершённых визитов
+        
+        const lastVisitDate = completedVisits.reduce(
+          (max: Date, v: any) => v.dateStart > max ? v.dateStart : max, 
+          new Date(0)
+        );
+        
+        return lastVisitDate >= from && lastVisitDate <= to;
+      } else {
+        // Для созданных заявок — дата создания (startDate или createdAt)
+        const dateField = r.startDate || r.createdAt;
+        if (!dateField) return false;
+        const date = new Date(dateField);
+        return date >= from && date <= to;
+      }
+    });
+
+    // Загружаем рекомендации
+    const recommendations = await prisma.recommendation.findMany({
+      select: { id: true, text: true },
+    });
+    const recMap = new Map(recommendations.map(r => [r.id, r.text]));
+
+    // Проверяем дубликаты фото через VisitAnomaly и phashWarning
+    const photoAnomalies = await prisma.visitAnomaly.findMany({
+      where: {
+        type: 'duplicate',
+        photo: {
+          task: {
+            visit: {
+              contractId,
+            },
+          },
+        },
+      },
+      select: {
+        photoId: true,
+      },
+    });
+    const duplicatePhotoIds = new Set(photoAnomalies.map((a: any) => a.photoId));
+
+    // Определяем статусы заявок и группируем данные
+    const requestsData: RequestsReportRequest[] = [];
+    let totalVisits = 0;
+    let totalCompletedTasks = 0;
+    const servicedAddresses = new Set<string>();
+
+    for (const r of filteredRequests) {
+      // Получаем все визиты для заявки
+      const visits = r.visitRequests.map((vr: any) => vr.visit);
+      
+      // Определяем статус заявки
+      const status = computeRequestStatus(
+        { 
+          visitId: r.visitId, 
+          visitRequests: r.visitRequests.map((vr: any) => ({ visitId: vr.visitId })), 
+          equipmentTypeId: r.equipmentTypeId, 
+          equipmentTypeCode: r.equipmentTypeCode 
+        },
+        visits
+      );
+      
+      // Фильтруем визиты по статусам (только завершённые и в работе)
+      const validVisits = visits.filter((v: any) => 
+        ['completed', 'sent', 'corrected_by_tm', 'in_progress'].includes(v.status)
+      );
+
+      if (validVisits.length > 0) {
+        totalVisits += validVisits.length;
+        
+        // Подсчитываем выполненные задачи
+        for (const visit of validVisits) {
+          totalCompletedTasks += visit.tasks.filter((t: any) => t.conclusion).length;
+          // Подсчёт обслуженных объектов по адресам визитов (не по заявкам)
+          servicedAddresses.add(visit.addressId);
+        }
+      }
+
+      // Формируем данные для отчёта
+      const requestData: RequestsReportRequest = {
+        externalRequestId: r.externalRequestId,
+        address: r.matchedAddress?.fullAddress || 'Адрес не указан',
+        status: status === 'completed' ? 'completed' : status === 'in_progress' || status === 'assigned' ? 'in_progress' : 'not_started',
+        visits: validVisits.map((v: any) => ({
+          id: v.id,
+          dateStart: v.dateStart,
+          engineerName: v.user?.fullName || 'Не указан',
+          status: v.status,
+          tasks: v.tasks.map((t: any) => ({
+            id: t.id,
+            taskType: t.taskType,
+            conclusion: t.conclusion,
+            brand: t.brand,
+            model: t.model,
+            serialNumber: t.serialNumber,
+            parameters: t.parameters,
+            selectedRecommendationIds: t.selectedRecommendationIds,
+            additionalRecommendations: t.additionalRecommendations,
+            equipmentType: t.equipmentType,
+            roomType: t.roomType,
+            photos: t.photos.map((p: any) => ({
+              fileName: p.fileName,
+              filePath: p.filePath,
+              moment: p.moment,
+              phash: p.phash,
+              isDuplicate: duplicatePhotoIds.has(p.id) || (p.phash !== null && p.phash !== undefined),
+            })),
+            equipmentItems: t.equipmentItems.map((ei: any) => ({
+              id: ei.id,
+              status: ei.status,
+              objectEquipment: ei.objectEquipment,
+              photos: ei.photos.map((p: any) => ({
+                fileName: p.fileName,
+                filePath: p.filePath,
+                moment: p.moment,
+                phash: p.phash,
+                isDuplicate: duplicatePhotoIds.has(p.id) || (p.phash !== null && p.phash !== undefined),
+              })),
+            })),
+          })),
+        })),
+      };
+
+      requestsData.push(requestData);
+    }
+
+    // Сортируем заявки: завершённые → в работе → не начатые
+    requestsData.sort((a, b) => {
+      const order = { completed: 0, in_progress: 1, not_started: 2 };
+      return order[a.status] - order[b.status];
+    });
+
+    // Рассчитываем SLA
+    const completedRequests = requestsData.filter(r => r.status === 'completed');
+    const closedInTime = completedRequests.filter(r => {
+      const req = filteredRequests.find(fr => fr.externalRequestId === r.externalRequestId);
+      if (!req || !req.deadline) return false;
+      // Проверяем, что все визиты завершены до deadline
+      const lastVisitDate = r.visits.reduce((max, v) => v.dateStart > max ? v.dateStart : max, new Date(0));
+      return lastVisitDate <= new Date(req.deadline);
+    }).length;
+    const sla = completedRequests.length > 0 ? (closedInTime / completedRequests.length) * 100 : 0;
+
+    // Формируем KPI
+    const kpi: RequestsReportKPI = {
+      totalRequests: filteredRequests.length,
+      completedRequests: completedRequests.length,
+      inProgressRequests: requestsData.filter(r => r.status === 'in_progress').length,
+      notStartedRequests: requestsData.filter(r => r.status === 'not_started').length,
+      sla,
+      totalVisits,
+      totalCompletedTasks,
+      totalServicedAddresses: servicedAddresses.size,
+    };
+
+    // Генерируем HTML
+    const html = await generateRequestsReportHtml(requestsData, kpi, {
+      periodType: periodType || 'created',
+      dateFrom,
+      dateTo,
+      generatedBy: { fullName: user.fullName, role: user.role },
+      recMap,
+    });
+
+    // Генерируем PDF
+    const pdfPath = path.join(reportsDir, `requests-report-${Date.now()}.pdf`);
+    await generatePdf(html, pdfPath);
+
+    await logAudit({ 
+      userId: req.userId, 
+      action: 'generate_requests_report', 
+      entityType: 'contract', 
+      entityId: contractId, 
+      ipAddress: req.ip, 
+      userAgent: req.headers['user-agent'] 
+    });
+
+    // Отправляем файл
+    res.download(pdfPath, `Отчет-по-заявкам-${Date.now()}.pdf`, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        res.status(500).json({ error: 'Ошибка скачивания отчёта' });
+      }
+      // Удаляем файл после отправки
+      setTimeout(() => {
+        if (fs.existsSync(pdfPath)) {
+          fs.unlinkSync(pdfPath);
+        }
+      }, 60000);
+    });
+  } catch (err: any) {
+    console.error('Requests report generation error:', err);
+    res.status(500).json({ error: 'Ошибка генерации отчёта по заявкам', details: err.message });
   }
 });
 
