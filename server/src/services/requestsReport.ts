@@ -494,36 +494,67 @@ export async function generateRequestsReportHtml(
 
   // Request sheets
   let sheetsHtml = '';
-  for (const req of requests) {
+  
+  // Разделяем заявки с визитами и без визитов
+  const requestsWithVisits = requests.filter(r => r.visits.length > 0);
+  const requestsWithoutVisits = requests.filter(r => r.visits.length === 0);
+  
+  // Рендерим заявки с визитами (каждая на отдельном листе)
+  for (const req of requestsWithVisits) {
     const statusColor = STATUS_COLORS[req.status] || '#999';
     const statusLabel = req.status === 'completed' ? 'Завершена' : req.status === 'in_progress' ? 'В работе' : 'Не начата';
-    
+
     sheetsHtml += `<div style="page-break-before:always;">`;
     sheetsHtml += `<h2 style="border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:20px;">Заявка: ${req.externalRequestId} (${req.address})</h2>`;
 
-    if (req.visits.length === 0) {
-      sheetsHtml += `<p style="text-align:center;color:#999;font-size:11pt;margin:40px 0;">Нет визитов по заявке</p>`;
-    } else {
-      for (const visit of req.visits) {
-        const visitStatusColor = STATUS_COLORS[visit.status] || '#999';
-        const visitStatusLabel = STATUS_LABELS[visit.status] || visit.status;
-        const issuesCount = visit.tasks.filter(t => t.conclusion && t.conclusion !== 'ok').length;
+    for (const visit of req.visits) {
+      const visitStatusColor = STATUS_COLORS[visit.status] || '#999';
+      const visitStatusLabel = STATUS_LABELS[visit.status] || visit.status;
+      const issuesCount = visit.tasks.filter(t => t.conclusion && t.conclusion !== 'ok').length;
 
-        sheetsHtml += `
-          <div style="margin:12px 0;padding:10px;border:1px solid #ccc;border-radius:6px;">
-            <h3 style="margin:0 0 6px;">Визит: ${formatDate(visit.dateStart)}</h3>
-            <p style="margin:2px 0;font-size:9pt;"><strong>Инженер:</strong> ${visit.engineerName}</p>
-            <p style="margin:2px 0;font-size:9pt;"><strong>Статус:</strong> <span style="color:${visitStatusColor};font-weight:600;">${visitStatusLabel}</span></p>
-            <p style="margin:2px 0;font-size:9pt;"><strong>Задач:</strong> ${visit.tasks.length} | <strong>Замечаний:</strong> ${issuesCount}</p>
-          </div>
-        `;
+      sheetsHtml += `
+        <div style="margin:12px 0;padding:10px;border:1px solid #ccc;border-radius:6px;">
+          <h3 style="margin:0 0 6px;">Визит: ${formatDate(visit.dateStart)}</h3>
+          <p style="margin:2px 0;font-size:9pt;"><strong>Инженер:</strong> ${visit.engineerName}</p>
+          <p style="margin:2px 0;font-size:9pt;"><strong>Статус:</strong> <span style="color:${visitStatusColor};font-weight:600;">${visitStatusLabel}</span></p>
+          <p style="margin:2px 0;font-size:9pt;"><strong>Задач:</strong> ${visit.tasks.length} | <strong>Замечаний:</strong> ${issuesCount}</p>
+        </div>
+      `;
 
-        for (let ti = 0; ti < visit.tasks.length; ti++) {
-          sheetsHtml += await renderTask(visit.tasks[ti], ti + 1, recMap, simplified);
-        }
+      for (let ti = 0; ti < visit.tasks.length; ti++) {
+        sheetsHtml += await renderTask(visit.tasks[ti], ti + 1, recMap, simplified);
       }
     }
     sheetsHtml += '</div>';
+  }
+  
+  // Рендерим заявки без визитов (все на одном листе в виде таблицы)
+  if (requestsWithoutVisits.length > 0) {
+    sheetsHtml += `<div style="page-break-before:always;">`;
+    sheetsHtml += `<h2 style="border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:20px;">Заявки без визитов (не назначенные)</h2>`;
+    sheetsHtml += `<table style="width:100%;border-collapse:collapse;margin:20px 0;">`;
+    sheetsHtml += `<thead><tr style="background:#f5f5f5;">`;
+    sheetsHtml += `<th style="padding:8px;border:1px solid #ddd;font-size:10pt;text-align:left;">№</th>`;
+    sheetsHtml += `<th style="padding:8px;border:1px solid #ddd;font-size:10pt;text-align:left;">Номер заявки</th>`;
+    sheetsHtml += `<th style="padding:8px;border:1px solid #ddd;font-size:10pt;text-align:left;">Адрес</th>`;
+    sheetsHtml += `<th style="padding:8px;border:1px solid #ddd;font-size:10pt;text-align:left;">Статус</th>`;
+    sheetsHtml += `</tr></thead><tbody>`;
+    
+    for (let i = 0; i < requestsWithoutVisits.length; i++) {
+      const req = requestsWithoutVisits[i];
+      const statusColor = STATUS_COLORS[req.status] || '#999';
+      const statusLabel = req.status === 'completed' ? 'Завершена' : req.status === 'in_progress' ? 'В работе' : 'Не начата';
+      
+      sheetsHtml += `<tr>`;
+      sheetsHtml += `<td style="padding:6px;border:1px solid #ddd;font-size:9pt;">${i + 1}</td>`;
+      sheetsHtml += `<td style="padding:6px;border:1px solid #ddd;font-size:9pt;">${req.externalRequestId}</td>`;
+      sheetsHtml += `<td style="padding:6px;border:1px solid #ddd;font-size:9pt;">${req.address}</td>`;
+      sheetsHtml += `<td style="padding:6px;border:1px solid #ddd;font-size:9pt;color:${statusColor};font-weight:600;">${statusLabel}</td>`;
+      sheetsHtml += `</tr>`;
+    }
+    
+    sheetsHtml += `</tbody></table>`;
+    sheetsHtml += `</div>`;
   }
 
   if (!sheetsHtml) {

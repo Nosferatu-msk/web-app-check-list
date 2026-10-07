@@ -912,23 +912,26 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
     });
     const recMap = new Map(recommendations.map(r => [r.id, r.text]));
 
-    // Проверяем дубликаты фото через VisitAnomaly и phashWarning
+    // Проверяем дубликаты фото через VisitAnomaly
+    // Дубликаты помечаются как 'photo_phash_match' или 'duplicate'
     const photoAnomalies = await prisma.visitAnomaly.findMany({
       where: {
-        type: 'duplicate',
-        photo: {
-          task: {
-            visit: {
-              contractId,
-            },
-          },
+        OR: [
+          { type: 'duplicate' },
+          { type: 'photo_phash_match', severity: 'critical' },
+        ],
+        photoId: { not: null },
+        visit: {
+          contractId,
         },
       },
       select: {
         photoId: true,
       },
     });
-    const duplicatePhotoIds = new Set(photoAnomalies.map((a: any) => a.photoId));
+    const duplicatePhotoIds = new Set(photoAnomalies.map((a: any) => a.photoId).filter(Boolean));
+    
+    console.log(`[requests-report] Найдено дубликатов фото: ${duplicatePhotoIds.size}`);
 
     // Определяем статусы заявок и группируем данные
     const requestsData: RequestsReportRequest[] = [];
