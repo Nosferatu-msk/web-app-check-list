@@ -1025,7 +1025,7 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       const requestData: RequestsReportRequest = {
         externalRequestId: r.externalRequestId,
         address: r.matchedAddress?.fullAddress || 'Адрес не указан',
-        status: status === 'completed' ? 'completed' : status === 'in_progress' || status === 'assigned' ? 'in_progress' : 'not_started',
+        status: status === 'completed' ? 'completed' : status === 'in_progress' ? 'in_progress' : 'not_started',
         visits: validVisits.map((v: any) => ({
           id: v.id,
           dateStart: v.dateStart,
@@ -1079,6 +1079,7 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
     console.log(`[requests-report] Статусы заявок: Завершены=${statusCompleted}, В работе=${statusInProgress}, Не начаты=${statusNotStarted}`);
 
     // Рассчитываем SLA
+    // SLA = (Заявки, закрытые в срок / Общее количество заявок) × 100%
     const completedRequests = requestsData.filter(r => r.status === 'completed');
     const closedInTime = completedRequests.filter(r => {
       const req = filteredRequests.find(fr => fr.externalRequestId === r.externalRequestId);
@@ -1087,7 +1088,7 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       const lastVisitDate = r.visits.reduce((max, v) => v.dateStart > max ? v.dateStart : max, new Date(0));
       return lastVisitDate <= new Date(req.deadline);
     }).length;
-    const sla = completedRequests.length > 0 ? (closedInTime / completedRequests.length) * 100 : 0;
+    const sla = filteredRequests.length > 0 ? (closedInTime / filteredRequests.length) * 100 : 0;
 
     // Формируем KPI
     const kpi: RequestsReportKPI = {
