@@ -857,6 +857,9 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       },
     });
 
+    // Отладка: выводим количество загруженных заявок
+    console.log(`[requests-report] Загружено заявок: ${allRequests.length}`);
+
     // Фильтруем по периоду (дата создания или закрытия)
     const filteredRequests = allRequests.filter(r => {
       if (periodType === 'closed') {
@@ -881,6 +884,9 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
         return date >= from && date <= to;
       }
     });
+
+    // Отладка: выводим количество заявок после фильтрации по периоду
+    console.log(`[requests-report] Заявок после фильтрации по периоду: ${filteredRequests.length}`);
 
     // Загружаем рекомендации
     const recommendations = await prisma.recommendation.findMany({
@@ -970,7 +976,7 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
               filePath: p.filePath,
               moment: p.moment,
               phash: p.phash,
-              isDuplicate: duplicatePhotoIds.has(p.id) || (p.phash !== null && p.phash !== undefined),
+              isDuplicate: duplicatePhotoIds.has(p.id),
             })),
             equipmentItems: t.equipmentItems.map((ei: any) => ({
               id: ei.id,
@@ -981,7 +987,7 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
                 filePath: p.filePath,
                 moment: p.moment,
                 phash: p.phash,
-                isDuplicate: duplicatePhotoIds.has(p.id) || (p.phash !== null && p.phash !== undefined),
+                isDuplicate: duplicatePhotoIds.has(p.id),
               })),
             })),
           })),
