@@ -19,6 +19,7 @@ const router = Router();
 router.use(authMiddleware);
 
 import { getTeamEngineerIds } from '../utils/tmTeam.js';
+import { getEngineerTeamTmId, canEngineEditVisit, releaseVisitEditLock } from '../utils/engineerTeam.js';
 
 async function canAccessVisit(visitUserId: string | null, req: AuthRequest, visitId?: string): Promise<boolean> {
   if (req.userRole === 'admin') return true;
@@ -33,6 +34,13 @@ async function canAccessVisit(visitUserId: string | null, req: AuthRequest, visi
       where: { visitId, engineerId: req.userId as string },
     });
     if (ve) return true;
+    
+    // Инженер видит визиты коллег по команде ТМ
+    const tmId = await getEngineerTeamTmId(req.userId as string);
+    if (tmId) {
+      const teamEngineerIds = await getTeamEngineerIds(tmId);
+      if (teamEngineerIds.includes(visitUserId)) return true;
+    }
   }
   if (req.userRole === 'tm') {
     const engineerIds = await getTeamEngineerIds(req.userId!);
@@ -352,11 +360,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
   if (req.userRole === 'engineer') {
     // Инженер видит визиты, где он основной (userId) или назначен через visitEngineers
+    // А также визиты других инженеров из своей команды ТМ
+    const tmId = await getEngineerTeamTmId(req.userId as string);
+    let teamEngineerIds: string[] = [];
+    if (tmId) {
+      teamEngineerIds = await getTeamEngineerIds(tmId);
+    }
+    
     where.AND = [
       ...(where.AND || []),
       { OR: [
         { userId: req.userId },
-        { visitEngineers: { some: { engineerId: req.userId } } }
+        { visitEngineers: { some: { engineerId: req.userId } } },
+        { userId: { in: teamEngineerIds } }, // Визиты коллег по команде
       ]}
     ];
   } else if (req.userRole === 'tm') {
@@ -534,6 +550,13 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
         visit.tasks = visit.tasks.filter(t => t.equipmentType && activeSpecs.includes(t.equipmentType.specializationReq || ''));
       }
     }
+    
+    // Добавляем информацию о возможности редактирования для инженера
+    const editCheck = await canEngineEditVisit(visit.id, req.userId as string);
+    (visitResult as any).canEdit = editCheck.canEdit;
+    (visitResult as any).canEditReason = editCheck.reason;
+    (visitResult as any).currentEditor = editCheck.editor || null;
+    (visitResult as any).isOwnVisit = visit.userId === req.userId;
   }
 
   res.json(visitResult);
@@ -551,6 +574,14 @@ router.put('/:id', validate(updateVisitSchema), async (req: AuthRequest, res: Re
   const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  
+  // Проверка для инженера: может ли он редактировать этот визит
+  if (req.userRole === 'engineer') {
+    const editCheck = await canEngineEditVisit(existing.id, req.userId as string);
+    if (!editCheck.canEdit) {
+      res.status(403).json({ error: editCheck.reason || 'Редактирование запрещено' }); return;
+    }
+  }
 
   const isTmCorrection = (req.userRole === 'tm' || req.userRole === 'admin') && existing.userId !== req.userId;
 
@@ -575,6 +606,11 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   const existing = await prisma.visit.findUnique({ where: { id: req.params.id as string } });
   if (!existing) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(existing.userId, req, existing.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
+  
+  // Инженер может удалить только свой визит (созданный им)
+  if (req.userRole === 'engineer' && existing.userId !== req.userId) {
+    res.status(403).json({ error: 'Вы можете удалять только свои визиты' }); return;
+  }
 
   // Снимаем привязки к заявкам и назначения инженеров перед удалением
   const visitRequests = await prisma.visitRequest.findMany({
@@ -793,7 +829,13 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
   const timeEnd = `${String(msk.getHours()).padStart(2, '0')}:${String(msk.getMinutes()).padStart(2, '0')}`;
   const visit = await prisma.visit.update({
     where: { id: req.params.id as string },
-    data: { status: 'completed', timeEnd },
+    data: { 
+      status: 'completed', 
+      timeEnd,
+      // Снимаем блокировку редактирования при завершении визита
+      editingEngineerId: null,
+      editingStartedAt: null,
+    },
     include: { address: true, tasks: { include: taskInclude } },
   });
   await logAudit({ userId: req.userId, action: 'complete', entityType: 'visit', entityId: visit.id, ipAddress: req.ip, userAgent: req.headers['user-agent'] });

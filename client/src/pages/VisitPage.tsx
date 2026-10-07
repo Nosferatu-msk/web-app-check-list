@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Form, Input, InputNumber, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, Segmented, List, Empty, AutoComplete, Dropdown, Steps, Card } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined } from '@ant-design/icons';
+import { Form, Input, InputNumber, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, Segmented, List, Empty, AutoComplete, Dropdown, Steps, Card, Alert } from 'antd';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -168,6 +168,25 @@ export default function VisitPage() {
         });
         resetAutoSave();
         setLoading(false);
+        
+        // Показываем предупреждения для инженера
+        if (user?.role === 'engineer') {
+          if (v.canEdit === false) {
+            // Визит нельзя редактировать
+            Modal.warning({
+              title: 'Редактирование запрещено',
+              content: v.canEditReason || 'Вы не можете редактировать этот визит',
+              icon: <ExclamationCircleOutlined />,
+            });
+          } else if (v.isOwnVisit === false && v.canEdit === true) {
+            // Визит коллеги, но можно редактировать
+            Modal.info({
+              title: 'Визит коллеги',
+              content: `Вы редактируете визит инженера ${v.user?.fullName || 'другого инженера'}. Будьте внимательны при внесении изменений.`,
+              icon: <ExclamationCircleOutlined />,
+            });
+          }
+        }
       }).catch(err => {
         setLoading(false);
         message.error(err.message || 'Не удалось загрузить визит');
@@ -669,12 +688,25 @@ export default function VisitPage() {
 
   const handleDeleteVisit = async () => {
     if (!visit?.id) return;
-    if (isOffline()) {
-      await api.deleteVisitOffline(visit.id);
-    } else {
-      await api.deleteVisit(visit.id);
+    try {
+      if (isOffline()) {
+        await api.deleteVisitOffline(visit.id);
+      } else {
+        await api.deleteVisit(visit.id);
+      }
+      navigate('/');
+    } catch (err: any) {
+      // Обработка ошибки при попытке удалить чужой визит
+      if (err.message?.includes('только свои визиты') || err.message?.includes('403')) {
+        Modal.error({
+          title: 'Невозможно удалить визит',
+          content: 'Вы можете удалять только визиты, которые создали сами. Этот визит был создан другим инженером.',
+          icon: <ExclamationCircleOutlined />,
+        });
+      } else {
+        message.error(err.message || 'Ошибка удаления визита');
+      }
     }
-    navigate('/');
   };
 
   const getPhotoProgress = (task: any) => {

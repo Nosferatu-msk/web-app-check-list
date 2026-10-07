@@ -165,9 +165,21 @@ export default function VisitListPage() {
       okType: 'danger',
       cancelText: 'Отмена',
       onOk: async () => {
-        await api.deleteVisit(visitId);
-        message.success('Визит удалён');
-        load();
+        try {
+          await api.deleteVisit(visitId);
+          message.success('Визит удалён');
+          load();
+        } catch (err: any) {
+          // Обработка ошибки при попытке удалить чужой визит
+          if (err.message?.includes('только свои визиты') || err.message?.includes('403')) {
+            modal.error({
+              title: 'Невозможно удалить визит',
+              content: 'Вы можете удалять только визиты, которые создали сами. Этот визит был создан другим инженером.',
+            });
+          } else {
+            message.error(err.message || 'Ошибка удаления визита');
+          }
+        }
       },
     });
   };
@@ -477,12 +489,19 @@ export default function VisitListPage() {
                           allEngineers.push({ id: v.user.id, fullName: v.user.fullName, specs: v.user });
                         }
                         if (allEngineers.length === 0) return null;
+                        
+                        // Проверяем, является ли визит "визитом коллеги" для текущего инженера
+                        const isColleagueVisit = user?.role === 'engineer' && v.user && v.user.id !== user.id;
+                        
                         return (
                           <span> · {allEngineers.map((e, idx) => (
                             <span key={e.id}>
                               {idx > 0 && ', '}{e.fullName}{getSpecBadges(e.specs)}
                             </span>
                           ))}
+                          {isColleagueVisit && (
+                            <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>Визит коллеги</Tag>
+                          )}
                           </span>
                         );
                       })()}

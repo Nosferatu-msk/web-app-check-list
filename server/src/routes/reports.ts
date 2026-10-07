@@ -110,6 +110,10 @@ router.post('/:id/report/send', async (req: AuthRequest, res: Response) => {
     } else {
       updateData.sentByTmAt = new Date();
     }
+    // Снимаем блокировку редактирования при отправке отчёта
+    updateData.editingEngineerId = null;
+    updateData.editingStartedAt = null;
+    
     await prisma.visit.update({ where: { id: req.params.id as string }, data: updateData });
 
     await logAudit({ userId: req.userId, action: 'send_report', entityType: 'visit', entityId: req.params.id as string, newValue: { email, sentBy: req.userRole }, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
@@ -122,6 +126,7 @@ router.post('/:id/report/send', async (req: AuthRequest, res: Response) => {
 // ─── Helpers ────────────────────────────────────────────────────
 
 import { getTeamEngineerIds } from '../utils/tmTeam.js';
+import { releaseVisitEditLock } from '../utils/engineerTeam.js';
 
 const actScansDir = path.resolve('./uploads/act-scans');
 if (!fs.existsSync(actScansDir)) fs.mkdirSync(actScansDir, { recursive: true });

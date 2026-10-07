@@ -210,6 +210,9 @@ model Visit {
   isDeleted         Boolean     @default(false) @map("is_deleted")
   deletedById       String?     @map("deleted_by_id")
   deletedAt         DateTime?   @map("deleted_at")
+  // Поля для отслеживания текущего редактора визита (для предотвращения одновременного редактирования)
+  editingEngineerId String?     @map("editing_engineer_id")
+  editingStartedAt  DateTime?   @map("editing_started_at")
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
@@ -229,6 +232,8 @@ model Visit {
   @@index([assignedById])
   @@index([isDeleted])
   @@index([contractId])
+  // Частичный индекс для активных блокировок редактирования (только где editingEngineerId не null)
+  // Примечание: Prisma не поддерживает partial indexes напрямую, но миграция создаёт его корректно
   @@map("visits")
 }
 
