@@ -944,7 +944,7 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
     for (const r of filteredRequests) {
       // Получаем все визиты для заявки (включая прямой visit)
       const visits = r.visitRequests.map((vr: any) => vr.visit);
-      
+
       // Добавляем прямой визит, если он есть и его нет в visitRequests
       if ((r as any).visit && !visits.find((v: any) => v.id === (r as any).visit.id)) {
         visits.push((r as any).visit);
@@ -960,6 +960,18 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
         },
         visits
       );
+
+      // Отладка: выводим первые 5 заявок для проверки
+      if (filteredRequests.indexOf(r) < 5) {
+        console.log(`[requests-report-debug] Заявка ${r.externalRequestId}: статус=${status}, визитов=${visits.length}, visitId=${r.visitId || 'null'}, equipmentTypeCode=${r.equipmentTypeCode}`);
+        if (visits.length > 0) {
+          const v = visits[0];
+          console.log(`  Первый визит: id=${v.id}, status=${v.status}, tasks=${v.tasks?.length || 0}`);
+          if (v.tasks && v.tasks.length > 0) {
+            console.log(`  Задачи: ${v.tasks.map((t: any) => t.equipmentTypeId).join(', ')}`);
+          }
+        }
+      }
 
       // Подсчитываем статусы для отладки
       if (status === 'completed') statusCompleted++;
