@@ -849,7 +849,7 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
               },
             },
           },
-        },
+        } as any,
         visitRequests: {
           include: {
             visit: {
@@ -951,15 +951,42 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       }
 
       // Определяем статус заявки
-      const status = computeRequestStatus(
-        {
-          visitId: r.visitId,
-          visitRequests: r.visitRequests.map((vr: any) => ({ visitId: vr.visitId })),
-          equipmentTypeId: r.equipmentTypeId,
-          equipmentTypeCode: r.equipmentTypeCode
-        },
-        visits
-      );
+      const isISZH = r.equipmentTypeCode === 'iszh_object';
+      let status: string;
+      
+      if (isISZH) {
+        // Для ИСЖ объекта — агрегированный статус по всем визитам
+        const realVisits = visits.filter((v: any) => v.tasks && v.tasks.length > 0);
+        if (realVisits.length === 0) {
+          status = visits.length > 0 ? 'assigned' : 'not_started';
+        } else {
+          const statuses = realVisits.map((v: any) => v.status);
+          const completedStatuses = ['completed', 'sent', 'corrected_by_tm'];
+          const allCompleted = statuses.every((s: string) => completedStatuses.includes(s));
+          if (allCompleted) {
+            status = 'completed';
+          } else if (statuses.includes('in_progress')) {
+            status = 'in_progress';
+          } else if (statuses.includes('planned')) {
+            status = 'assigned';
+          } else if (statuses.some((s: string) => completedStatuses.includes(s))) {
+            status = 'in_progress';
+          } else {
+            status = 'assigned';
+          }
+        }
+      } else {
+        // Для обычных заявок — используем computeRequestStatus
+        status = computeRequestStatus(
+          {
+            visitId: r.visitId,
+            visitRequests: r.visitRequests.map((vr: any) => ({ visitId: vr.visitId })),
+            equipmentTypeId: r.equipmentTypeId,
+            equipmentTypeCode: r.equipmentTypeCode
+          },
+          visits
+        );
+      }
 
       // Отладка: выводим первые 5 заявок для проверки
       if (filteredRequests.indexOf(r) < 5) {
