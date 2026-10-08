@@ -14,10 +14,10 @@ const addressSchema = z.object({
   city: z.string().min(1),
   street: z.string().min(1),
   house: z.string().min(1),
-  building: z.string().optional(),
+  building: z.string().nullable().optional(),
   fullAddress: z.string().min(1),
-  customerEmail: z.string().email().optional().or(z.literal('')),
-  objectCode: z.string().optional().or(z.literal('')),
+  customerEmail: z.string().email().nullable().optional().or(z.literal('')),
+  objectCode: z.string().nullable().optional().or(z.literal('')),
 });
 
 router.get('/addresses', async (req: AuthRequest, res: Response) => {
