@@ -152,7 +152,7 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
       const fullAddress = (r.full_address || r.fullAddress || r['полный адрес'] || '').trim();
       if (!fullAddress) { result.errors.push({ row: i + 2, message: 'Не заполнен full_address' }); continue; }
 
-      const existing = await prisma.address.findFirst({ where: { fullAddress } });
+      const existing = await prisma.address.findFirst({ where: { fullAddress, isDeleted: false } });
       if (existing) { result.duplicates++; dupRows.push(i + 2); continue; }
 
       let customerEmail = r.customer_email || r.customerEmail || r['email заказчика'] || null;
@@ -164,7 +164,7 @@ router.post('/addresses', upload.single('file'), async (req: AuthRequest, res: R
       const objectCode = (r.object_code || r.objectCode || r['код объекта'] || '').trim() || null;
 
       if (objectCode) {
-        const existingByCode = await prisma.address.findFirst({ where: { objectCode } });
+        const existingByCode = await prisma.address.findFirst({ where: { objectCode, isDeleted: false } });
         if (existingByCode) { result.duplicates++; dupRows.push(i + 2); continue; }
       }
 

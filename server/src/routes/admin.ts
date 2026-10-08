@@ -73,11 +73,48 @@ router.put('/addresses/:id', validate(addressSchema), async (req: AuthRequest, r
 
 router.delete('/addresses/:id', async (req: AuthRequest, res: Response) => {
   try {
-    await prisma.address.update({
-      where: { id: req.params.id as string },
-      data: { isDeleted: true },
-    });
-    await logAudit({ userId: req.userId, action: 'delete', entityType: 'address', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+    const addressId = req.params.id as string;
+    
+    // Получаем адрес для логирования
+    const address = await prisma.address.findUnique({ where: { id: addressId } });
+    if (!address) {
+      return res.status(404).json({ error: 'Адрес не найден' });
+    }
+    
+    // Каскадное удаление связанных записей
+    const deleteOperations: any[] = [
+      // Удаляем привязки ТМ к объекту
+      prisma.tmObject.deleteMany({ where: { addressId } }),
+      // Удаляем оборудование объекта
+      prisma.objectEquipment.deleteMany({ where: { addressId } }),
+      // Удаляем предложения по оборудованию
+      prisma.equipmentProposal.deleteMany({ where: { addressId } }),
+      // Удаляем импортированные заявки (связаны через matched_address_id)
+      prisma.importedRequest.deleteMany({ where: { matchedAddressId: addressId } }),
+      // Удаляем МТР привязки к ТМ
+      prisma.mtrTmObject.deleteMany({ where: { addressId } }),
+      // Удаляем МТР визиты
+      prisma.mtrVisit.deleteMany({ where: { addressId } }),
+      // Удаляем визиты (мягко — помечаем как удалённые)
+      prisma.visit.updateMany({ 
+        where: { addressId }, 
+        data: { isDeleted: true } 
+      }),
+    ];
+    
+    // Удаляем избранные объекты (связаны через objectCode, только если objectCode есть)
+    if (address.objectCode) {
+      deleteOperations.push(
+        prisma.userFavoriteObject.deleteMany({ where: { objectCode: address.objectCode } })
+      );
+    }
+    
+    // Физически удаляем адрес
+    deleteOperations.push(prisma.address.delete({ where: { id: addressId } }));
+    
+    await prisma.$transaction(deleteOperations);
+    
+    await logAudit({ userId: req.userId, action: 'delete', entityType: 'address', entityId: addressId, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
     res.json({ message: 'Удалено' });
   } catch (err: any) {
     console.error('Delete address error:', err);
