@@ -61,7 +61,7 @@ export async function getAnalyticsVisits(params: {
 
   const hasAnomalyFilter = type || severity || status;
 
-  // Получаем визиты с отклонениями
+  // Получаем визиты с отклонениями (сразу с фильтрами визита)
   const visitsWithAnomalies = await prisma.visitAnomaly.groupBy({
     by: ['visitId'],
     where: {
@@ -81,7 +81,10 @@ export async function getAnalyticsVisits(params: {
     };
   }
 
-  // Получаем детали визитов
+  // Общее количество визитов с отклонениями (для пагинации)
+  const total = visitIdsWithAnomalies.length;
+
+  // Получаем детали визитов с пагинацией
   const visits = await prisma.visit.findMany({
     where: { id: { in: visitIdsWithAnomalies } },
     include: {
@@ -96,7 +99,7 @@ export async function getAnalyticsVisits(params: {
     take: pageSize,
   });
 
-  // Общее количество визитов за период
+  // Общее количество визитов за период (для сводки)
   const totalVisits = await prisma.visit.count({ where: visitWhere });
 
   // Сводка
@@ -136,7 +139,7 @@ export async function getAnalyticsVisits(params: {
 
   return {
     data,
-    total: uniqueVisitsWithAnomalies.size,
+    total,
     summary: {
       totalVisits,
       visitsWithAnomalies: uniqueVisitsWithAnomalies.size,
