@@ -1,3 +1,5 @@
+import { getFingerprint } from '../utils/fingerprint';
+
 const API_BASE = '/api';
 
 class ApiError extends Error {
@@ -20,6 +22,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
+  }
+  
+  // Добавляем fingerprint браузера для идентификации устройства
+  try {
+    const fingerprint = await getFingerprint();
+    headers['X-Device-Fingerprint'] = fingerprint;
+  } catch (err) {
+    console.error('Failed to get fingerprint:', err);
   }
 
   let res: Response;

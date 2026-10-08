@@ -18,6 +18,7 @@ export function auditMiddleware(entityType: string, action: string, getEntityId?
             newValue: ['create', 'update'].includes(action) ? req.body : null,
             ipAddress: req.ip || null,
             userAgent: req.headers['user-agent'] || null,
+            deviceFingerprint: (req.headers['x-device-fingerprint'] as string) || null,
           },
         }).catch(console.error);
       }
@@ -36,6 +37,7 @@ export async function logAudit(params: {
   newValue?: Record<string, unknown> | null;
   ipAddress?: string | null;
   userAgent?: string | null;
+  deviceFingerprint?: string | null;
 }) {
   await prisma.auditLog.create({ data: params as any });
 }

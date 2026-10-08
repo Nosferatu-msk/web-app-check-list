@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
+import { clearFingerprintCache } from '../utils/fingerprint';
 
 interface User {
   id: string;
@@ -39,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    clearFingerprintCache();
     set({ user: null, isAuthenticated: false, isLoading: false });
   },
 

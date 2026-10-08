@@ -51,7 +51,15 @@ router.post('/login', authLimiter, validate(loginSchema), async (req: Request, r
   }
   const accessToken = generateAccessToken(user.id, user.role);
   const refreshToken = generateRefreshToken(user.id, user.role);
-  await logAudit({ userId: user.id, action: 'login', entityType: 'user', entityId: user.id, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+  await logAudit({ 
+    userId: user.id, 
+    action: 'login', 
+    entityType: 'user', 
+    entityId: user.id, 
+    ipAddress: req.ip, 
+    userAgent: req.headers['user-agent'],
+    deviceFingerprint: (req.headers['x-device-fingerprint'] as string) || null,
+  });
   res.json({
     accessToken,
     refreshToken,
