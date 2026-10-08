@@ -570,6 +570,7 @@ export default function VisitPage() {
 
   const handleAddNewTask = async (values: any) => {
     if (!visit?.id) { message.warning('Сначала сохраните визит'); return; }
+    if (addingEquipment) return; // Защита от повторных вызовов
     if (!values.roomTypeId && !values.comment) {
       message.warning('Укажите тип помещения или комментарий');
       return;
@@ -585,47 +586,59 @@ export default function VisitPage() {
       }
     }
 
-    const taskData = {
-      equipmentTypeId: values.equipmentTypeId,
-      roomTypeId: values.roomTypeId || '',
-      comment: values.comment || '',
-      brand: values.brand || '',
-      model: values.model || '',
-      serialNumber: values.serialNumber || '',
-    };
-    let createdTaskId: string | undefined;
-    if (isOffline()) {
-      await api.createTaskOffline(visit.id, taskData);
-    } else {
-      const createdTask = await api.createTask(visit.id, taskData);
-      createdTaskId = createdTask?.id;
-    }
-
-    if (proposeEquipment && !isOffline()) {
-      const eqType = equipmentTypes.find(e => e.id === values.equipmentTypeId);
-      const rmType = roomTypes.find(r => r.id === values.roomTypeId);
-      try {
-        await api.createProposal({
-          addressId: visit.addressId,
-          equipmentTypeCode: eqType?.code || '',
-          roomTypeCode: rmType?.code || '',
-          brand: values.brand || '',
-          model: values.model || '',
-          serialNumber: values.serialNumber || '',
-          locationDescription: values.comment || '',
-          coolingCapacityKw: values.coolingCapacityKw ?? null,
-          taskId: createdTaskId,
-        });
-        message.success('Предложение отправлено администратору');
-      } catch {
-        message.warning('Задача создана, но предложение не удалось отправить');
+    setAddingEquipment(true);
+    try {
+      const taskData = {
+        equipmentTypeId: values.equipmentTypeId,
+        roomTypeId: values.roomTypeId || '',
+        comment: values.comment || '',
+        brand: values.brand || '',
+        model: values.model || '',
+        serialNumber: values.serialNumber || '',
+      };
+      let createdTaskId: string | undefined;
+      if (isOffline()) {
+        await api.createTaskOffline(visit.id, taskData);
+      } else {
+        const createdTask = await api.createTask(visit.id, taskData);
+        createdTaskId = createdTask?.id;
       }
-    }
 
-    const v = await api.getVisit(visit.id);
-    setTasks(v.tasks || []);
-    setAddModalOpen(false);
-    newTaskForm.resetFields();
+      if (proposeEquipment && !isOffline()) {
+        const eqType = equipmentTypes.find(e => e.id === values.equipmentTypeId);
+        const rmType = roomTypes.find(r => r.id === values.roomTypeId);
+        try {
+          await api.createProposal({
+            addressId: visit.addressId,
+            equipmentTypeCode: eqType?.code || '',
+            roomTypeCode: rmType?.code || '',
+            brand: values.brand || '',
+            model: values.model || '',
+            serialNumber: values.serialNumber || '',
+            locationDescription: values.comment || '',
+            coolingCapacityKw: values.coolingCapacityKw ?? null,
+            taskId: createdTaskId,
+          });
+          message.success('Предложение отправлено администратору');
+        } catch (err: any) {
+          // Если сервер вернул 409 (дубликат), не показываем ошибку — задача уже создана
+          if (err.status === 409) {
+            message.info('Предложение уже ожидает модерации');
+          } else {
+            message.warning('Задача создана, но предложение не удалось отправить');
+          }
+        }
+      }
+
+      const v = await api.getVisit(visit.id);
+      setTasks(v.tasks || []);
+      setAddModalOpen(false);
+      newTaskForm.resetFields();
+    } catch (err: any) {
+      message.error(err.message || 'Ошибка добавления');
+    } finally {
+      setAddingEquipment(false);
+    }
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -1519,7 +1532,16 @@ export default function VisitPage() {
                     Добавить в справочник оборудования объекта (на модерацию)
                   </Checkbox>
                 </Form.Item>
-                <Form.Item><Button type="primary" htmlType="submit" block>Добавить</Button></Form.Item>
+                <Form.Item>
+                  <Button 
+                    type="primary" 
+                    htmlType="submit" 
+                    block
+                    loading={addingEquipment}
+                  >
+                    Добавить
+                  </Button>
+                </Form.Item>
               </Form>
             ),
           },

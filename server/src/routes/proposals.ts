@@ -75,6 +75,24 @@ const createProposalSchema = z.object({
 router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: Response) => {
   const { addressId, equipmentTypeCode, roomTypeCode, brand, model, serialNumber, locationDescription, coolingCapacityKw, taskId, newManufacturer, newModel } = req.body;
 
+  // Проверка дубликатов: если уже есть pending proposal с такими же данными, отклоняем запрос
+  const existingPending = await prisma.equipmentProposal.findFirst({
+    where: {
+      addressId,
+      equipmentTypeCode,
+      status: 'pending',
+      ...(serialNumber ? { serialNumber } : {}),
+      ...(brand ? { brand } : {}),
+      ...(model ? { model } : {}),
+    },
+  });
+
+  if (existingPending) {
+    return res.status(409).json({ 
+      error: 'Такое предложение уже ожидает модерации' 
+    });
+  }
+
   // Обработка нового производителя
   if (newManufacturer) {
     const existing = await prisma.manufacturer.findFirst({
