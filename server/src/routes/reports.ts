@@ -558,8 +558,8 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
         where.id = { in: [...visitIds] };
       }
     }
-    // Фильтрация по команде ТМ НЕ применяется для режима заявок (ТМ должен видеть все заявки договора)
-    if (req.userRole === 'tm' && type !== 'requests') {
+    // Фильтрация по команде ТМ применяется для всех типов отчётов
+    if (req.userRole === 'tm') {
       const engineerIds = await getTeamEngineerIds(req.userId!);
       // Включаем визиты самого ТМ (если ТМ тоже выполнял работы)
       if (!engineerIds.includes(req.userId!)) {
