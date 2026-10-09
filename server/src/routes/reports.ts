@@ -571,21 +571,13 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
       where.userId = engineerId;
     }
 
-    // Отладка: выводим финальный фильтр where
-    if (type === 'requests' && contractId) {
-      console.log('[report-debug] Финальный where для отчёта по заявкам:');
-      console.log(`  isDeleted: ${where.isDeleted}`);
-      console.log(`  userId: ${JSON.stringify(where.userId)}`);
-      console.log(`  id count: ${where.id?.in?.length || 0}`);
-    }
-
     const visits = await prisma.visit.findMany({
       where,
       orderBy: { dateStart: 'asc' },
       include: {
         address: true,
         contract: { select: { number: true } },
-        user: { select: { id: true, email: true, fullName: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } },
+        user: { select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } },
         visitRequests: {
           select: {
             importedRequest: {
@@ -617,14 +609,6 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
         },
       },
     });
-
-    // Отладка: выводим список загруженных визитов
-    if (type === 'requests' && contractId) {
-      console.log(`[report-debug] Загружено визитов: ${visits.length}`);
-      for (const v of visits) {
-        console.log(`  - ${v.id}: ${v.engineerName} (${v.user?.email || 'нет email'}), isDeleted=${v.isDeleted}, status=${v.status}`);
-      }
-    }
 
     const recommendations = await prisma.recommendation.findMany({ where: { isActive: true } });
     const recMap = new Map(recommendations.map(r => [r.id, r.text]));
@@ -1016,14 +1000,6 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
         visits.push((r as any).visit);
       }
 
-      // Отладка: выводим визиты до фильтрации
-      if (r.externalRequestId === 'IS0136714020') {
-        console.log(`[requests-report-debug] Заявка ${r.externalRequestId}: визитов до фильтрации = ${visits.length}`);
-        for (const v of visits) {
-          console.log(`  - ${v.id}: isDeleted=${v.isDeleted}, userId=${v.userId}`);
-        }
-      }
-
       // Фильтрация визитов:
       // 1. Удаляем удалённые визиты (isDeleted = true)
       visits = visits.filter((v: any) => !v.isDeleted);
@@ -1031,14 +1007,6 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       // 2. Для ТМ — оставляем только визиты своей команды
       if (req.userRole === 'tm' && teamEngineerIds.length > 0) {
         visits = visits.filter((v: any) => teamEngineerIds.includes(v.userId));
-      }
-
-      // Отладка: выводим визиты после фильтрации
-      if (r.externalRequestId === 'IS0136714020') {
-        console.log(`[requests-report-debug] Заявка ${r.externalRequestId}: визитов после фильтрации = ${visits.length}`);
-        for (const v of visits) {
-          console.log(`  - ${v.id}: isDeleted=${v.isDeleted}, userId=${v.userId}`);
-        }
       }
 
       // Определяем статус заявки
