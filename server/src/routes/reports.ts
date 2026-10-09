@@ -928,6 +928,16 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
       },
     });
 
+    // Получаем команду ТМ для фильтрации визитов
+    let teamEngineerIds: string[] = [];
+    if (req.userRole === 'tm') {
+      teamEngineerIds = await getTeamEngineerIds(req.userId!);
+      // Включаем визиты самого ТМ (если ТМ тоже выполнял работы)
+      if (!teamEngineerIds.includes(req.userId!)) {
+        teamEngineerIds.push(req.userId!);
+      }
+    }
+
     // Отладка: выводим количество загруженных заявок
     console.log(`[requests-report] Загружено заявок: ${allRequests.length}`);
 
@@ -999,11 +1009,20 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
 
     for (const r of filteredRequests) {
       // Получаем все визиты для заявки (включая прямой visit)
-      const visits = r.visitRequests.map((vr: any) => vr.visit);
+      let visits = r.visitRequests.map((vr: any) => vr.visit);
 
       // Добавляем прямой визит, если он есть и его нет в visitRequests
       if ((r as any).visit && !visits.find((v: any) => v.id === (r as any).visit.id)) {
         visits.push((r as any).visit);
+      }
+
+      // Фильтрация визитов:
+      // 1. Удаляем удалённые визиты (isDeleted = true)
+      visits = visits.filter((v: any) => !v.isDeleted);
+      
+      // 2. Для ТМ — оставляем только визиты своей команды
+      if (req.userRole === 'tm' && teamEngineerIds.length > 0) {
+        visits = visits.filter((v: any) => teamEngineerIds.includes(v.userId));
       }
 
       // Определяем статус заявки
