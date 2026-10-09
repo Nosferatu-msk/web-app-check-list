@@ -479,13 +479,29 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
         (req as any).pendingRequests = pendingRequests;
 
         // Получаем visitIds для загрузки визитов
-        const visitIds = new Set<string>();
+        const allVisitIds = new Set<string>();
         for (const ir of allContractRequests) {
-          if (ir.visitId) visitIds.add(ir.visitId);
+          if (ir.visitId) allVisitIds.add(ir.visitId);
           for (const vr of ir.visitRequests) {
-            visitIds.add(vr.visitId);
+            allVisitIds.add(vr.visitId);
           }
         }
+        
+        // Фильтруем только неудалённые визиты
+        const visitIds = new Set<string>();
+        if (allVisitIds.size > 0) {
+          const validVisits = await prisma.visit.findMany({
+            where: {
+              id: { in: [...allVisitIds] },
+              isDeleted: false,
+            },
+            select: { id: true },
+          });
+          for (const v of validVisits) {
+            visitIds.add(v.id);
+          }
+        }
+        
         // Также включаем визиты с прямым contract_id в периоде (без привязки к заявкам)
         const directVisits = await prisma.visit.findMany({
           where: {
@@ -512,13 +528,29 @@ router.post('/summary-generate', tmOrAdmin, async (req: AuthRequest, res: Respon
           where: { id: { in: requestIds } },
           select: { visitId: true, visitRequests: { select: { visitId: true } } },
         });
-        const visitIds = new Set<string>();
+        const allVisitIds = new Set<string>();
         for (const ir of importedRequests) {
-          if (ir.visitId) visitIds.add(ir.visitId);
+          if (ir.visitId) allVisitIds.add(ir.visitId);
           for (const vr of ir.visitRequests) {
-            visitIds.add(vr.visitId);
+            allVisitIds.add(vr.visitId);
           }
         }
+        
+        // Фильтруем только неудалённые визиты
+        const visitIds = new Set<string>();
+        if (allVisitIds.size > 0) {
+          const validVisits = await prisma.visit.findMany({
+            where: {
+              id: { in: [...allVisitIds] },
+              isDeleted: false,
+            },
+            select: { id: true },
+          });
+          for (const v of validVisits) {
+            visitIds.add(v.id);
+          }
+        }
+        
         if (visitIds.size === 0) {
           res.status(400).json({ error: 'По указанным заявкам не найдено визитов' });
           return;
