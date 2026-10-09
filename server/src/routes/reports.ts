@@ -1016,13 +1016,29 @@ router.post('/requests-generate', tmOrAdmin, async (req: AuthRequest, res: Respo
         visits.push((r as any).visit);
       }
 
+      // Отладка: выводим визиты до фильтрации
+      if (r.externalRequestId === 'IS0136714020') {
+        console.log(`[requests-report-debug] Заявка ${r.externalRequestId}: визитов до фильтрации = ${visits.length}`);
+        for (const v of visits) {
+          console.log(`  - ${v.id}: isDeleted=${v.isDeleted}, userId=${v.userId}`);
+        }
+      }
+
       // Фильтрация визитов:
       // 1. Удаляем удалённые визиты (isDeleted = true)
       visits = visits.filter((v: any) => !v.isDeleted);
-      
+
       // 2. Для ТМ — оставляем только визиты своей команды
       if (req.userRole === 'tm' && teamEngineerIds.length > 0) {
         visits = visits.filter((v: any) => teamEngineerIds.includes(v.userId));
+      }
+
+      // Отладка: выводим визиты после фильтрации
+      if (r.externalRequestId === 'IS0136714020') {
+        console.log(`[requests-report-debug] Заявка ${r.externalRequestId}: визитов после фильтрации = ${visits.length}`);
+        for (const v of visits) {
+          console.log(`  - ${v.id}: isDeleted=${v.isDeleted}, userId=${v.userId}`);
+        }
       }
 
       // Определяем статус заявки
