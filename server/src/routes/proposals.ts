@@ -377,7 +377,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   }
 
   // Откат для room_change
-  if (proposal.requestType === 'room_change' && proposal.objectEquipmentId && proposal.oldRoomTypeCode) {
+  if (proposal.requestType === 'room_change' && proposal.objectEquipmentId) {
     await prisma.objectEquipment.update({
       where: { id: proposal.objectEquipmentId },
       data: {
@@ -670,7 +670,7 @@ router.put('/admin/:id/reject', validate(rejectSchema), adminOnly, async (req: A
   const reason = req.body.reason || null;
 
   // Откат для room_change
-  if (proposal.requestType === 'room_change' && proposal.objectEquipmentId && proposal.oldRoomTypeCode) {
+  if (proposal.requestType === 'room_change' && proposal.objectEquipmentId) {
     await prisma.objectEquipment.update({
       where: { id: proposal.objectEquipmentId },
       data: {
@@ -874,7 +874,7 @@ router.put('/admin/batch', validate(batchSchema), adminOnly, async (req: AuthReq
 
         results.approved++;
       } else {
-        if (proposal.requestType === 'room_change' && proposal.objectEquipmentId && proposal.oldRoomTypeCode) {
+        if (proposal.requestType === 'room_change' && proposal.objectEquipmentId) {
           await prisma.objectEquipment.update({
             where: { id: proposal.objectEquipmentId },
             data: {
