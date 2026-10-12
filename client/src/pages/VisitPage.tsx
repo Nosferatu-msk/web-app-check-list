@@ -546,8 +546,8 @@ export default function VisitPage() {
           await api.createTask(visit.id, taskData);
         }
 
-        // Создаём room_change proposal, если оборудование с уровня объекта добавляется в помещение
-        if (!eq.roomTypeCode && targetRoomTypeCode) {
+        // Создаём room_change proposal, если оборудование добавляется в другое помещение
+        if (eq.roomTypeCode !== targetRoomTypeCode && targetRoomTypeCode) {
           try {
             await api.createRoomChangeProposal({
               objectEquipmentId: eq.id,
