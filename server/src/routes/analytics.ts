@@ -86,19 +86,30 @@ router.patch('/anomalies/batch', async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Проверяем, что все anomalyIds — валидные UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validIds = anomalyIds.filter(id => uuidRegex.test(id));
+    if (validIds.length === 0) {
+      res.status(400).json({ error: 'Невалидные ID аномалий' });
+      return;
+    }
+
     const result = await prisma.visitAnomaly.updateMany({
-      where: { id: { in: anomalyIds } },
-      data: { status, reviewedBy: req.userId, reviewedAt: new Date() },
+      where: { id: { in: validIds } },
+      data: { status, reviewedBy: req.userId || null, reviewedAt: new Date() },
     });
 
+    // Обрезаем entityId до разумной длины (максимум 10 ID)
+    const entityIdStr = validIds.slice(0, 10).join(',');
+
     await logAudit({
-      userId: req.userId,
+      userId: req.userId || null,
       action: 'batch_update_anomalies',
       entityType: 'visit_anomaly',
-      entityId: anomalyIds.join(','),
-      newValue: { status, count: result.count },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+      entityId: entityIdStr,
+      newValue: { status, count: result.count, totalRequested: validIds.length },
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
     });
 
     res.json({ updated: result.count });
