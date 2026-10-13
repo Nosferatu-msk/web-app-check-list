@@ -335,6 +335,26 @@ router.patch('/:id', validate(updateProposalSchema), async (req: AuthRequest, re
     });
   }
 
+  // Синхронизация с задачей: если у proposal есть taskId — обновить данные в задаче
+  if (proposal.taskId) {
+    const taskUpdateData: any = {};
+    if (req.body.brand !== undefined && req.body.brand !== proposal.brand) {
+      taskUpdateData.brand = req.body.brand;
+    }
+    if (req.body.model !== undefined && req.body.model !== proposal.model) {
+      taskUpdateData.model = req.body.model;
+    }
+    if (req.body.serialNumber !== undefined && req.body.serialNumber !== proposal.serialNumber) {
+      taskUpdateData.serialNumber = req.body.serialNumber;
+    }
+    if (Object.keys(taskUpdateData).length > 0) {
+      await prisma.task.update({
+        where: { id: proposal.taskId },
+        data: taskUpdateData,
+      });
+    }
+  }
+
   const updated = await prisma.equipmentProposal.update({
     where: { id: proposal.id },
     data: req.body,
