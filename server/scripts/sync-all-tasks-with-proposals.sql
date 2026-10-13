@@ -14,12 +14,21 @@ WHERE p.status = 'approved'
   AND p."requestType" = 'new_equipment';
 
 -- Шаг 2: Обновление всех рассинхронизированных задач
--- Обновляем brand, model, serialNumber из approved proposals в задачи
+-- Обновляем brand, model, serialNumber из approved proposals в задачи И в parameters (JSONB)
 UPDATE tasks
 SET 
   brand = p.brand,
   model = p.model,
   "serialNumber" = p."serialNumber",
+  parameters = jsonb_set(
+    jsonb_set(
+      parameters, 
+      '{model}', 
+      to_jsonb(p.model)
+    ),
+    '{serial_number}', 
+    to_jsonb(p."serialNumber")
+  ),
   updated_at = NOW()
 FROM equipment_proposals p
 WHERE p."taskId" = tasks.id

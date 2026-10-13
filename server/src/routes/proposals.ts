@@ -338,16 +338,40 @@ router.patch('/:id', validate(updateProposalSchema), async (req: AuthRequest, re
   // Синхронизация с задачей: если у proposal есть taskId — обновить данные в задаче
   if (proposal.taskId) {
     const taskUpdateData: any = {};
+    let needsParametersUpdate = false;
+    const newParameters: any = {};
+    
     if (req.body.brand !== undefined && req.body.brand !== proposal.brand) {
       taskUpdateData.brand = req.body.brand;
     }
     if (req.body.model !== undefined && req.body.model !== proposal.model) {
       taskUpdateData.model = req.body.model;
+      needsParametersUpdate = true;
+      newParameters.model = req.body.model;
     }
     if (req.body.serialNumber !== undefined && req.body.serialNumber !== proposal.serialNumber) {
       taskUpdateData.serialNumber = req.body.serialNumber;
+      needsParametersUpdate = true;
+      newParameters.serial_number = req.body.serialNumber;
     }
+    
     if (Object.keys(taskUpdateData).length > 0) {
+      // Если нужно обновить parameters, сначала получаем текущую задачу
+      if (needsParametersUpdate) {
+        const currentTask = await prisma.task.findUnique({
+          where: { id: proposal.taskId },
+          select: { parameters: true },
+        });
+        
+        if (currentTask && currentTask.parameters) {
+          const currentParams = currentTask.parameters as any;
+          taskUpdateData.parameters = {
+            ...currentParams,
+            ...newParameters,
+          };
+        }
+      }
+      
       await prisma.task.update({
         where: { id: proposal.taskId },
         data: taskUpdateData,

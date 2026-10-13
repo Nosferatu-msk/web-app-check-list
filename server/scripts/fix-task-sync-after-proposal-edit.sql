@@ -24,11 +24,20 @@ LEFT JOIN object_equipment oe ON oe.id = p."objectEquipmentId"
 WHERE t.id = '0c09beca-a954-47de-8990-d638cf967f83';
 
 -- Шаг 2: Обновление данных задачи из proposal (если админ изменил данные перед approve)
--- Обновляем model и serialNumber из proposal в задачу
+-- Обновляем model и serialNumber из proposal в задачу И в parameters (JSONB)
 UPDATE tasks
 SET 
   model = p.model,
   "serialNumber" = p."serialNumber",
+  parameters = jsonb_set(
+    jsonb_set(
+      parameters, 
+      '{model}', 
+      to_jsonb(p.model)
+    ),
+    '{serial_number}', 
+    to_jsonb(p."serialNumber")
+  ),
   updated_at = NOW()
 FROM equipment_proposals p
 WHERE tasks.id = '0c09beca-a954-47de-8990-d638cf967f83'
