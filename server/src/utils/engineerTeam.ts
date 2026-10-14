@@ -126,8 +126,13 @@ export async function canEngineEditVisit(visitId: string, engineerId: string): P
       return { canEdit: false, reason: 'Визит не найден' };
     }
 
-    // Если визит завершён или отправлен — редактирование запрещено
+    // Если визит завершён или отправлен — редактирование запрещено (кроме владельца)
     if (['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'].includes(visit.status)) {
+      // Владелец визита может редактировать свои завершённые визиты
+      if (visit.userId === engineerId) {
+        // Разрешаем редактирование, но не устанавливаем блокировку (визит завершён)
+        return { canEdit: true };
+      }
       return { canEdit: false, reason: 'Визит завершён или отправлен и не может быть изменён' };
     }
 
