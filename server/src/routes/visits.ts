@@ -675,6 +675,7 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
           equipmentType: { select: { photosRequired: true, name: true, code: true } },
           photos: { select: { id: true } },
           equipmentItems: { include: { photos: { select: { id: true } } } },
+          objectEquipment: { select: { serialNumber: true, equipmentTypeCode: true } },
         },
       },
     },
@@ -795,30 +796,63 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
       await bindRequest(r.id, r.visit);
     }
 
-    // 2. Привязка заявок на конкретное оборудование (1 заявка → 1 визит)
-    // Фильтр: только заявки, которые ещё НЕ привязаны ни к одному рабочему визиту + период
-    const taskEquipmentTypeIds = [...new Set(existing.tasks.map(t => t.equipmentTypeId).filter(Boolean))] as string[];
-    if (taskEquipmentTypeIds.length > 0) {
-      const equipRequests = await prisma.importedRequest.findMany({
-        where: {
-          matchedAddressId: addressId,
-          equipmentTypeId: { in: taskEquipmentTypeIds },
-          equipmentType: { code: { not: 'iszh_object' } },
-          visit: { status: { in: ['awaiting_assignment', 'planned'] } },
-          startDate: { lte: visitDate },
-          deadline: { gte: visitDate },
-          visitRequests: { none: {} },
-        },
-        include: { visit: true },
-      });
+    // 2. Привязка заявок на конкретное оборудование (по serialNumber задач)
+    // Для каждой задачи визита с serialNumber — ищем заявку с тем же serialNumber
+    let nonIszhBound = 0;
+    for (const task of existing.tasks) {
+      const eqCode = task.equipmentType?.code;
+      if (!eqCode || eqCode === 'iszh_object') continue;
 
-      for (const r of equipRequests) {
-        await bindRequest(r.id, r.visit);
+      if (task.taskType === 'group_climate') {
+        // Для group_climate — перебираем TaskEquipmentItem
+        const items = await prisma.taskEquipmentItem.findMany({
+          where: { taskId: task.id },
+          include: { objectEquipment: true },
+        });
+        for (const item of items) {
+          if (!item.objectEquipment?.serialNumber) continue;
+          const matchedRequest = await prisma.importedRequest.findFirst({
+            where: {
+              matchedAddressId: addressId,
+              equipmentTypeCode: item.objectEquipment.equipmentTypeCode,
+              serialNumber: item.objectEquipment.serialNumber,
+              startDate: { lte: visitDate },
+              deadline: { gte: visitDate },
+              visitRequests: { none: {} },
+              ...(existing.contractId ? { contractId: existing.contractId } : {}),
+            },
+            include: { visit: true },
+          });
+          if (matchedRequest) {
+            await bindRequest(matchedRequest.id, matchedRequest.visit);
+            nonIszhBound++;
+          }
+        }
+      } else {
+        // Для individual задач — ищем по serialNumber задачи
+        const taskSN = task.serialNumber || task.objectEquipment?.serialNumber;
+        if (!taskSN) continue;
+        const matchedRequest = await prisma.importedRequest.findFirst({
+          where: {
+            matchedAddressId: addressId,
+            equipmentTypeCode: eqCode,
+            serialNumber: taskSN,
+            startDate: { lte: visitDate },
+            deadline: { gte: visitDate },
+            visitRequests: { none: {} },
+            ...(existing.contractId ? { contractId: existing.contractId } : {}),
+          },
+          include: { visit: true },
+        });
+        if (matchedRequest) {
+          await bindRequest(matchedRequest.id, matchedRequest.visit);
+          nonIszhBound++;
+        }
       }
     }
 
-    if (iszhRequests.length > 0 || taskEquipmentTypeIds.length > 0) {
-      console.log(`[visit/complete] Автопривязка: ISZH=${iszhRequests.length}, адрес=${addressId}`);
+    if (iszhRequests.length > 0 || nonIszhBound > 0) {
+      console.log(`[visit/complete] Автопривязка: ISZH=${iszhRequests.length}, не-ИСЖ=${nonIszhBound}, адрес=${addressId}`);
     }
   } catch (bindErr) {
     console.error('[visit/complete] Ошибка автопривязки заявок:', bindErr);
@@ -987,67 +1021,110 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
     });
   }
 
-  // Автопривязка заявок на конкретное оборудование по типу добавленной задачи
-  // Ищем заявки на том же адресе с тем же типом оборудования (не iszh_object),
+  // Автопривязка заявок на конкретное оборудование по serialNumber
+  // Ищем заявки на том же адресе с совпадающим serialNumber (не iszh_object),
   // которые ещё не привязаны к визиту, с проверкой периода действия
   const boundRequests: { requestId: string; externalRequestId: string }[] = [];
   try {
     const addressId = visit.addressId;
-    const equipmentTypeId = task.equipmentTypeId;
     const visitDate = visit.dateStart || new Date();
 
-    const matchingRequests = await prisma.importedRequest.findMany({
-      where: {
-        matchedAddressId: addressId,
-        equipmentTypeId,
-        equipmentType: { code: { not: 'iszh_object' } },
-        visit: {
-          status: { in: ['awaiting_assignment', 'planned'] },
-        },
-        startDate: { lte: visitDate },
-        deadline: { gte: visitDate },
-      },
-    });
+    // Получаем equipmentTypeCode для задачи
+    const eqTypeCode = (await prisma.equipmentType.findUnique({
+      where: { id: task.equipmentTypeId },
+      select: { code: true },
+    }))?.code;
 
-    for (const request of matchingRequests) {
-      // Пропускаем, если уже привязана к этому визиту
-      const existingLink = await prisma.visitRequest.findUnique({
-        where: {
-          visitId_importedRequestId: {
-            visitId: visit.id,
-            importedRequestId: request.id,
-          },
-        },
-      });
-      if (existingLink) continue;
-
-      await prisma.visitRequest.create({
-        data: { visitId: visit.id, importedRequestId: request.id },
-      });
-      await prisma.importedRequest.update({
-        where: { id: request.id },
-        data: { visitId: visit.id },
-      });
-
-      // Синхронизировать contractId из заявки в визит (если ещё не установлен)
-      if (request.contractId && !visit.contractId) {
-        await prisma.visit.update({
-          where: { id: visit.id },
-          data: { contractId: request.contractId },
+    if (eqTypeCode && eqTypeCode !== 'iszh_object') {
+      if (task.taskType === 'group_climate') {
+        // Для group_climate — перебираем все единицы оборудования в группе
+        const equipmentItems = await prisma.taskEquipmentItem.findMany({
+          where: { taskId: task.id },
+          include: { objectEquipment: true },
         });
-        visit.contractId = request.contractId;
+        for (const item of equipmentItems) {
+          if (!item.objectEquipment?.serialNumber) continue;
+          const matchedRequest = await prisma.importedRequest.findFirst({
+            where: {
+              matchedAddressId: addressId,
+              equipmentTypeCode: item.objectEquipment.equipmentTypeCode,
+              serialNumber: item.objectEquipment.serialNumber,
+              startDate: { lte: visitDate },
+              deadline: { gte: visitDate },
+              visitRequests: { none: {} },
+              ...(visit.contractId ? { contractId: visit.contractId } : {}),
+            },
+          });
+          if (matchedRequest) {
+            await prisma.visitRequest.create({
+              data: { visitId: visit.id, importedRequestId: matchedRequest.id },
+            });
+            await prisma.importedRequest.update({
+              where: { id: matchedRequest.id },
+              data: { visitId: visit.id },
+            });
+            if (matchedRequest.contractId && !visit.contractId) {
+              await prisma.visit.update({
+                where: { id: visit.id },
+                data: { contractId: matchedRequest.contractId },
+              });
+              visit.contractId = matchedRequest.contractId;
+            }
+            await prisma.requestAssignmentLog.create({
+              data: {
+                importedRequestId: matchedRequest.id,
+                action: 'assigned',
+                engineerId: req.userId,
+                performedBy: req.userId,
+                reason: `Автоматически при добавлении оборудования (задача ${task.id}, SN: ${item.objectEquipment.serialNumber})`,
+              },
+            });
+            boundRequests.push({ requestId: matchedRequest.id, externalRequestId: matchedRequest.externalRequestId });
+          }
+        }
+      } else {
+        // Для individual задач — ищем по serialNumber задачи
+        const taskSN = task.serialNumber || task.objectEquipment?.serialNumber;
+        if (taskSN) {
+          const matchedRequest = await prisma.importedRequest.findFirst({
+            where: {
+              matchedAddressId: addressId,
+              equipmentTypeCode: eqTypeCode,
+              serialNumber: taskSN,
+              startDate: { lte: visitDate },
+              deadline: { gte: visitDate },
+              visitRequests: { none: {} },
+              ...(visit.contractId ? { contractId: visit.contractId } : {}),
+            },
+          });
+          if (matchedRequest) {
+            await prisma.visitRequest.create({
+              data: { visitId: visit.id, importedRequestId: matchedRequest.id },
+            });
+            await prisma.importedRequest.update({
+              where: { id: matchedRequest.id },
+              data: { visitId: visit.id },
+            });
+            if (matchedRequest.contractId && !visit.contractId) {
+              await prisma.visit.update({
+                where: { id: visit.id },
+                data: { contractId: matchedRequest.contractId },
+              });
+              visit.contractId = matchedRequest.contractId;
+            }
+            await prisma.requestAssignmentLog.create({
+              data: {
+                importedRequestId: matchedRequest.id,
+                action: 'assigned',
+                engineerId: req.userId,
+                performedBy: req.userId,
+                reason: `Автоматически при добавлении оборудования (задача ${task.id}, SN: ${taskSN})`,
+              },
+            });
+            boundRequests.push({ requestId: matchedRequest.id, externalRequestId: matchedRequest.externalRequestId });
+          }
+        }
       }
-
-      await prisma.requestAssignmentLog.create({
-        data: {
-          importedRequestId: request.id,
-          action: 'assigned',
-          engineerId: req.userId,
-          performedBy: req.userId,
-          reason: `Автоматически при добавлении оборудования (задача ${task.id})`,
-        },
-      });
-      boundRequests.push({ requestId: request.id, externalRequestId: request.externalRequestId });
     }
   } catch (bindErr) {
     console.error('[task/create] Ошибка автопривязки заявок:', bindErr);

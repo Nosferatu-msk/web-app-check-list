@@ -12,7 +12,7 @@ router.use(authMiddleware);
 
 // ─── ВЫЧИСЛЕНИЕ СТАТУСА ЗАЯВКИ ──────────────────────────────
 // Для обычных заявок (не ИСЖ объекта)
-function computeExecutionStatus(visit: any, isISZH: boolean, equipmentTypeId?: string): string {
+function computeExecutionStatus(visit: any, isISZH: boolean, equipmentTypeId?: string, requestSerialNumber?: string | null): string {
   if (!visit || visit.status === 'awaiting_assignment') return 'not_assigned';
   if (visit.status === 'planned') return 'assigned';
   if (visit.status === 'in_progress') return 'in_progress';
@@ -21,6 +21,16 @@ function computeExecutionStatus(visit: any, isISZH: boolean, equipmentTypeId?: s
     if (equipmentTypeId && visit.tasks && !isISZH) {
       const hasMatchingTask = visit.tasks.some((t: any) => t.equipmentTypeId === equipmentTypeId);
       if (!hasMatchingTask) return 'not_assigned';
+
+      // Дополнительная проверка serialNumber для не-ИСЖ заявок
+      if (requestSerialNumber) {
+        const hasMatchingSN = visit.tasks.some((t: any) => {
+          if (t.equipmentTypeId !== equipmentTypeId) return false;
+          const taskSN = t.serialNumber || t.objectEquipment?.serialNumber;
+          return taskSN === requestSerialNumber;
+        });
+        if (!hasMatchingSN) return 'not_assigned';
+      }
     }
     return 'completed';
   }
@@ -358,7 +368,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
       let executionStatus: string;
       if (!isISZHObject) {
-        executionStatus = computeExecutionStatus(req.visit, false, req.equipmentTypeId);
+        executionStatus = computeExecutionStatus(req.visit, false, req.equipmentTypeId, req.serialNumber);
       } else {
         const allVisits = req.visitRequests?.map(vr => vr.visit).filter(Boolean) || [];
         executionStatus = computeISZHExecutionStatus(allVisits);
@@ -424,6 +434,165 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       return;
     }
     res.json(request);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── ОБНОВЛЕНИЕ СЕРИЙНОГО НОМЕРА ──────────────────────────────
+const updateSerialNumberSchema = z.object({
+  serialNumber: z.string().trim().max(200).nullable(),
+});
+
+router.patch('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    if (!['admin', 'tm'].includes(req.userRole!)) {
+      res.status(403).json({ error: 'Доступно только ТМ и администратору' });
+      return;
+    }
+
+    const parsed = updateSerialNumberSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.errors });
+      return;
+    }
+
+    const request = await prisma.importedRequest.findUnique({
+      where: { id: req.params.id as string },
+      include: { equipmentType: true },
+    });
+    if (!request) {
+      res.status(404).json({ error: 'Заявка не найдена' });
+      return;
+    }
+    if (request.equipmentType?.code === 'iszh_object') {
+      res.status(400).json({ error: 'Для заявок ИСЖ объекта серийный номер не используется' });
+      return;
+    }
+
+    const newSN = parsed.data.serialNumber?.trim() || null;
+
+    // Обновить serialNumber
+    await prisma.importedRequest.update({
+      where: { id: request.id },
+      data: { serialNumber: newSN },
+    });
+
+    // Пересчёт привязок
+    let bound = false;
+    if (newSN && request.matchedAddressId && request.equipmentTypeCode && request.startDate && request.deadline) {
+      // SN указан — ищем визит для привязки
+      // 1. Разорвать текущую связь
+      await prisma.visitRequest.deleteMany({ where: { importedRequestId: request.id } });
+
+      // 2. Поискать визит
+      const { findMatchingVisit } = await import('../utils/requestBinding.js');
+      const matchingVisit = await findMatchingVisit(
+        request.matchedAddressId,
+        request.contractId,
+        request.equipmentTypeCode,
+        newSN,
+        request.startDate,
+        request.deadline,
+      );
+
+      if (matchingVisit) {
+        // 3. Создать новую связь
+        await prisma.visitRequest.create({
+          data: { visitId: matchingVisit.id, importedRequestId: request.id },
+        });
+        await prisma.importedRequest.update({
+          where: { id: request.id },
+          data: { visitId: matchingVisit.id },
+        });
+        bound = true;
+      } else {
+        // 4. Вернуть на виртуальный визит (переиспользовать существующий или создать новый)
+        let virtualVisitId: string;
+        if (!request.visitId) {
+          // visitId = null — создаём новый виртуальный визит
+          const virtualVisit = await prisma.visit.create({
+            data: {
+              addressId: request.matchedAddressId,
+              contractId: request.contractId,
+              engineerName: '',
+              userId: null,
+              dateStart: new Date(),
+              timeStart: '09:00',
+              season: getCurrentSeason(),
+              status: 'awaiting_assignment',
+            },
+          });
+          virtualVisitId = virtualVisit.id;
+        } else {
+          const currentVisit = await prisma.visit.findUnique({
+            where: { id: request.visitId },
+          });
+          if (currentVisit && currentVisit.status === 'awaiting_assignment' && !currentVisit.userId) {
+            // Текущий визит уже виртуальный — переиспользуем
+            virtualVisitId = currentVisit.id;
+          } else {
+            // Создаём новый виртуальный визит
+            const virtualVisit = await prisma.visit.create({
+              data: {
+                addressId: request.matchedAddressId,
+                contractId: request.contractId,
+                engineerName: '',
+                userId: null,
+                dateStart: new Date(),
+                timeStart: '09:00',
+                season: getCurrentSeason(),
+                status: 'awaiting_assignment',
+              },
+            });
+            virtualVisitId = virtualVisit.id;
+          }
+        }
+        await prisma.importedRequest.update({
+          where: { id: request.id },
+          data: { visitId: virtualVisitId },
+        });
+      }
+    } else if (!newSN) {
+      // SN очищен (null) — разрываем текущие связи
+      await prisma.visitRequest.deleteMany({ where: { importedRequestId: request.id } });
+      // Возвращаем на виртуальный визит
+      if (request.visitId) {
+        const currentVisit = await prisma.visit.findUnique({ where: { id: request.visitId } });
+        if (currentVisit && currentVisit.status === 'awaiting_assignment' && !currentVisit.userId) {
+          // Уже на виртуальном — ничего не делаем
+        } else {
+          const virtualVisit = await prisma.visit.create({
+            data: {
+              addressId: request.matchedAddressId!,
+              contractId: request.contractId,
+              engineerName: '',
+              userId: null,
+              dateStart: new Date(),
+              timeStart: '09:00',
+              season: getCurrentSeason(),
+              status: 'awaiting_assignment',
+            },
+          });
+          await prisma.importedRequest.update({
+            where: { id: request.id },
+            data: { visitId: virtualVisit.id },
+          });
+        }
+      }
+    }
+
+    // Логирование
+    await prisma.requestAssignmentLog.create({
+      data: {
+        importedRequestId: request.id,
+        action: bound ? 'assigned' : 'unassigned',
+        performedBy: req.userId,
+        reason: `Изменён serialNumber: ${newSN || '(пусто)'}`,
+      },
+    });
+
+    res.json({ success: true, bound, serialNumber: newSN });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

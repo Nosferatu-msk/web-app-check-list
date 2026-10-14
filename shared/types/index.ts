@@ -464,6 +464,7 @@ export interface ImportedRequest {
   matchedAddressId?: string;
   visitId?: string;
   contractId?: string;
+  serialNumber?: string | null;
   requestType?: 'planned' | 'unplanned';
   startDate?: string;
   deadline?: string;

@@ -22,6 +22,7 @@ interface RequestRow {
   requestType: string;
   contractNumber: string;
   startDateRaw: string;
+  serialNumber: string;
 }
 
 interface ParsedRequest {
@@ -33,6 +34,7 @@ interface ParsedRequest {
   requestType: 'planned' | 'unplanned' | null;
   startDate: Date | null;
   deadline: Date | null;
+  serialNumber: string | null;
   error: string | null;
   isSkipped?: boolean;
 }
@@ -74,6 +76,7 @@ export async function parseRequestsExcel(buffer: Buffer): Promise<RequestRow[]> 
     const requestType = findCol(['тип заявки', 'тип', 'request type']);
     const contractNumber = findCol(['номер договора', 'договор', 'contract']);
     const startDateRaw = findCol(['дата начала', 'дата', 'start date']);
+    const serialNumber = findCol(['серийный №', 'серийный номер', 'серийник', 'serial number', 's/n']);
 
     if (externalRequestId || equipmentTypeName || objectCode || addressRaw) {
       rows.push({
@@ -86,6 +89,7 @@ export async function parseRequestsExcel(buffer: Buffer): Promise<RequestRow[]> 
         requestType,
         contractNumber,
         startDateRaw,
+        serialNumber,
       });
     }
   });
@@ -167,6 +171,7 @@ async function validateAndMapRow(
     requestType: null,
     startDate: null,
     deadline: null,
+    serialNumber: null,
     error: null,
   };
 
@@ -204,6 +209,9 @@ async function validateAndMapRow(
   }
   result.requestType = reqType;
 
+  // 3.5. Серийный номер (нормализация — trim пробелов по краям)
+  result.serialNumber = row.serialNumber?.trim() || null;
+
   // 4. Номер договора
   const contractNum = row.contractNumber.trim();
   if (!contractNum) {
@@ -233,6 +241,29 @@ async function validateAndMapRow(
   // 6. Расчёт deadline
   const deadlineDays = reqType === 'planned' ? deadlineSettings.planned : deadlineSettings.unplanned;
   result.deadline = computeDeadline(reqType, result.startDate, deadlineDays);
+
+  // 6.5. Проверка дубликата в БД (по периоду) — для не-ИСЖ заявок с serialNumber
+  if (result.serialNumber && result.equipmentTypeCode && result.equipmentTypeCode !== 'iszh_object' && result.startDate && result.deadline) {
+    const existingInPeriod = await prisma.importedRequest.findFirst({
+      where: {
+        equipmentTypeCode: result.equipmentTypeCode,
+        serialNumber: result.serialNumber,
+        importStatus: { not: 'error' }, // исключаем ошибочные записи
+        // Пересечение периодов: NOT (existing.deadline < new.startDate OR existing.startDate > new.deadline)
+        NOT: {
+          OR: [
+            { deadline: { lt: result.startDate } },
+            { startDate: { gt: result.deadline } },
+          ],
+        },
+      },
+      select: { externalRequestId: true },
+    });
+    if (existingInPeriod) {
+      result.error = `Заявка на оборудование с серийным номером ${result.serialNumber} уже существует в данном отчётном периоде (заявка № ${existingInPeriod.externalRequestId})`;
+      return result;
+    }
+  }
 
   // 7. Поиск объекта по коду (приоритет)
   const objCode = row.objectCode.trim();
@@ -348,6 +379,30 @@ export async function importRequests(
     parsedRows.push(parsed);
   }
 
+  // Проверка дубликатов (equipmentTypeCode + serialNumber) в файле
+  // Выполняется ПОСЛЕ заполнения parsedRows
+  const snDuplicates = new Map<string, number[]>();
+  for (const parsed of parsedRows) {
+    if (parsed.error || parsed.isSkipped) continue;
+    const sn = parsed.serialNumber;
+    if (!sn || !parsed.equipmentTypeCode || parsed.equipmentTypeCode === 'iszh_object') continue;
+    const key = `${parsed.equipmentTypeCode}::${sn}`;
+    if (!snDuplicates.has(key)) snDuplicates.set(key, []);
+    snDuplicates.get(key)!.push(parsed.row.rowNumber);
+  }
+  for (const [, rowNumbers] of snDuplicates) {
+    if (rowNumbers.length > 1) {
+      const actualSN = parsedRows.find(p => p.row.rowNumber === rowNumbers[0])?.serialNumber || '';
+      for (const rn of rowNumbers) {
+        const parsed = parsedRows.find(p => p.row.rowNumber === rn);
+        if (parsed) {
+          parsed.error = `Файл содержит две и более заявок на одно и то же оборудование (serialNumber: ${actualSN})`;
+          parsed.isSkipped = true;
+        }
+      }
+    }
+  }
+
   // Создание визитов — по одному на каждую заявку
   for (const parsed of parsedRows) {
     if (parsed.error) {
@@ -384,7 +439,7 @@ export async function importRequests(
     });
 
     // Создание записи imported_request (с договором, типом, сроками)
-    await prisma.importedRequest.create({
+    const importedRequest = await prisma.importedRequest.create({
       data: {
         externalRequestId: parsed.row.externalRequestId,
         externalStatus: parsed.row.externalStatus || null,
@@ -394,6 +449,7 @@ export async function importRequests(
         addressRaw: parsed.row.addressRaw,
         matchedAddressId: addressId,
         contractId: parsed.contractId,
+        serialNumber: parsed.serialNumber,
         requestType: parsed.requestType,
         startDate: parsed.startDate,
         deadline: parsed.deadline,
@@ -402,6 +458,31 @@ export async function importRequests(
         importedBy: userId,
       },
     });
+
+    // Автопривязка к существующему визиту (для не-ИСЖ с serialNumber)
+    if (parsed.serialNumber && parsed.equipmentTypeCode !== 'iszh_object' && parsed.startDate && parsed.deadline) {
+      const { findMatchingVisit } = await import('../utils/requestBinding.js');
+      const matchingVisit = await findMatchingVisit(
+        addressId,
+        parsed.contractId,
+        parsed.equipmentTypeCode!,
+        parsed.serialNumber,
+        parsed.startDate,
+        parsed.deadline,
+      );
+      if (matchingVisit) {
+        // Привязываем к реальному визиту (вместо виртуального)
+        await prisma.visitRequest.create({
+          data: { visitId: matchingVisit.id, importedRequestId: importedRequest.id },
+        });
+        await prisma.importedRequest.update({
+          where: { id: importedRequest.id },
+          data: { visitId: matchingVisit.id },
+        });
+        // Удаляем orphaned виртуальный визит
+        await prisma.visit.delete({ where: { id: visit.id } });
+      }
+    }
 
     // Создание задачи (кроме ИСЖ объекта)
     if (!isISZHEquipment) {

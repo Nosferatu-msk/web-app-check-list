@@ -771,6 +771,9 @@ export const api = {
   declineRequest: async (requestId: string, reason: string) =>
     request<any>('/requests/decline', { method: 'POST', body: JSON.stringify({ requestId, reason }) }),
 
+  updateRequestSerialNumber: async (requestId: string, serialNumber: string | null) =>
+    request<any>(`/requests/${requestId}`, { method: 'PATCH', body: JSON.stringify({ serialNumber }) }),
+
   bulkAssignEngineers: async (requestIds: string[], engineerIds: string[]) =>
     request<any>('/requests/bulk-assign', { method: 'POST', body: JSON.stringify({ requestIds, engineerIds }) }),
 

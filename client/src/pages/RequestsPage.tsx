@@ -109,6 +109,10 @@ export default function RequestsPage() {
   // Мобильный drawer фильтров
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  // Редактирование serialNumber
+  const [editingSN, setEditingSN] = useState<{ requestId: string; value: string } | null>(null);
+  const [snSaving, setSnSaving] = useState(false);
+
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { message, modal } = App.useApp();
@@ -390,6 +394,17 @@ export default function RequestsPage() {
       render: (_: any, r: any) => r.equipmentType?.name || '—',
     },
     {
+      title: 'Серийный №',
+      key: 'serialNumber',
+      width: 140,
+      ellipsis: true,
+      render: (_: any, r: any) => {
+        if (r.equipmentType?.code === 'iszh_object') return <span style={{ color: '#999' }}>—</span>;
+        if (!r.serialNumber) return <span style={{ color: '#ff4d4f' }}>не указан</span>;
+        return r.serialNumber;
+      },
+    },
+    {
       title: 'Срок',
       key: 'deadline',
       width: 120,
@@ -486,6 +501,22 @@ export default function RequestsPage() {
     })).filter((e: any) => e.name);
   };
 
+  // Сохранение serialNumber
+  const handleSaveSN = async (requestId: string) => {
+    if (!editingSN) return;
+    setSnSaving(true);
+    try {
+      const data = await api.updateRequestSerialNumber(requestId, editingSN.value || null);
+      message.success(data.bound ? 'Серийный номер сохранён, заявка привязана к визиту' : 'Серийный номер сохранён');
+      setEditingSN(null);
+      load(); // перезагрузить список
+    } catch (e: any) {
+      message.error(e.message || 'Ошибка сохранения');
+    } finally {
+      setSnSaving(false);
+    }
+  };
+
   // ─── Expandable Row ─────────────────────────────────────
   const expandedRowRender = (record: any) => {
     const visits = getVisitsForRequest(record);
@@ -500,6 +531,36 @@ export default function RequestsPage() {
             <ContractBadge contractNumber={record.contract?.number} />
           </div>
           <div><span style={{ color: '#888', fontSize: 12 }}>Создана:</span> {dayjs(record.createdAt).format('DD.MM.YYYY')}</div>
+          {record.equipmentType?.code !== 'iszh_object' && (isAdmin || isTm) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: '#888', fontSize: 12 }}>Серийный №:</span>
+              {editingSN?.requestId === record.id && editingSN ? (
+                <>
+                  <Input
+                    size="small"
+                    value={editingSN.value}
+                    onChange={e => setEditingSN({ requestId: record.id, value: e.target.value })}
+                    placeholder="Введите серийный номер"
+                    style={{ width: 200 }}
+                    autoFocus
+                    onPressEnter={() => handleSaveSN(record.id)}
+                    disabled={snSaving}
+                  />
+                  <Button size="small" type="primary" onClick={() => handleSaveSN(record.id)} loading={snSaving}>✓</Button>
+                  <Button size="small" onClick={() => setEditingSN(null)}>✕</Button>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 13, color: record.serialNumber ? '#333' : '#ff4d4f' }}>
+                    {record.serialNumber || 'не указан'}
+                  </span>
+                  <Button size="small" type="text" onClick={() => setEditingSN({ requestId: record.id, value: record.serialNumber || '' })}>
+                    ✎
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {visits.length > 0 && (
@@ -590,6 +651,11 @@ export default function RequestsPage() {
             {r.objectCode && <Tag color="blue" style={{ marginTop: 4, fontSize: 11 }}>{r.objectCode}</Tag>}
             <div style={{ color: '#333', fontSize: 13, marginTop: 4, lineHeight: 1.3, wordBreak: 'break-word' }}>{address}</div>
             <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>{r.equipmentType?.name || '—'}</div>
+            {r.equipmentType?.code !== 'iszh_object' && (
+              <div style={{ color: r.serialNumber ? '#333' : '#ff4d4f', fontSize: 12, marginTop: 1 }}>
+                {r.serialNumber ? `SN: ${r.serialNumber}` : 'SN: не указан'}
+              </div>
+            )}
             {r.deadline && (
               <div style={{ fontSize: 12, marginTop: 2 }}>
                 {(() => {

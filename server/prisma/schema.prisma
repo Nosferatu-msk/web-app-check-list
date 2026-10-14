@@ -666,6 +666,7 @@ model ImportedRequest {
   matchedAddressId  String?      @map("matched_address_id")
   visitId           String?      @map("visit_id")
   contractId        String?      @map("contract_id")
+  serialNumber      String?      @map("serial_number")
   requestType       RequestType? @map("request_type")
   startDate         DateTime?    @map("start_date")
   deadline          DateTime?    @map("deadline")
@@ -686,6 +687,7 @@ model ImportedRequest {
   @@index([importStatus])
   @@index([objectCode])
   @@index([visitId])
+  @@index([serialNumber])
   @@map("imported_requests")
 }
 
