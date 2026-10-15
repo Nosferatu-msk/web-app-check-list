@@ -135,6 +135,15 @@ router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: R
 
   const pendingUntil = new Date(Date.now() + THIRTY_DAYS_MS);
 
+  // Автогенерация serialNumber для не-счётчиков, если инженер не указал
+  let finalSerialNumber = serialNumber || null;
+  if ((!finalSerialNumber || finalSerialNumber.trim() === '') && !isMeterEquipment(equipmentTypeCode)) {
+    const generatedSN = await generateSerialNumber(addressId, equipmentTypeCode);
+    if (generatedSN) {
+      finalSerialNumber = generatedSN;
+    }
+  }
+
   const proposal = await prisma.equipmentProposal.create({
     data: {
       addressId,
@@ -142,7 +151,7 @@ router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: R
       roomTypeCode,
       brand: brand || null,
       model: model || null,
-      serialNumber: serialNumber || null,
+      serialNumber: finalSerialNumber,
       locationDescription: locationDescription || null,
       coolingCapacityKw: coolingCapacityKw ?? null,
       proposedById: req.userId!,
