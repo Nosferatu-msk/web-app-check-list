@@ -71,8 +71,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new ApiError('Сессия истекла', 401);
   }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(body.error || res.statusText, res.status);
+    let errorMessage: string;
+    
+    // Пытаемся получить сообщение из JSON-ответа
+    const body = await res.json().catch(() => null);
+    
+    if (body && typeof body === 'object' && body.error) {
+      // Сервер вернул JSON с сообщением об ошибке
+      errorMessage = typeof body.error === 'string' ? body.error : JSON.stringify(body.error);
+    } else {
+      // Сервер вернул не-JSON ответ или без поля error
+      // Используем русские сообщения для распространённых статусов
+      const statusMessages: Record<number, string> = {
+        400: 'Некорректный запрос',
+        401: 'Требуется авторизация',
+        403: 'Доступ запрещён',
+        404: 'Ресурс не найден',
+        500: 'Внутренняя ошибка сервера',
+        502: 'Проблема с сервером',
+        503: 'Сервер временно недоступен',
+      };
+      errorMessage = statusMessages[res.status] || `Ошибка ${res.status}`;
+    }
+    
+    throw new ApiError(errorMessage, res.status);
   }
   return res.json();
 }
