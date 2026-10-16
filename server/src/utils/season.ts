@@ -5,11 +5,7 @@
 export function getCurrentSeason(): 'summer' | 'winter' {
   const msk = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
   const month = msk.getMonth() + 1;
-  const day = msk.getDate();
-  if ((month > 4 && month < 10) || (month === 4 && day >= 1) || (month === 10 && day <= 31)) {
-    return 'summer';
-  }
-  return 'winter';
+  return (month >= 4 && month <= 9) ? 'summer' : 'winter';
 }
 
 /**

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton, DatePicker } from 'antd';
 import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined, PieChartOutlined, CopyOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { api } from '../api/client';
+import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { VISIT_STATUS_LABELS, ROLE_LABELS } from '../../../shared/types/index';
 import NotificationBell from '../components/NotificationBell';
@@ -465,7 +465,7 @@ export default function VisitListPage() {
                 },
               });
             }
-            if (!isDeleted && CLONEABLE_STATUSES.includes(v.status)) {
+            if (!isDeleted && !isOffline() && CLONEABLE_STATUSES.includes(v.status)) {
               actionItems.push({
                 key: 'clone',
                 icon: <CopyOutlined />,
@@ -581,7 +581,7 @@ export default function VisitListPage() {
                           setReassignTarget('');
                         }} />
                       )}
-                      {!isDeleted && CLONEABLE_STATUSES.includes(v.status) && (
+                      {!isDeleted && !isOffline() && CLONEABLE_STATUSES.includes(v.status) && (
                         <Button size="small" icon={<CopyOutlined />} style={{ color: '#0F766E' }} onClick={(e) => { e.stopPropagation(); handleClone(v.id); }} title="Клонировать в новый период" />
                       )}
                       {!isDeleted && (

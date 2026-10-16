@@ -594,9 +594,7 @@ router.put('/:id', validate(updateVisitSchema), async (req: AuthRequest, res: Re
     data: {
       addressId: req.body.addressId,
       engineerName: req.body.engineerName,
-      dateStart: req.body.dateStart ? new Date(req.body.dateStart) : undefined,
-      timeStart: req.body.timeStart,
-      season: req.body.season,
+      // dateStart, timeStart, season — фиксированы при создании, не обновляются
       tmCorrected: isTmCorrection ? true : existing.tmCorrected,
       status: isTmCorrection && existing.status === 'completed' ? 'corrected_by_tm' : undefined,
     },
@@ -748,9 +746,15 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
   // 6. Определить userId и engineerName для клона
   let cloneEngineerName = source.engineerName;
   let cloneStatus: string = 'not_started';
+  const isCloningColleague = !isOwner && !isTm && !isAdmin;
 
-  if (isOwner) {
-    // Инженер клонирует свой или коллеги визит
+  if (isOwner && !isCloningColleague) {
+    // Инженер клонирует свой визит — берёт своё ФИО
+    const engineer = await prisma.user.findUnique({ where: { id: req.userId! }, select: { fullName: true } });
+    cloneEngineerName = engineer?.fullName || '';
+    cloneStatus = 'not_started';
+  } else if (isCloningColleague) {
+    // Инженер клонирует визит коллеги — берёт своё ФИО, фильтрует по специализации
     const engineer = await prisma.user.findUnique({ where: { id: req.userId! }, select: { fullName: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } });
     cloneEngineerName = engineer?.fullName || '';
     cloneStatus = 'not_started';
@@ -762,7 +766,7 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
 
   // 7. Фильтрация задач по специализации (если инженер клонирует визит коллеги)
   let tasksToClone = source.tasks;
-  if (isOwner && source.userId !== req.userId) {
+  if (isCloningColleague) {
     const engineer = await prisma.user.findUnique({
       where: { id: req.userId! },
       select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
@@ -780,6 +784,7 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
         return false;
       });
     }
+    // Если нет специализаций — копируются все задачи (fallback)
   }
 
   // 8. Транзакция: создание визита + задач + привязка заявок

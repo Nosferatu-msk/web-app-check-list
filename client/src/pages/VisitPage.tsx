@@ -66,7 +66,7 @@ const getModelError = (value: string): string | null => {
 
 function determineSeason(date: dayjs.Dayjs): string {
   const m = date.month() + 1;
-  return (m >= 4 && m <= 10) ? 'summer' : 'winter';
+  return (m >= 4 && m <= 9) ? 'summer' : 'winter';
 }
 
 export default function VisitPage() {
@@ -763,7 +763,7 @@ export default function VisitPage() {
   const getVisitActions = () => {
     const items: any[] = [];
     const isDeleted = visit?.isDeleted;
-    const isCloneable = !isNew && visit && !isDeleted && CLONEABLE_STATUSES.includes(visit.status);
+    const isCloneable = !isNew && visit && !isDeleted && !isOffline() && CLONEABLE_STATUSES.includes(visit.status);
 
     if (isCloneable) {
       items.push({
