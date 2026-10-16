@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Спецификация: Клонирование визитов — макеты UI</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; color: #0F172A; line-height: 1.5; }
+
+  .spec-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .spec-header { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .spec-header h1 { font-size: 24px; color: #0F766E; margin-bottom: 8px; }
+  .spec-header .meta { font-size: 13px; color: #475569; }
+  .spec-header .badge { display: inline-block; background: #0F766E; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+
+  .section { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .section h2 { font-size: 18px; color: #0F172A; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0; }
+  .section h3 { font-size: 15px; color: #475569; margin: 16px 0 12px; }
+
+  /* Mockup frames */
+  .mockup-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; }
+  .mockup-frame { flex: 1; min-width: 320px; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; }
+  .mockup-frame .frame-label { background: #F1F5F9; padding: 8px 16px; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+  .mockup-content { padding: 16px; background: #F8FAFC; }
+
+  /* Visit page header mockup */
+  .vp-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .vp-back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #0F172A; font-size: 14px; cursor: pointer; height: 44px; }
+  .vp-back-btn svg { width: 14px; height: 14px; }
+  .vp-title { font-size: 20px; font-weight: 600; flex: 1; }
+  .vp-tag { display: inline-block; background: #059669; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 6px; margin-left: 8px; }
+
+  /* Action buttons row */
+  .action-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 20px; height: 44px; background: #0F766E; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .btn-primary:hover { background: #0D6B63; }
+  .btn-primary:disabled { background: #94D8D0; cursor: not-allowed; }
+  .btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 20px; height: 44px; background: #fff; color: #DC2626; border: 1px solid #DC2626; border-radius: 10px; font-size: 14px; cursor: pointer; }
+  .btn-danger:hover { background: #FEF2F2; }
+
+  /* Clone button — NEW */
+  .btn-clone { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 20px; height: 44px; background: #fff; color: #0F766E; border: 1px solid #0F766E; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .btn-clone:hover { background: #F0FDFA; }
+  .btn-clone svg { width: 16px; height: 16px; }
+
+  /* Save indicator */
+  .save-indicator { font-size: 12px; color: #999; }
+
+  /* Visit list card mockup */
+  .visit-card { background: #fff; border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease; }
+  .visit-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .vc-left { display: flex; flex-direction: column; gap: 4px; }
+  .vc-address { font-size: 14px; font-weight: 500; }
+  .vc-engineer { font-size: 12px; color: #475569; }
+  .vc-date { font-size: 12px; color: #888; }
+  .vc-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .vc-tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+  .vc-tag.completed { background: #ECFDF5; color: #059669; }
+  .vc-tag.in-progress { background: #FFF7ED; color: #D97706; }
+  .vc-btn-small { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid #E2E8F0; border-radius: 8px; background: #fff; cursor: pointer; }
+  .vc-btn-small:hover { background: #F8FAFC; }
+  .vc-btn-small.danger { color: #DC2626; border-color: #FECACA; }
+  .vc-btn-small.danger:hover { background: #FEF2F2; }
+  .vc-btn-small.clone { color: #0F766E; border-color: #99F6E4; }
+  .vc-btn-small.clone:hover { background: #F0FDFA; }
+  .vc-btn-small svg { width: 14px; height: 14px; }
+
+  /* Mobile dropdown */
+  .mobile-dropdown-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; background: transparent; cursor: pointer; border-radius: 8px; }
+  .mobile-dropdown-btn:hover { background: #F1F5F9; }
+  .mobile-dropdown-btn svg { width: 18px; height: 18px; color: #475569; }
+
+  /* Dropdown menu mockup */
+  .dropdown-menu { background: #fff; border-radius: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.12); padding: 4px; min-width: 200px; }
+  .dropdown-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  .dropdown-item:hover { background: #F8FAFC; }
+  .dropdown-item.danger { color: #DC2626; }
+  .dropdown-item.danger:hover { background: #FEF2F2; }
+  .dropdown-item.clone { color: #0F766E; }
+  .dropdown-item.clone:hover { background: #F0FDFA; }
+  .dropdown-item svg { width: 16px; height: 16px; }
+  .dropdown-divider { height: 1px; background: #E2E8F0; margin: 4px 0; }
+
+  /* Modal mockup */
+  .modal-overlay { background: rgba(0,0,0,0.45); border-radius: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 360px; }
+  .modal-box { background: #fff; border-radius: 16px; padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 12px 32px rgba(0,0,0,0.15); }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .modal-title svg { width: 20px; height: 20px; color: #0F766E; }
+  .modal-body { font-size: 14px; color: #475569; margin-bottom: 20px; line-height: 1.6; }
+  .modal-body .highlight { background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 8px; padding: 12px; margin: 12px 0; }
+  .modal-body .warn { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 13px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
+  .btn-modal-cancel { padding: 0 20px; height: 40px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #0F172A; font-size: 14px; cursor: pointer; }
+  .btn-modal-cancel:hover { border-color: #0F766E; color: #0F766E; }
+  .btn-modal-ok { padding: 0 20px; height: 40px; border: none; border-radius: 10px; background: #0F766E; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .btn-modal-ok:hover { background: #0D6B63; }
+
+  /* Mobile frame */
+  .mobile-frame { max-width: 393px; margin: 0 auto; }
+  .mobile-frame .visit-card { padding: 12px; }
+
+  /* Annotation */
+  .annotation { position: relative; }
+  .annotation-badge { position: absolute; top: -8px; right: -8px; background: #DC2626; color: #fff; font-size: 10px; font-weight: 700; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1; }
+  .annotation-badge.new { background: #0F766E; }
+
+  /* Tooltip */
+  .tooltip-demo { position: relative; display: inline-block; }
+  .tooltip-box { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #0F172A; color: #fff; font-size: 12px; padding: 6px 12px; border-radius: 8px; white-space: nowrap; opacity: 0.95; }
+  .tooltip-box::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #0F172A; }
+
+  /* Table */
+  .spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .spec-table th { background: #F8FAFC; padding: 10px 12px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #E2E8F0; }
+  .spec-table td { padding: 10px 12px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+  .spec-table tr:hover td { background: #FAFCFB; }
+  .spec-table code { background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #0F766E; }
+
+  .task-list { list-style: none; }
+  .task-list li { padding: 8px 0; border-bottom: 1px solid #F1F5F9; display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
+  .task-list li:last-child { border-bottom: none; }
+  .task-num { background: #0F766E; color: #fff; font-size: 11px; font-weight: 600; width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .task-priority { font-size: 11px; padding: 1px 6px; border-radius: 4px; font-weight: 500; }
+  .task-priority.high { background: #FEF2F2; color: #DC2626; }
+  .task-priority.medium { background: #FFF7ED; color: #D97706; }
+  .task-priority.low { background: #F0FDFA; color: #0F766E; }
+
+  /* Color swatches */
+  .color-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+  .color-swatch { width: 48px; height: 48px; border-radius: 10px; border: 1px solid #E2E8F0; }
+  .color-label { font-size: 11px; color: #475569; text-align: center; margin-top: 4px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .mockup-row { flex-direction: column; }
+    .spec-container { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="spec-container">
+
+  <!-- HEADER -->
+  <div class="spec-header">
+    <h1>📋 Спецификация: Клонирование визитов <span class="badge">СП-clone-1</span></h1>
+    <div class="meta">
+      <strong>Проект:</strong> Цифровой чек-лист инженера &nbsp;|&nbsp;
+      <strong>Дата:</strong> 16.10.2026 &nbsp;|&nbsp;
+      <strong>Статус:</strong> Готово к реализации &nbsp;|&nbsp;
+      <strong>Оценка:</strong> ~6 часов
+    </div>
+  </div>
+
+  <!-- ДИЗАЙН-ТОКЕНЫ -->
+  <div class="section">
+    <h2>🎨 Дизайн-токены (соответствие проекту)</h2>
+    <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">Все элементы используют стандартные токены Ant Design 5 из ConfigProvider (main.tsx). Новые токены не вводятся.</p>
+
+    <h3>Цветовая палитра</h3>
+    <div class="color-row">
+      <div>
+        <div class="color-swatch" style="background: #0F766E;"></div>
+        <div class="color-label">Primary<br>#0F766E</div>
+      </div>
+      <div>
+        <div class="color-swatch" style="background: #F0FDFA; border: 1px dashed #0F766E;"></div>
+        <div class="color-label">Hover bg<br>#F0FDFA</div>
+      </div>
+      <div>
+        <div class="color-swatch" style="background: #99F6E4;"></div>
+        <div class="color-label">Border<br>#99F6E4</div>
+      </div>
+      <div>
+        <div class="color-swatch" style="background: #DC2626;"></div>
+        <div class="color-label">Danger<br>#DC2626</div>
+      </div>
+      <div>
+        <div class="color-swatch" style="background: #E2E8F0;"></div>
+        <div class="color-label">Border<br>#E2E8F0</div>
+      </div>
+      <div>
+        <div class="color-swatch" style="background: #F8FAFC;"></div>
+        <div class="color-label">Background<br>#F8FAFC</div>
+      </div>
+    </div>
+
+    <h3>Параметры кнопки ⋮ и пункта «Клонировать»</h3>
+    <table class="spec-table">
+      <tr><th>Элемент</th><th>Параметр</th><th>Значение</th><th>Источник</th></tr>
+      <tr><td rowspan="4">Кнопка ⋮ (trigger)</td><td>Компонент</td><td><code>Button</code> type="text"</td><td>Как в VisitListPage мобильном</td></tr>
+      <tr><td>Иконка</td><td><code>EllipsisOutlined</code> (18×18)</td><td>@ant-design/icons</td></tr>
+      <tr><td>Размер</td><td><code>44×44px</code> (десктоп) / <code>36×36px</code> (мобильный)</td><td>Button.controlHeight</td></tr>
+      <tr><td>Border radius</td><td><code>10px</code></td><td>Button.borderRadius</td></tr>
+      <tr><td rowspan="4">Пункт «Клонировать»</td><td>Цвет текста</td><td><code>#0F766E</code> (colorPrimary)</td><td>Ant Design token</td></tr>
+      <tr><td>Иконка</td><td><code>CopyOutlined</code> (16×16)</td><td>@ant-design/icons</td></tr>
+      <tr><td>Hover background</td><td><code>#F0FDFA</code></td><td>teal-50</td></tr>
+      <tr><td>Border radius (item)</td><td><code>6px</code></td><td>Menu.itemBorderRadius</td></tr>
+    </table>
+  </div>
+
+  <!-- МАКЕТ 1: VISIT PAGE (ДЕСКТОП) -->
+  <div class="section">
+    <h2>🖥️ Макет 1: Страница визита — десктоп (вариант A: dropdown ⋮)</h2>
+    <p style="font-size: 14px; color: #475569; margin-bottom: 16px;">Кнопка «Клонировать» размещается в dropdown-меню (⋮) в шапке визита. Единый паттерн для десктопа и мобильного. Нет риска случайного нажатия.</p>
+
+    <div class="mockup-frame">
+      <div class="frame-label">VisitPage.tsx — завершённый визит (десктоп)</div>
+      <div class="mockup-content">
+        <!-- Header -->
+        <div class="vp-header">
+          <button class="vp-back-btn">
+            <svg viewBox="64 64 896 896"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+            Назад
+          </button>
+          <div class="vp-title">Визит <span class="vp-tag">IS0140282788</span></div>
+          <!-- Dropdown trigger (NEW) -->
+          <div class="annotation" style="position: relative;">
+            <span class="annotation-badge new">NEW</span>
+            <button class="dropdown-trigger" title="Действия" style="width: 44px; height: 44px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+              <svg viewBox="64 64 896 896" fill="#475569" width="18" height="18"><path d="M452.4 816a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dropdown expanded (shown below header) -->
+        <div style="position: relative; margin-bottom: 16px; min-height: 100px;">
+          <div class="dropdown-menu" style="position: absolute; right: 0; top: 0; z-index: 10;">
+            <div class="dropdown-item clone">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+              Клонировать
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" style="color: #DC2626;">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+              Удалить визит
+            </div>
+          </div>
+        </div>
+
+        <!-- Action buttons (без clone) -->
+        <div class="action-row" style="margin-top: 100px;">
+          <button class="btn-primary">
+            <svg viewBox="64 64 896 896" fill="currentColor" width="14" height="14"><path d="M880 184H712v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H384v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H144c-17.7 0-32 14.3-32 32v664c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V216c0-17.7-14.3-32-32-32z"/></svg>
+            Сохранить
+          </button>
+          <span class="save-indicator">Сохранено 5 мин. назад</span>
+        </div>
+
+        <!-- Tasks section -->
+        <div style="background: #fff; border-radius: 12px; padding: 16px; margin-top: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-weight: 600; font-size: 16px;">Проведённые работы</div>
+            <button style="display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; height: 40px; border: 1px dashed #E2E8F0; border-radius: 10px; background: #fff; color: #0F172A; font-size: 14px; cursor: pointer;">
+              + Добавить оборудование
+            </button>
+          </div>
+          <div style="font-size: 13px; color: #475569; padding: 8px 0;">
+            ✅ Визит завершён, 12 задач выполнено
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МАКЕТ 2: VISIT PAGE (МОБИЛЬНЫЙ) -->
+  <div class="section">
+    <h2>📱 Макет 2: Страница визита — мобильный (393px, вариант A: dropdown ⋮)</h2>
+    <p style="font-size: 14px; color: #475569; margin-bottom: 16px;">Та же кнопка ⋮ в шапке, что и на десктопе. Единый паттерн — не нужно учить два разных UI.</p>
+
+    <div class="mockup-frame">
+      <div class="frame-label">VisitPage.tsx — мобильный (≤393px)</div>
+      <div class="mockup-content">
+        <div class="mobile-frame">
+          <!-- Header -->
+          <div class="vp-header" style="margin-bottom: 12px;">
+            <button class="vp-back-btn" style="height: 40px; padding: 6px 12px; font-size: 13px;">
+              <svg viewBox="64 64 896 896" width="12" height="12"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+              Назад
+            </button>
+            <div class="vp-title" style="font-size: 17px;">Визит <span class="vp-tag" style="font-size: 11px;">IS0140282788</span></div>
+            <!-- Dropdown trigger (NEW) -->
+            <div class="annotation" style="position: relative;">
+              <span class="annotation-badge new" style="width: 16px; height: 16px; font-size: 8px; top: -6px; right: -6px; padding: 0; display: flex; align-items: center; justify-content: center;">NEW</span>
+              <button class="dropdown-trigger" title="Действия" style="width: 36px; height: 36px; border: 1px solid #E2E8F0; border-radius: 8px; background: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                <svg viewBox="64 64 896 896" fill="#475569" width="16" height="16"><path d="M452.4 816a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Dropdown shown -->
+          <div style="background: #fff; border-radius: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.12); padding: 4px; margin-bottom: 12px;">
+            <div class="dropdown-item clone">
+              <svg viewBox="64 64 896 896" fill="currentColor" width="16" height="16"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+              Клонировать
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" style="color: #DC2626;">
+              <svg viewBox="64 64 896 896" fill="currentColor" width="16" height="16"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+              Удалить визит
+            </div>
+          </div>
+
+          <button class="btn-primary" style="width: 100%;">Сохранить</button>
+          <span class="save-indicator" style="text-align: center; display: block; margin-top: 4px;">Сохранено 5 мин. назад</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МАКЕТ 3: СПИСОК ВИЗИТОВ (ДЕСКТОП) -->
+  <div class="section">
+    <h2>🖥️ Макет 3: Список визитов — десктоп</h2>
+    <p style="font-size: 14px; color: #475569; margin-bottom: 16px;">В списке визитов кнопка «Клонировать» — иконочная (как «Переназначить»), размещается перед кнопкой «Удалить». Видна только для завершённых визитов.</p>
+
+    <div class="mockup-frame">
+      <div class="frame-label">VisitListPage.tsx — десктоп</div>
+      <div class="mockup-content">
+        <!-- Visit card 1 — completed (clone available) -->
+        <div class="visit-card">
+          <div class="vc-left">
+            <div class="vc-address">RU/77/561, г. Москва, ул. Ленина, д. 15</div>
+            <div class="vc-engineer">Иванов И.И. • 12 задач</div>
+            <div class="vc-date">15.10.2026 14:30</div>
+          </div>
+          <div class="vc-right">
+            <span class="vc-tag completed">Завершён</span>
+            <div class="tooltip-demo">
+              <div class="annotation" style="position: relative;">
+                <span class="annotation-badge new">NEW</span>
+                <button class="vc-btn-small clone" title="Клонировать в новый период">
+                  <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                </button>
+              </div>
+              <div class="tooltip-box">Клонировать в новый период</div>
+            </div>
+            <button class="vc-btn-small danger" title="Удалить">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Visit card 2 — in progress (no clone) -->
+        <div class="visit-card" style="opacity: 0.7;">
+          <div class="vc-left">
+            <div class="vc-address">RU/77/3291, г. Москва, ул. Пушкина, д. 7</div>
+            <div class="vc-engineer">Петров П.П. • 3 из 8 задач</div>
+            <div class="vc-date">16.10.2026 09:15</div>
+          </div>
+          <div class="vc-right">
+            <span class="vc-tag in-progress">В работе</span>
+            <button class="vc-btn-small" title="Переназначить">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M648 293.2l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0L393.2 447.2c-4.4 4.4-4.4 11.6 0 16l42.4 42.4c4.4 4.4 11.6 4.4 16 0L648 309.2c4.4-4.4 4.4-11.6 0-16z"/><path d="M341 583c-4.4-4.4-11.6-4.4-16 0L196.2 711.8c-4.4 4.4-4.4 11.6 0 16l42.4 42.4c4.4 4.4 11.6 4.4 16 0L383 641.4c4.4-4.4 4.4-11.6 0-16L341 583z"/><path d="M880 184H712v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H384v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H144c-17.7 0-32 14.3-32 32v664c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V216c0-17.7-14.3-32-32-32z"/></svg>
+            </button>
+            <button class="vc-btn-small danger" title="Удалить">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Visit card 3 — completed (clone available) -->
+        <div class="visit-card">
+          <div class="vc-left">
+            <div class="vc-address">RU/50/708, МО, г. Балашиха, ул. Советская, д. 42</div>
+            <div class="vc-engineer">Сидоров С.С. • 5 задач</div>
+            <div class="vc-date">14.10.2026 11:00</div>
+          </div>
+          <div class="vc-right">
+            <span class="vc-tag completed">Завершён</span>
+            <button class="vc-btn-small clone" title="Клонировать в новый период">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+            </button>
+            <button class="vc-btn-small danger" title="Удалить">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МАКЕТ 4: СПИСОК ВИЗИТОВ (МОБИЛЬНЫЙ) -->
+  <div class="section">
+    <h2>📱 Макет 4: Список визитов — мобильный (393px)</h2>
+    <p style="font-size: 14px; color: #475569; margin-bottom: 16px;">На мобильном «Клонировать» добавляется в dropdown-меню (кнопка «⋮»). Пункт меню размещается перед «Удалить».</p>
+
+    <div class="mockup-row">
+      <!-- Mobile card -->
+      <div class="mockup-frame" style="flex: 0 0 393px;">
+        <div class="frame-label">VisitListPage.tsx — мобильный</div>
+        <div class="mockup-content">
+          <div class="mobile-frame">
+            <div class="visit-card">
+              <div class="vc-left">
+                <div class="vc-address" style="font-size: 13px;">RU/77/561, г. Москва, ул. Ленина, д. 15</div>
+                <div class="vc-engineer" style="font-size: 11px;">Иванов И.И. • 12 задач</div>
+              </div>
+              <div class="vc-right">
+                <span class="vc-tag completed" style="font-size: 11px;">Завершён</span>
+                <div class="annotation" style="position: relative;">
+                  <span class="annotation-badge new" style="width: 16px; height: 16px; font-size: 8px; top: -6px; right: -6px;">NEW</span>
+                  <button class="mobile-dropdown-btn">
+                    <svg viewBox="64 64 896 896" fill="currentColor"><path d="M452.4 816a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0z"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dropdown expanded -->
+      <div class="mockup-frame" style="flex: 0 0 260px;">
+        <div class="frame-label">Dropdown меню (развёрнуто)</div>
+        <div class="mockup-content" style="display: flex; justify-content: center; padding: 24px;">
+          <div class="dropdown-menu">
+            <div class="dropdown-item clone">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+              Клонировать в новый период
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item danger">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+              Удалить
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МАКЕТ 5: МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ -->
+  <div class="section">
+    <h2>🪟 Макет 5: Модальное окно подтверждения</h2>
+    <p style="font-size: 14px; color: #475569; margin-bottom: 16px;">Появляется после выбора «Клонировать» в dropdown. Стандартный Ant Design <code>Modal</code> с borderRadiusLG: 16.</p>
+
+    <div class="mockup-frame">
+      <div class="frame-label">Modal — подтверждение клонирования</div>
+      <div class="mockup-content">
+        <div class="modal-overlay">
+          <div class="modal-box">
+            <div class="modal-title">
+              <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+              Клонирование визита
+            </div>
+            <div class="modal-body">
+              <p>Будет создан новый визит на адрес:</p>
+              <div class="highlight">
+                <strong>RU/77/561, г. Москва, ул. Ленина, д. 15</strong><br>
+                <span style="font-size: 13px;">12 задач из визита от 15.10.2026</span>
+              </div>
+              <div class="warn">
+                ⚠️ Измеряемые параметры и фотографии нужно заполнить заново.
+              </div>
+              <p style="font-size: 13px; color: #888;">Дата нового визита: <strong>16.10.2026</strong> (сезон: зима)</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-modal-cancel">Отмена</button>
+              <button class="btn-modal-ok">Клонировать</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МАКЕТ 6: СОСТОЯНИЯ КНОПКИ -->
+  <div class="section">
+    <h2>🔄 Макет 6: Видимость пункта «Клонировать» в dropdown</h2>
+
+    <div class="mockup-frame">
+      <div class="frame-label">Пункт меню — состояния видимости</div>
+      <div class="mockup-content">
+        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+          <!-- Visible (completed visit) -->
+          <div style="text-align: center;">
+            <div class="dropdown-menu" style="min-width: 180px;">
+              <div class="dropdown-item clone">
+                <svg viewBox="64 64 896 896" fill="currentColor" width="16" height="16"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                Клонировать
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" style="color: #DC2626;">
+                <svg viewBox="64 64 896 896" fill="currentColor" width="16" height="16"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+                Удалить визит
+              </div>
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-top: 8px;">Видим (completed/sent)</div>
+          </div>
+
+          <!-- Hidden (active visit) -->
+          <div style="text-align: center;">
+            <div class="dropdown-menu" style="min-width: 180px;">
+              <div class="dropdown-item" style="color: #DC2626;">
+                <svg viewBox="64 64 896 896" fill="currentColor" width="16" height="16"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+                Удалить визит
+              </div>
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-top: 8px;">Скрыт (in_progress)</div>
+          </div>
+
+          <!-- Hidden (awaiting_assignment) -->
+          <div style="text-align: center;">
+            <div class="dropdown-menu" style="min-width: 180px; opacity: 0.5;">
+              <div style="padding: 10px 12px; font-size: 13px; color: #94A3B8; text-align: center;">
+                (dropdown пуст — нет действий)
+              </div>
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-top: 8px;">Скрыт (awaiting_assignment)</div>
+          </div>
+
+          <!-- Hidden (offline) -->
+          <div style="text-align: center;">
+            <div class="dropdown-menu" style="min-width: 180px;">
+              <div class="dropdown-item" style="color: #DC2626;">
+                <svg viewBox="64 64 896 896" fill="currentColor" width="16" height="16"><path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-8c0 4.4 3.6 8 8 8h8V184c0-17.7-14.3-32-32-32H232c-17.7 0-32 14.3-32 32v8h8v-72z"/></svg>
+                Удалить визит
+              </div>
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-top: 8px;">Скрыт (офлайн)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЗАДАЧИ РЕАЛИЗАЦИИ -->
+  <div class="section">
+    <h2>📋 Задачи реализации</h2>
+
+    <h3>Сервер (3 задачи, ~3 часа)</h3>
+    <ul class="task-list">
+      <li>
+        <span class="task-num">1</span>
+        <div>
+          <strong>POST /api/visits/:id/clone</strong> — эндпоинт клонирования<br>
+          <span style="font-size: 12px; color: #475569;">Проверки, транзакция, копирование задач, автопривязка заявок, AuditLog</span>
+          <span class="task-priority high">2ч</span>
+        </div>
+      </li>
+      <li>
+        <span class="task-num">2</span>
+        <div>
+          <strong>Вынести функцию автопривязки заявок</strong> — из visits.ts в отдельный модуль<br>
+          <span style="font-size: 12px; color: #475569;">autoAssignISZHRequests() + autoAssignBySerialNumber() — переиспользовать в clone</span>
+          <span class="task-priority medium">0.5ч</span>
+        </div>
+      </li>
+      <li>
+        <span class="task-num">3</span>
+        <div>
+          <strong>Функция determineSeason()</strong> — вынести в utils<br>
+          <span style="font-size: 12px; color: #475569;">Определение сезона по дате (апрель–сентябрь = лето)</span>
+          <span class="task-priority low">0.5ч</span>
+        </div>
+      </li>
+    </ul>
+
+    <h3>Клиент (4 задачи, ~2.5 часа)</h3>
+    <ul class="task-list">
+      <li>
+        <span class="task-num">4</span>
+        <div>
+          <strong>API-метод cloneVisit()</strong> — client/src/api/client.ts<br>
+          <span style="font-size: 12px; color: #475569;">POST /api/visits/:id/clone, обработка ошибок 409/423</span>
+          <span class="task-priority low">0.25ч</span>
+        </div>
+      </li>
+      <li>
+        <span class="task-num">5</span>
+        <div>
+          <strong>Кнопка + модалка в VisitPage.tsx</strong><br>
+          <span style="font-size: 12px; color: #475569;">Кнопка «Клонировать» (десктоп: в ряду действий, мобильный: под «Сохранить»), модальное окно подтверждения</span>
+          <span class="task-priority medium">1ч</span>
+        </div>
+      </li>
+      <li>
+        <span class="task-num">6</span>
+        <div>
+          <strong>Кнопка в VisitListPage.tsx</strong><br>
+          <span style="font-size: 12px; color: #475569;">Десктоп: иконочная кнопка (size=small). Мобильный: пункт в dropdown actionItems</span>
+          <span class="task-priority medium">0.75ч</span>
+        </div>
+      </li>
+      <li>
+        <span class="task-num">7</span>
+        <div>
+          <strong>Условная видимость кнопки</strong><br>
+          <span style="font-size: 12px; color: #475569;">Показывать только для completed/sent/sent_by_engineer/sent_by_tm/corrected_by_tm. Проверка офлайн → disabled.</span>
+          <span class="task-priority low">0.5ч</span>
+        </div>
+      </li>
+    </ul>
+
+    <h3>Тестирование (1 задача, ~0.5 часа)</h3>
+    <ul class="task-list">
+      <li>
+        <span class="task-num">8</span>
+        <div>
+          <strong>E2E-тесты клонирования</strong><br>
+          <span style="font-size: 12px; color: #475569;">Кнопка видна/скрыта, модалка, клонирование, проверка задач, офлайн</span>
+          <span class="task-priority medium">0.5ч</span>
+        </div>
+      </li>
+    </ul>
+
+    <div style="background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 10px; padding: 16px; margin-top: 16px;">
+      <strong>Итого: ~6 часов</strong> (сервер 3ч + клиент 2.5ч + тесты 0.5ч)
+    </div>
+  </div>
+
+</div>
+
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+</style>
+</body>
+</html>

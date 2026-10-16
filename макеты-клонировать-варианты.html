@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Макеты кнопки «Клонировать» — варианты расположения</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; color: #0F172A; line-height: 1.5; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .page-header { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .page-header h1 { font-size: 22px; color: #0F766E; margin-bottom: 4px; }
+  .page-header p { font-size: 14px; color: #475569; }
+
+  .variant { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .variant-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #E2E8F0; }
+  .variant-num { background: #0F766E; color: #fff; font-size: 14px; font-weight: 700; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .variant-title { font-size: 17px; font-weight: 600; }
+  .variant-pros { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pro { font-size: 12px; padding: 4px 10px; border-radius: 6px; }
+  .pro.plus { background: #ECFDF5; color: #059669; }
+  .pro.minus { background: #FEF2F2; color: #DC2626; }
+  .pro.neutral { background: #F1F5F9; color: #475569; }
+
+  .mockup-row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .mockup-frame { flex: 1; min-width: 320px; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; }
+  .frame-label { background: #F1F5F9; padding: 8px 16px; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+  .mockup-content { padding: 16px; background: #F8FAFC; }
+
+  /* Visit page elements */
+  .vp-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .vp-back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #0F172A; font-size: 14px; cursor: pointer; height: 44px; }
+  .vp-back-btn svg { width: 14px; height: 14px; }
+  .vp-title { font-size: 20px; font-weight: 600; flex: 1; }
+  .vp-tag { display: inline-block; background: #059669; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 6px; margin-left: 8px; }
+
+  /* Buttons */
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 20px; height: 44px; background: #0F766E; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 20px; height: 44px; background: #fff; color: #DC2626; border: 1px solid #DC2626; border-radius: 10px; font-size: 14px; cursor: pointer; }
+  .btn-clone { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 16px; height: 44px; background: #fff; color: #0F766E; border: 1px solid #0F766E; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .btn-clone:hover { background: #F0FDFA; }
+  .btn-clone svg { width: 16px; height: 16px; }
+  .btn-clone-sm { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 12px; height: 32px; background: #fff; color: #0F766E; border: 1px solid #99F6E4; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  .btn-clone-sm:hover { background: #F0FDFA; }
+  .btn-clone-sm svg { width: 14px; height: 14px; }
+  .save-indicator { font-size: 12px; color: #999; }
+
+  /* Dropdown button (⋮) */
+  .dropdown-trigger { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; cursor: pointer; }
+  .dropdown-trigger:hover { background: #F8FAFC; border-color: #0F766E; }
+  .dropdown-trigger svg { width: 18px; height: 18px; color: #475569; }
+
+  /* Dropdown menu */
+  .dropdown-menu { background: #fff; border-radius: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.12); padding: 4px; min-width: 220px; }
+  .dropdown-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  .dropdown-item:hover { background: #F8FAFC; }
+  .dropdown-item.clone { color: #0F766E; }
+  .dropdown-item.clone:hover { background: #F0FDFA; }
+  .dropdown-item.danger { color: #DC2626; }
+  .dropdown-item.danger:hover { background: #FEF2F2; }
+  .dropdown-item svg { width: 16px; height: 16px; }
+  .dropdown-divider { height: 1px; background: #E2E8F0; margin: 4px 0; }
+
+  /* Section blocks */
+  .section-block { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .section-title { font-weight: 600; font-size: 16px; margin-bottom: 12px; }
+  .section-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .btn-dashed { display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; height: 40px; border: 1px dashed #E2E8F0; border-radius: 10px; background: #fff; color: #0F172A; font-size: 14px; cursor: pointer; }
+
+  /* Info card */
+  .info-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; }
+  .info-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; margin-bottom: 4px; }
+  .info-row:last-child { margin-bottom: 0; }
+  .info-label { font-weight: 500; color: #0F172A; min-width: 80px; }
+
+  /* Annotation */
+  .annotation { position: relative; }
+  .annotation-badge { position: absolute; top: -8px; right: -8px; background: #0F766E; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; z-index: 1; }
+
+  /* Bottom zone */
+  .bottom-zone { border-top: 2px dashed #E2E8F0; padding-top: 16px; margin-top: 16px; }
+  .clone-zone { background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .clone-zone-text { font-size: 13px; color: #475569; }
+  .clone-zone-text strong { color: #0F172A; }
+
+  /* Complete button */
+  .btn-complete { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 48px; background: #0F766E; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 16px; }
+
+  /* Mobile frame */
+  .mobile-frame { max-width: 393px; margin: 0 auto; }
+  .mobile-btn-clone { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 40px; background: #fff; color: #0F766E; border: 1px solid #0F766E; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+
+  /* Tooltip */
+  .tooltip-box { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #0F172A; color: #fff; font-size: 12px; padding: 6px 12px; border-radius: 8px; white-space: nowrap; }
+  .tooltip-box::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #0F172A; }
+
+  .recommendation { background: #ECFDF5; border: 1px solid #6EE7B7; border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-size: 13px; color: #065F46; }
+  .recommendation strong { color: #059669; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="page-header">
+    <h1>🔀 Варианты расположения кнопки «Клонировать»</h1>
+    <p>4 варианта для VisitPage (десктоп + мобильный). Кнопка переименована в «Клонировать» для компактности.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ВАРИАНТ A: Dropdown в шапке -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="variant">
+    <div class="variant-header">
+      <div class="variant-num">A</div>
+      <div>
+        <div class="variant-title">Dropdown-меню (⋮) в шапке визита</div>
+        <div style="font-size: 13px; color: #475569;">Кнопка «⋮» рядом с NotificationBell и TorchButton. Пункт «Клонировать» в выпадающем меню.</div>
+      </div>
+    </div>
+    <div class="variant-pros">
+      <span class="pro plus">✓ Нет риска случайного нажатия</span>
+      <span class="pro plus">✓ Консистентно с VisitListPage (мобильный)</span>
+      <span class="pro plus">✓ Не загромождает интерфейс</span>
+      <span class="pro minus">✗ Скрыта — пользователь может не найти</span>
+    </div>
+
+    <div class="mockup-row">
+      <!-- Desktop -->
+      <div class="mockup-frame">
+        <div class="frame-label">Десктоп — шапка с dropdown</div>
+        <div class="mockup-content">
+          <div class="vp-header">
+            <button class="vp-back-btn">
+              <svg viewBox="64 64 896 896"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+              Назад
+            </button>
+            <div class="vp-title">Визит <span class="vp-tag">IS0140282788</span></div>
+            <!-- Dropdown trigger -->
+            <div class="annotation" style="position: relative;">
+              <span class="annotation-badge">A</span>
+              <button class="dropdown-trigger" title="Действия">
+                <svg viewBox="64 64 896 896" fill="currentColor"><path d="M452.4 816a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Dropdown expanded (shown below header) -->
+          <div style="position: relative; margin-bottom: 16px;">
+            <div class="dropdown-menu" style="position: absolute; right: 0; top: 0; z-index: 10;">
+              <div class="dropdown-item clone">
+                <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                Клонировать
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" style="color: #0F172A;">
+                <svg viewBox="64 64 896 896" fill="currentColor"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"/><path d="M464 336a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm72 112h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V456c0-4.4-3.6-8-8-8z"/></svg>
+                Удалить визит
+              </div>
+            </div>
+          </div>
+
+          <div class="section-block" style="margin-top: 80px;">
+            <div class="section-row">
+              <div class="section-title">Проведённые работы</div>
+              <button class="btn-dashed">+ Добавить оборудование</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-primary">Сохранить</button>
+            <span class="save-indicator" style="align-self: center;">Сохранено 5 мин. назад</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile -->
+      <div class="mockup-frame" style="flex: 0 0 393px;">
+        <div class="frame-label">Мобильный — та же кнопка ⋮</div>
+        <div class="mockup-content">
+          <div class="mobile-frame">
+            <div class="vp-header" style="margin-bottom: 12px;">
+              <button class="vp-back-btn" style="height: 40px; padding: 6px 12px; font-size: 13px;">
+                <svg viewBox="64 64 896 896" width="12" height="12"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+                Назад
+              </button>
+              <div class="vp-title" style="font-size: 17px;">Визит <span class="vp-tag" style="font-size: 11px;">IS0140282788</span></div>
+              <div class="annotation" style="position: relative;">
+                <span class="annotation-badge" style="width: 16px; height: 16px; font-size: 8px; top: -6px; right: -6px; padding: 0; display: flex; align-items: center; justify-content: center;">A</span>
+                <button class="dropdown-trigger" style="width: 36px; height: 36px;" title="Действия">
+                  <svg viewBox="64 64 896 896" fill="currentColor" style="width: 16px; height: 16px;"><path d="M452.4 816a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0zm0-352a64 64 0 1 0 119.3 0 64 64 0 1 0-119.3 0z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: #475569; text-align: center; padding: 20px;">↓ Тот же dropdown, что на десктопе ↓</div>
+            <button class="btn-primary" style="width: 100%;">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="recommendation">💡 <strong>Плюс:</strong> Единый паттерн для десктопа и мобильного. <strong>Минус:</strong> Кнопка «спрятана» — неочевидна для новых пользователей.</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ВАРИАНТ B: Отдельный блок внизу -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="variant">
+    <div class="variant-header">
+      <div class="variant-num">B</div>
+      <div>
+        <div class="variant-title">Отдельный блок внизу страницы (после «Завершить визит»)</div>
+        <div style="font-size: 13px; color: #475569;">Зона «Действия с визитом» — визуально отделена от основных кнопок. Кнопка «Клонировать» с описанием.</div>
+      </div>
+    </div>
+    <div class="variant-pros">
+      <span class="pro plus">✓ Нет риска случайного нажатия</span>
+      <span class="pro plus">✓ Видна и понятна</span>
+      <span class="pro plus">✓ Есть место для описания</span>
+      <span class="pro minus">✗ Далеко от верхней части страницы</span>
+    </div>
+
+    <div class="mockup-row">
+      <!-- Desktop -->
+      <div class="mockup-frame">
+        <div class="frame-label">Десктоп — внизу страницы</div>
+        <div class="mockup-content">
+          <div class="vp-header">
+            <button class="vp-back-btn">
+              <svg viewBox="64 64 896 896"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+              Назад
+            </button>
+            <div class="vp-title">Визит <span class="vp-tag">IS0140282788</span></div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-row">
+              <div class="section-title">Проведённые работы</div>
+              <button class="btn-dashed">+ Добавить оборудование</button>
+            </div>
+            <div style="font-size: 13px; color: #475569; padding: 4px 0;">✅ 12 задач выполнено</div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <button class="btn-primary">Сохранить</button>
+            <span class="save-indicator" style="align-self: center;">Сохранено 5 мин. назад</span>
+            <button class="btn-danger" style="margin-left: auto;">Удалить визит</button>
+          </div>
+
+          <button class="btn-complete">✓ Завершить визит</button>
+
+          <!-- Clone zone — separated -->
+          <div class="bottom-zone">
+            <div class="annotation" style="position: relative; display: inline-block; width: 100%;">
+              <span class="annotation-badge" style="top: -16px; right: auto; left: 0;">B</span>
+              <div class="clone-zone">
+                <div class="clone-zone-text">
+                  <strong>Повторный визит на этот объект?</strong><br>
+                  Создайте копию визита с задачами и оборудованием, заполнив параметры заново.
+                </div>
+                <button class="btn-clone">
+                  <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                  Клонировать
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile -->
+      <div class="mockup-frame" style="flex: 0 0 393px;">
+        <div class="frame-label">Мобильный — внизу страницы</div>
+        <div class="mockup-content">
+          <div class="mobile-frame">
+            <div class="vp-header" style="margin-bottom: 12px;">
+              <button class="vp-back-btn" style="height: 40px; padding: 6px 12px; font-size: 13px;">
+                <svg viewBox="64 64 896 896" width="12" height="12"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+                Назад
+              </button>
+              <div class="vp-title" style="font-size: 17px;">Визит <span class="vp-tag" style="font-size: 11px;">IS0140282788</span></div>
+            </div>
+
+            <div class="section-block" style="padding: 12px;">
+              <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">Проведённые работы</div>
+              <div style="font-size: 12px; color: #475569;">✅ 12 задач выполнено</div>
+            </div>
+
+            <button class="btn-primary" style="width: 100%;">Сохранить</button>
+            <button class="btn-complete" style="height: 44px; font-size: 14px;">✓ Завершить визит</button>
+
+            <!-- Clone zone mobile -->
+            <div class="bottom-zone" style="margin-top: 12px;">
+              <div style="background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 10px; padding: 12px; text-align: center;">
+                <div style="font-size: 12px; color: #475569; margin-bottom: 8px;">Повторный визит? Создайте копию с задачами</div>
+                <button class="mobile-btn-clone">
+                  <svg viewBox="64 64 896 896" fill="currentColor" width="14" height="14"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                  Клонировать
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="recommendation">💡 <strong>Плюс:</strong> Безопасное расположение, есть контекст («Повторный визит?»). <strong>Минус:</strong> Нужно прокрутить вниз.</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ВАРИАНТ C: В информационной карточке -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="variant">
+    <div class="variant-header">
+      <div class="variant-num">C</div>
+      <div>
+        <div class="variant-title">В информационной карточке визита (адрес / инженер / дата)</div>
+        <div style="font-size: 13px; color: #475569;">Компактная кнопка-ссылка «Клонировать» рядом с данными визита. Не конкурирует с основными действиями.</div>
+      </div>
+    </div>
+    <div class="variant-pros">
+      <span class="pro plus">✓ Рядом с контекстом (адрес, задачи)</span>
+      <span class="pro plus">✓ Не мешает основным кнопкам</span>
+      <span class="pro plus">✓ Компактная</span>
+      <span class="pro minus">✗ Нестандартное расположение</span>
+    </div>
+
+    <div class="mockup-row">
+      <!-- Desktop -->
+      <div class="mockup-frame">
+        <div class="frame-label">Десктоп — в инфо-карточке</div>
+        <div class="mockup-content">
+          <div class="vp-header">
+            <button class="vp-back-btn">
+              <svg viewBox="64 64 896 896"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+              Назад
+            </button>
+            <div class="vp-title">Визит <span class="vp-tag">IS0140282788</span></div>
+          </div>
+
+          <!-- Info card with clone -->
+          <div class="annotation" style="position: relative;">
+            <span class="annotation-badge">C</span>
+            <div class="info-card">
+              <div class="info-row">
+                <span class="info-label">Адрес:</span>
+                RU/77/561, г. Москва, ул. Ленина, д. 15
+              </div>
+              <div class="info-row">
+                <span class="info-label">Инженер:</span>
+                Иванов И.И.
+              </div>
+              <div class="info-row">
+                <span class="info-label">Дата:</span>
+                15.10.2026, 14:30
+              </div>
+              <div class="info-row">
+                <span class="info-label">Задачи:</span>
+                12 (все завершены)
+              </div>
+              <div style="border-top: 1px solid #E2E8F0; margin-top: 8px; padding-top: 8px; display: flex; justify-content: flex-end;">
+                <button class="btn-clone-sm">
+                  <svg viewBox="64 64 896 896" fill="currentColor"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                  Клонировать
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-row">
+              <div class="section-title">Проведённые работы</div>
+              <button class="btn-dashed">+ Добавить оборудование</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-primary">Сохранить</button>
+            <span class="save-indicator" style="align-self: center;">Сохранено 5 мин. назад</span>
+            <button class="btn-danger" style="margin-left: auto;">Удалить визит</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile -->
+      <div class="mockup-frame" style="flex: 0 0 393px;">
+        <div class="frame-label">Мобильный — в инфо-карточке</div>
+        <div class="mockup-content">
+          <div class="mobile-frame">
+            <div class="vp-header" style="margin-bottom: 12px;">
+              <button class="vp-back-btn" style="height: 40px; padding: 6px 12px; font-size: 13px;">
+                <svg viewBox="64 64 896 896" width="12" height="12"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+                Назад
+              </button>
+              <div class="vp-title" style="font-size: 17px;">Визит <span class="vp-tag" style="font-size: 11px;">IS0140282788</span></div>
+            </div>
+
+            <div class="annotation" style="position: relative;">
+              <span class="annotation-badge" style="top: -6px; right: -6px; font-size: 8px; width: 16px; height: 16px; padding: 0; display: flex; align-items: center; justify-content: center;">C</span>
+              <div class="info-card" style="padding: 10px 12px;">
+                <div class="info-row" style="font-size: 12px; margin-bottom: 2px;">
+                  <span class="info-label" style="min-width: 60px; font-size: 12px;">Адрес:</span>
+                  RU/77/561, Москва
+                </div>
+                <div class="info-row" style="font-size: 12px; margin-bottom: 2px;">
+                  <span class="info-label" style="min-width: 60px; font-size: 12px;">Инженер:</span>
+                  Иванов И.И.
+                </div>
+                <div class="info-row" style="font-size: 12px;">
+                  <span class="info-label" style="min-width: 60px; font-size: 12px;">Задачи:</span>
+                  12 (все ✅)
+                </div>
+                <div style="border-top: 1px solid #E2E8F0; margin-top: 6px; padding-top: 6px; display: flex; justify-content: flex-end;">
+                  <button class="btn-clone-sm" style="height: 28px; font-size: 12px; padding: 0 10px;">
+                    <svg viewBox="64 64 896 896" fill="currentColor" width="12" height="12"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                    Клонировать
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn-primary" style="width: 100%; margin-top: 12px;">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="recommendation">💡 <strong>Плюс:</strong> Контекстно (рядом с данными визита), компактно. <strong>Минус:</strong> Нестандартно — пользователь может не ожидать кнопку действия в инфо-блоке.</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ВАРИАНТ D: В заголовке рядом с статусом -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="variant">
+    <div class="variant-header">
+      <div class="variant-num">D</div>
+      <div>
+        <div class="variant-title">Компактная кнопка-ссылка под заголовком (рядом со статусом)</div>
+        <div style="font-size: 13px; color: #475569;">Текстовая ссылка с иконкой под заголовком «Визит». Не конкурирует с кнопками действий.</div>
+      </div>
+    </div>
+    <div class="variant-pros">
+      <span class="pro plus">✓ Видна сразу при открытии</span>
+      <span class="pro plus">✓ Не мешает кнопкам</span>
+      <span class="pro plus">✓ Очень компактная</span>
+      <span class="pro minus">✗ Может быть не замечена</span>
+    </div>
+
+    <div class="mockup-row">
+      <!-- Desktop -->
+      <div class="mockup-frame">
+        <div class="frame-label">Десктоп — под заголовком</div>
+        <div class="mockup-content">
+          <div class="vp-header">
+            <button class="vp-back-btn">
+              <svg viewBox="64 64 896 896"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+              Назад
+            </button>
+            <div class="vp-title">Визит <span class="vp-tag">IS0140282788</span></div>
+          </div>
+
+          <!-- Clone link under title -->
+          <div class="annotation" style="position: relative; margin-bottom: 12px;">
+            <span class="annotation-badge">D</span>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0;">
+              <button style="display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: #0F766E; font-size: 13px; cursor: pointer; padding: 4px 0; border-bottom: 1px dashed #99F6E4;">
+                <svg viewBox="64 64 896 896" fill="currentColor" width="14" height="14"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                Клонировать в новый период
+              </button>
+              <span style="font-size: 12px; color: #94A3B8;">— создайте копию визита с задачами и оборудованием</span>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-row">
+              <div class="section-title">Проведённые работы</div>
+              <button class="btn-dashed">+ Добавить оборудование</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-primary">Сохранить</button>
+            <span class="save-indicator" style="align-self: center;">Сохранено 5 мин. назад</span>
+            <button class="btn-danger" style="margin-left: auto;">Удалить визит</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile -->
+      <div class="mockup-frame" style="flex: 0 0 393px;">
+        <div class="frame-label">Мобильный — под заголовком</div>
+        <div class="mockup-content">
+          <div class="mobile-frame">
+            <div class="vp-header" style="margin-bottom: 4px;">
+              <button class="vp-back-btn" style="height: 40px; padding: 6px 12px; font-size: 13px;">
+                <svg viewBox="64 64 896 896" width="12" height="12"><path d="M872 474H286.2l270.3-270.4c4.4-4.4 4.4-11.6 0-16l-42.4-42.4c-4.4-4.4-11.6-4.4-16 0l-334 334c-4.4 4.4-4.4 11.6 0 16l334 334c4.4 4.4 11.6 4.4 16 0l42.4-42.4c4.4-4.4 4.4-11.6 0-16L286.2 498H872c6.2 0 10-5 10-12v-48c0-7-3.8-12-10-12z"/></svg>
+                Назад
+              </button>
+              <div class="vp-title" style="font-size: 17px;">Визит <span class="vp-tag" style="font-size: 11px;">IS0140282788</span></div>
+            </div>
+
+            <div class="annotation" style="position: relative; margin-bottom: 8px;">
+              <span class="annotation-badge" style="top: -6px; right: auto; left: 0; font-size: 8px; width: 16px; height: 16px; padding: 0; display: flex; align-items: center; justify-content: center;">D</span>
+              <button style="display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: #0F766E; font-size: 13px; cursor: pointer; padding: 4px 0; margin-top: 12px;">
+                <svg viewBox="64 64 896 896" fill="currentColor" width="14" height="14"><path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V360h560v256zm0 272H232V644h560v244z"/><path d="M304 768h416v64H304z"/></svg>
+                Клонировать в новый период
+              </button>
+            </div>
+
+            <button class="btn-primary" style="width: 100%;">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="recommendation">💡 <strong>Плюс:</strong> Максимально компактно, видно сразу. <strong>Минус:</strong> Выглядит как ссылка, а не кнопка — может не ассоциироваться с действием.</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- СРАВНЕНИЕ -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="variant" style="background: #F8FAFC; border: 2px solid #0F766E;">
+    <h2 style="font-size: 17px; color: #0F766E; margin-bottom: 16px;">📊 Сравнение вариантов</h2>
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <tr style="background: #F0FDFA;">
+        <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E2E8F0;">Критерий</th>
+        <th style="padding: 10px 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">A: Dropdown ⋮</th>
+        <th style="padding: 10px 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">B: Внизу страницы</th>
+        <th style="padding: 10px 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">C: В инфо-карточке</th>
+        <th style="padding: 10px 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">D: Ссылка под заголовком</th>
+      </tr>
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">Безопасность (нет случайных нажатий)</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">Обнаруживаемость</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">⚠️</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">Консистентность с проектом</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">Мобильная адаптация</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅</td>
+        <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅✅✅</td>
+      </tr>
+      <tr style="background: #F0FDFA; font-weight: 600;">
+        <td style="padding: 10px 12px;">ИТОГО</td>
+        <td style="padding: 10px 12px; text-align: center; color: #0F766E;">⭐ Рекомендую</td>
+        <td style="padding: 10px 12px; text-align: center;">Альтернатива</td>
+        <td style="padding: 10px 12px; text-align: center;">Компактный</td>
+        <td style="padding: 10px 12px; text-align: center;">Минималистичный</td>
+      </tr>
+    </table>
+    <div class="recommendation" style="margin-top: 16px;">
+      💡 <strong>Рекомендация:</strong> Вариант <strong>A</strong> (dropdown ⋮) — наиболее консистентный с проектом (такой же паттерн уже используется в VisitListPage мобильном). Безопасный, компактный, не загромождает интерфейс. Единственный минус — неочевидность, но это решается подсказкой при первом использовании.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
