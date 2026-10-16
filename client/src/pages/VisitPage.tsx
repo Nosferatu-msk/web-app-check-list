@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Input, InputNumber, Select, Button, Table, Modal, Tag, Space, App, Popconfirm, DatePicker, TimePicker, Spin, Checkbox, Tabs, Segmented, List, Empty, AutoComplete, Dropdown, Steps, Card, Alert } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined, CheckOutlined, SaveOutlined, EllipsisOutlined, CheckCircleOutlined, SyncOutlined, ClockCircleOutlined, CameraOutlined, EditOutlined, PictureOutlined, EnvironmentOutlined, HomeOutlined, WarningOutlined, SendOutlined, HourglassOutlined, ExclamationCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { api, isOffline } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -722,6 +722,85 @@ export default function VisitPage() {
     }
   };
 
+  const CLONEABLE_STATUSES = ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'];
+
+  const handleClone = async () => {
+    if (!visit?.id) return;
+    const fullAddress = visit.address?.fullAddress || 'адрес не указан';
+    const tasksCount = tasks.length;
+    const now = dayjs();
+    const seasonLabel = visit.season === 'winter' ? 'зима' : 'лето';
+
+    Modal.confirm({
+      title: 'Клонирование визита',
+      content: (
+        <div>
+          <p>Будет создан новый визит на адрес: <strong>{fullAddress}</strong> с {tasksCount} {tasksCount === 1 ? 'задачей' : tasksCount < 5 ? 'задачами' : 'задачами'}.</p>
+          <p style={{ color: '#D97706' }}>⚠️ Измеряемые параметры и фотографии нужно заполнить заново.</p>
+          <p>Дата нового визита: <strong>{now.format('DD.MM.YYYY')}</strong> (сезон: {seasonLabel})</p>
+        </div>
+      ),
+      okText: 'Клонировать',
+      cancelText: 'Отмена',
+      onOk: async () => {
+        try {
+          const result = await api.cloneVisit(visit.id);
+          message.success(result.message || `Визит клонирован. Создано задач: ${result.tasksCount}`);
+          navigate('/visit/' + result.id);
+        } catch (err: any) {
+          if (err.status === 409) {
+            message.warning('У вас уже есть активный визит по этому адресу в текущем месяце');
+          } else if (err.status === 423) {
+            message.warning('Визит сейчас редактируется другим инженером');
+          } else {
+            message.error(err.message || 'Ошибка клонирования визита');
+          }
+        }
+      },
+    });
+  };
+
+  const getVisitActions = () => {
+    const items: any[] = [];
+    const isDeleted = visit?.isDeleted;
+    const isCloneable = !isNew && visit && !isDeleted && CLONEABLE_STATUSES.includes(visit.status);
+
+    if (isCloneable) {
+      items.push({
+        key: 'clone',
+        icon: <CopyOutlined />,
+        label: 'Клонировать',
+        style: { color: '#0F766E' },
+      });
+    }
+
+    if (!isNew && visit) {
+      items.push({
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: 'Удалить визит',
+        danger: true,
+      });
+    }
+
+    return items;
+  };
+
+  const handleVisitAction = (key: string) => {
+    if (key === 'clone') {
+      handleClone();
+    } else if (key === 'delete') {
+      Modal.confirm({
+        title: 'Удалить визит?',
+        content: 'Визит будет скрыт из списка. Данные сохранятся для аудита.',
+        okText: 'Удалить',
+        okType: 'danger',
+        cancelText: 'Отмена',
+        onOk: handleDeleteVisit,
+      });
+    }
+  };
+
   const getPhotoProgress = (task: any) => {
     if (task.taskType === 'group_climate') {
       const items = task.equipmentItems || [];
@@ -921,6 +1000,11 @@ export default function VisitPage() {
         </div>
         <NotificationBell />
         <TorchButton />
+        {!isNew && visit && getVisitActions().length > 0 && (
+          <Dropdown menu={{ items: getVisitActions(), onClick: ({ key }) => handleVisitAction(key as string) }} trigger={['click']}>
+            <Button type="text" icon={<EllipsisOutlined style={{ fontSize: 18 }} />} />
+          </Dropdown>
+        )}
       </div>
 
       {/* Steps — прогресс-индикатор визита */}
@@ -979,7 +1063,7 @@ export default function VisitPage() {
           <Form.Item name="addressId" hidden><Input /></Form.Item>
           <Space style={{ width: '100%' }} size="middle">
             <Form.Item label="Дата" name="dateStart" rules={[{ required: true }]}>
-              <DatePicker format="DD.MM.YYYY" onChange={handleDateChange} />
+              <DatePicker format="DD.MM.YYYY" onChange={handleDateChange} disabled />
             </Form.Item>
             <Form.Item label="Время" name="timeStart" rules={[{ required: true }]}>
               <TimePicker format="HH:mm" />
@@ -995,11 +1079,6 @@ export default function VisitPage() {
             <span style={{ fontSize: 12, color: '#999' }}>
               {autoSaving ? 'Автосохранение...' : `Сохранено ${dayjs(lastSavedAt).fromNow()}`}
             </span>
-          )}
-          {!isNew && visit && (
-            <Popconfirm title="Удалить визит?" onConfirm={handleDeleteVisit} okText="Да" cancelText="Нет">
-              <Button danger>Удалить визит</Button>
-            </Popconfirm>
           )}
         </Space>
       </div>

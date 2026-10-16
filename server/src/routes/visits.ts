@@ -14,6 +14,8 @@ import {
   normalizeNumericParams,
   getRequiredParams,
 } from '../utils/validation.js';
+import { autoAssignISZHRequests, autoAssignBySerialNumber } from '../utils/requestBinding.js';
+import { getCurrentSeason, getMskTime } from '../utils/season.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -123,9 +125,9 @@ router.get('/check-requests', async (req: AuthRequest, res: Response) => {
 const createVisitSchema = z.object({
   addressId: z.string().uuid(),
   engineerName: z.string().min(1),
-  dateStart: z.string(),
-  timeStart: z.string(),
-  season: z.enum(['summer', 'winter']),
+  dateStart: z.string().optional(),
+  timeStart: z.string().optional(),
+  season: z.enum(['summer', 'winter']).optional(),
   userId: z.string().uuid().optional(),
   autoAssignRequests: z.boolean().optional(),
 });
@@ -202,7 +204,9 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     data: {
       ...rest,
       userId: visitUserId,
-      dateStart: new Date(rest.dateStart),
+      dateStart: new Date(),
+      timeStart: rest.timeStart || getMskTime(),
+      season: rest.season || getCurrentSeason(),
       status: req.userRole !== 'engineer' && targetUserId ? 'planned' : 'not_started',
       assignedById: req.userRole !== 'engineer' && targetUserId ? req.userId : null,
       assignedAt: req.userRole !== 'engineer' && targetUserId ? new Date() : null,
@@ -664,6 +668,273 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   });
   await logAudit({ userId: req.userId, action: 'delete', entityType: 'visit', entityId: req.params.id as string, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
   res.json({ message: 'Визит удалён' });
+});
+
+// ─── CLONE VISIT ──────────────────────────────────────────────────
+router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
+  const sourceVisitId = req.params.id as string;
+
+  // 1. Загрузить исходный визит с задачами
+  const source = await prisma.visit.findUnique({
+    where: { id: sourceVisitId },
+    include: {
+      tasks: {
+        include: {
+          equipmentType: { select: { code: true, specializationReq: true } },
+          objectEquipment: true,
+          equipmentItems: { include: { objectEquipment: true } },
+        },
+      },
+      address: true,
+      visitEngineers: true,
+    },
+  });
+  if (!source) { res.status(404).json({ error: 'Визит не найден' }); return; }
+  if (source.isDeleted) { res.status(404).json({ error: 'Визит удалён' }); return; }
+
+  // 2. Проверить статус
+  const allowedStatuses = ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'];
+  if (!allowedStatuses.includes(source.status)) {
+    res.status(400).json({ error: 'Визит должен быть завершён для клонирования' }); return;
+  }
+
+  // 3. Проверка доступа
+  const isOwner = source.userId === req.userId;
+  const isTm = req.userRole === 'tm';
+  const isAdmin = req.userRole === 'admin';
+
+  if (!isOwner && !isTm && !isAdmin) {
+    // Проверка: инженер из команды
+    const { getTeamEngineerIds } = await import('../utils/tmTeam.js');
+    const teamIds = await getTeamEngineerIds(req.userId as string);
+    const isTeammate = source.userId ? teamIds.includes(source.userId) : false;
+    const isAssigned = source.visitEngineers.some(ve => ve.engineerId === req.userId);
+    if (!isTeammate && !isAssigned) {
+      res.status(403).json({ error: 'Нет доступа к визиту' }); return;
+    }
+  }
+  if (isTm && !isAdmin) {
+    const tmObj = await prisma.tmObject.findFirst({ where: { tmId: req.userId, addressId: source.addressId } });
+    if (!tmObj) { res.status(403).json({ error: 'Адрес не закреплён за вами' }); return; }
+  }
+
+  // 4. Проверка блокировки редактирования
+  if (source.editingEngineerId && source.editingEngineerId !== req.userId) {
+    res.status(423).json({ error: 'Визит сейчас редактируется другим инженером' }); return;
+  }
+
+  // 5. Защита от дубликатов: активный визит в текущем месяце
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const cloneUserId = (isTm || isAdmin) ? (source.userId || req.userId!) : req.userId!;
+  const existingActive = await prisma.visit.findFirst({
+    where: {
+      addressId: source.addressId,
+      userId: cloneUserId,
+      isDeleted: false,
+      status: { in: ['not_started', 'planned', 'in_progress'] },
+      dateStart: { gte: monthStart },
+    },
+  });
+  if (existingActive) {
+    res.status(409).json({
+      error: 'ACTIVE_VISIT_EXISTS',
+      message: 'У вас уже есть активный визит по этому адресу в текущем месяце',
+      existingVisitId: existingActive.id,
+    });
+    return;
+  }
+
+  // 6. Определить userId и engineerName для клона
+  let cloneEngineerName = source.engineerName;
+  let cloneStatus: string = 'not_started';
+
+  if (isOwner) {
+    // Инженер клонирует свой или коллеги визит
+    const engineer = await prisma.user.findUnique({ where: { id: req.userId! }, select: { fullName: true, specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true } });
+    cloneEngineerName = engineer?.fullName || '';
+    cloneStatus = 'not_started';
+  } else if (isTm || isAdmin) {
+    // ТМ/админ клонирует — сохраняем данные инженера из исходного визита
+    cloneEngineerName = source.engineerName;
+    cloneStatus = 'planned';
+  }
+
+  // 7. Фильтрация задач по специализации (если инженер клонирует визит коллеги)
+  let tasksToClone = source.tasks;
+  if (isOwner && source.userId !== req.userId) {
+    const engineer = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { specializationVik: true, specializationIszh: true, specializationGpm: true, specializationDgu: true, specializationIbp: true },
+    });
+    const hasAnySpec = engineer && (engineer.specializationVik || engineer.specializationIszh || engineer.specializationGpm || engineer.specializationDgu || engineer.specializationIbp);
+    if (hasAnySpec) {
+      tasksToClone = source.tasks.filter(t => {
+        const specReq = t.equipmentType?.specializationReq;
+        if (!specReq) return true; // универсальная задача
+        if (specReq === 'vik' && engineer.specializationVik) return true;
+        if (specReq === 'iszh' && engineer.specializationIszh) return true;
+        if (specReq === 'gpm' && engineer.specializationGpm) return true;
+        if (specReq === 'dgu' && engineer.specializationDgu) return true;
+        if (specReq === 'ibp' && engineer.specializationIbp) return true;
+        return false;
+      });
+    }
+  }
+
+  // 8. Транзакция: создание визита + задач + привязка заявок
+  const result = await prisma.$transaction(async (tx) => {
+    // a. Создать визит
+    const cloneDate = new Date();
+    const cloneTime = getMskTime();
+    const cloneSeason = getCurrentSeason();
+
+    // contractId из tm_objects
+    let autoContractId: string | null = null;
+    const tmId = req.userRole === 'engineer'
+      ? (await tx.tmEngineer.findUnique({ where: { engineerId: req.userId as string } }))?.tmId
+      : req.userRole === 'tm' ? req.userId as string : null;
+    if (tmId) {
+      const tmObj = await tx.tmObject.findFirst({ where: { tmId, addressId: source.addressId }, select: { contractId: true } });
+      if (tmObj?.contractId) autoContractId = tmObj.contractId;
+    }
+
+    const newVisit = await tx.visit.create({
+      data: {
+        userId: cloneUserId,
+        addressId: source.addressId,
+        contractId: autoContractId || source.contractId || null,
+        engineerName: cloneEngineerName,
+        dateStart: cloneDate,
+        timeStart: cloneTime,
+        season: cloneSeason,
+        status: cloneStatus as any,
+        isMultiSpecialist: (isTm || isAdmin) ? source.isMultiSpecialist : false,
+        assignedById: (isTm || isAdmin) ? req.userId : null,
+        assignedAt: (isTm || isAdmin) ? new Date() : null,
+      },
+    });
+
+    // b. Создать задачи
+    const taskMap = new Map<string, string>(); // oldTaskId -> newTaskId
+    for (const task of tasksToClone) {
+      const newTask = await tx.task.create({
+        data: {
+          visitId: newVisit.id,
+          taskType: task.taskType,
+          equipmentTypeId: task.equipmentTypeId,
+          roomTypeId: task.roomTypeId,
+          roomTypeCode: task.roomTypeCode,
+          objectEquipmentId: task.objectEquipmentId,
+          brand: task.brand,
+          model: task.model,
+          serialNumber: task.serialNumber,
+          sortOrder: task.sortOrder,
+          status: 'not_started',
+          parameters: Prisma.JsonNull,
+          selectedRecommendationIds: [],
+          additionalRecommendations: null,
+          conclusion: null,
+        },
+      });
+      taskMap.set(task.id, newTask.id);
+
+      // c. Копировать TaskEquipmentItem для group_climate
+      if (task.taskType === 'group_climate' && task.equipmentItems.length > 0) {
+        for (const item of task.equipmentItems) {
+          await tx.taskEquipmentItem.create({
+            data: {
+              taskId: newTask.id,
+              objectEquipmentId: item.objectEquipmentId,
+              sortOrder: item.sortOrder,
+            },
+          });
+        }
+      }
+    }
+
+    // d. Копировать visitEngineers (только если ТМ/админ и исходный визит мульти-специалистный)
+    if ((isTm || isAdmin) && source.visitEngineers.length > 0) {
+      for (const ve of source.visitEngineers) {
+        await tx.visitEngineer.create({
+          data: {
+            visitId: newVisit.id,
+            engineerId: ve.engineerId,
+            isPrimary: ve.isPrimary,
+            assignedBy: req.userId!,
+          },
+        });
+      }
+    }
+
+    // e. Автопривязка заявок
+    const visitDate = newVisit.dateStart;
+
+    // ИСЖ заявки
+    await autoAssignISZHRequests({
+      addressId: source.addressId,
+      visitId: newVisit.id,
+      visitDate,
+      contractId: newVisit.contractId,
+      engineerId: cloneUserId,
+      options: {
+        createVisitEngineer: false,
+        createAssignmentLog: true,
+        reason: 'Автоматически при клонировании визита',
+      },
+    });
+
+    // Не-ИСЖ заявки по serialNumber
+    const tasksForBinding = tasksToClone.map(t => ({
+      id: t.id,
+      taskType: t.taskType,
+      equipmentTypeCode: t.equipmentType?.code,
+      serialNumber: t.serialNumber,
+      objectEquipment: t.objectEquipment ? { serialNumber: t.objectEquipment.serialNumber, equipmentTypeCode: t.objectEquipment.equipmentTypeCode } : null,
+      equipmentItems: t.equipmentItems.map(ei => ({
+        objectEquipment: { serialNumber: ei.objectEquipment.serialNumber, equipmentTypeCode: ei.objectEquipment.equipmentTypeCode },
+      })),
+    }));
+    await autoAssignBySerialNumber({
+      addressId: source.addressId,
+      visitId: newVisit.id,
+      visitDate,
+      contractId: newVisit.contractId,
+      tasks: tasksForBinding,
+      options: {
+        createAssignmentLog: true,
+        engineerId: cloneUserId,
+        reason: 'Автоматически при клонировании визита',
+      },
+    });
+
+    // f. AuditLog
+    await tx.visit.update({
+      where: { id: newVisit.id },
+      data: { contractId: autoContractId || source.contractId || null },
+    });
+
+    return { id: newVisit.id, tasksCount: tasksToClone.length };
+  });
+
+  // 9. Записать в AuditLog (вне транзакции)
+  await logAudit({
+    userId: req.userId,
+    action: 'visit_cloned',
+    entityType: 'visit',
+    entityId: result.id,
+    oldValue: { sourceVisitId },
+    newValue: { tasksCount: result.tasksCount },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.status(201).json({
+    id: result.id,
+    sourceVisitId,
+    tasksCount: result.tasksCount,
+    message: `Визит успешно клонирован. Создано ${result.tasksCount} задач.`,
+  });
 });
 
 router.post('/:id/complete', async (req: AuthRequest, res: Response) => {

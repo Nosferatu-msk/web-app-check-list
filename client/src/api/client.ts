@@ -151,6 +151,8 @@ export const api = {
     request<any>(`/visits/${id}/complete`, { method: 'POST' }),
   reassignVisit: (id: string, newUserId: string) =>
     request<any>(`/visits/${id}/reassign`, { method: 'POST', body: JSON.stringify({ newUserId }) }),
+  cloneVisit: (sourceVisitId: string) =>
+    request<{ id: string; sourceVisitId: string; tasksCount: number; message: string }>(`/visits/${sourceVisitId}/clone`, { method: 'POST' }),
 
   // Tasks
   createTask: (visitId: string, data: any) =>

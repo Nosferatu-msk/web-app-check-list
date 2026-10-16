@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, List, Tag, Empty, Spin, Space, Select, Card, Row, Col, Statistic, Modal, App, Switch, Dropdown, Pagination, Input, Skeleton, DatePicker } from 'antd';
-import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined, PieChartOutlined } from '@ant-design/icons';
+import { PlusOutlined, LogoutOutlined, SettingOutlined, SwapOutlined, DeleteOutlined, BarChartOutlined, FormOutlined, UserOutlined, MoreOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, SendOutlined, EditOutlined, MinusCircleOutlined, SearchOutlined, CalendarOutlined, PieChartOutlined, CopyOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -178,6 +178,46 @@ export default function VisitListPage() {
             });
           } else {
             message.error(err.message || 'Ошибка удаления визита');
+          }
+        }
+      },
+    });
+  };
+
+  const CLONEABLE_STATUSES = ['completed', 'sent', 'sent_by_engineer', 'sent_by_tm', 'corrected_by_tm'];
+
+  const handleClone = (visitId: string) => {
+    // Находим визит для получения данных
+    const v = visits.find((vi: any) => vi.id === visitId);
+    if (!v) return;
+    const fullAddress = v.address?.fullAddress || 'адрес не указан';
+    const tasksCount = v._count?.tasks || 0;
+    const now = dayjs();
+    const seasonLabel = now.month() >= 3 && now.month() <= 9 ? 'лето' : 'зима';
+
+    modal.confirm({
+      title: 'Клонирование визита',
+      content: (
+        <div>
+          <p>Будет создан новый визит на адрес: <strong>{fullAddress}</strong> с {tasksCount} {tasksCount === 1 ? 'задачей' : tasksCount < 5 ? 'задачами' : 'задачами'}.</p>
+          <p style={{ color: '#D97706' }}>⚠️ Измеряемые параметры и фотографии нужно заполнить заново.</p>
+          <p>Дата нового визита: <strong>{now.format('DD.MM.YYYY')}</strong> (сезон: {seasonLabel})</p>
+        </div>
+      ),
+      okText: 'Клонировать',
+      cancelText: 'Отмена',
+      onOk: async () => {
+        try {
+          const result = await api.cloneVisit(visitId);
+          message.success(result.message || `Визит клонирован. Создано задач: ${result.tasksCount}`);
+          navigate('/visit/' + result.id);
+        } catch (err: any) {
+          if (err.status === 409) {
+            message.warning('У вас уже есть активный визит по этому адресу в текущем месяце');
+          } else if (err.status === 423) {
+            message.warning('Визит сейчас редактируется другим инженером');
+          } else {
+            message.error(err.message || 'Ошибка клонирования визита');
           }
         }
       },
@@ -425,6 +465,18 @@ export default function VisitListPage() {
                 },
               });
             }
+            if (!isDeleted && CLONEABLE_STATUSES.includes(v.status)) {
+              actionItems.push({
+                key: 'clone',
+                icon: <CopyOutlined />,
+                label: 'Клонировать',
+                style: { color: '#0F766E' },
+                onClick: (info: any) => {
+                  info?.domEvent?.stopPropagation();
+                  handleClone(v.id);
+                },
+              });
+            }
             if (!isDeleted) {
               actionItems.push({
                 key: 'delete',
@@ -528,6 +580,9 @@ export default function VisitListPage() {
                           setReassignModal({ visible: true, visitId: v.id });
                           setReassignTarget('');
                         }} />
+                      )}
+                      {!isDeleted && CLONEABLE_STATUSES.includes(v.status) && (
+                        <Button size="small" icon={<CopyOutlined />} style={{ color: '#0F766E' }} onClick={(e) => { e.stopPropagation(); handleClone(v.id); }} title="Клонировать в новый период" />
                       )}
                       {!isDeleted && (
                         <Button size="small" danger icon={<DeleteOutlined />} onClick={(e) => handleDelete(e, v.id)} />
