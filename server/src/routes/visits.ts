@@ -821,7 +821,6 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
     });
 
     // b. Создать задачи
-    const taskMap = new Map<string, string>(); // oldTaskId -> newTaskId
     for (const task of tasksToClone) {
       const newTask = await tx.task.create({
         data: {
@@ -842,7 +841,6 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
           conclusion: null,
         },
       });
-      taskMap.set(task.id, newTask.id);
 
       // c. Копировать TaskEquipmentItem для group_climate
       if (task.taskType === 'group_climate' && task.equipmentItems.length > 0) {
@@ -872,15 +870,23 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // e. Автопривязка заявок
-    const visitDate = newVisit.dateStart;
+    // e. AuditLog (в транзакции)
+    await tx.visit.update({
+      where: { id: newVisit.id },
+      data: { contractId: autoContractId || source.contractId || null },
+    });
 
+    return { id: newVisit.id, tasksCount: tasksToClone.length, visitDate: newVisit.dateStart, contractId: newVisit.contractId };
+  });
+
+  // 9. Автопривязка заявок (ВНЕ транзакции — если привязка не удалась, это не критично)
+  try {
     // ИСЖ заявки
     await autoAssignISZHRequests({
       addressId: source.addressId,
-      visitId: newVisit.id,
-      visitDate,
-      contractId: newVisit.contractId,
+      visitId: result.id,
+      visitDate: result.visitDate,
+      contractId: result.contractId,
       engineerId: cloneUserId,
       options: {
         createVisitEngineer: false,
@@ -902,9 +908,9 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
     }));
     await autoAssignBySerialNumber({
       addressId: source.addressId,
-      visitId: newVisit.id,
-      visitDate,
-      contractId: newVisit.contractId,
+      visitId: result.id,
+      visitDate: result.visitDate,
+      contractId: result.contractId,
       tasks: tasksForBinding,
       options: {
         createAssignmentLog: true,
@@ -912,17 +918,11 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
         reason: 'Автоматически при клонировании визита',
       },
     });
+  } catch (bindErr) {
+    console.error('[visit/clone] Ошибка автопривязки заявок (не критично):', bindErr);
+  }
 
-    // f. AuditLog
-    await tx.visit.update({
-      where: { id: newVisit.id },
-      data: { contractId: autoContractId || source.contractId || null },
-    });
-
-    return { id: newVisit.id, tasksCount: tasksToClone.length };
-  });
-
-  // 9. Записать в AuditLog (вне транзакции)
+  // 10. Записать в AuditLog
   await logAudit({
     userId: req.userId,
     action: 'visit_cloned',

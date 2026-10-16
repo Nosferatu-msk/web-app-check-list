@@ -193,7 +193,7 @@ export default function VisitListPage() {
     const fullAddress = v.address?.fullAddress || 'адрес не указан';
     const tasksCount = v._count?.tasks || 0;
     const now = dayjs();
-    const seasonLabel = now.month() >= 3 && now.month() <= 9 ? 'лето' : 'зима';
+    const seasonLabel = now.month() >= 3 && now.month() <= 8 ? 'лето' : 'зима';
 
     modal.confirm({
       title: 'Клонирование визита',

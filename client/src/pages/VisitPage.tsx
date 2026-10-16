@@ -729,7 +729,7 @@ export default function VisitPage() {
     const fullAddress = visit.address?.fullAddress || 'адрес не указан';
     const tasksCount = tasks.length;
     const now = dayjs();
-    const seasonLabel = visit.season === 'winter' ? 'зима' : 'лето';
+    const seasonLabel = determineSeason(now) === 'winter' ? 'зима' : 'лето';
 
     Modal.confirm({
       title: 'Клонирование визита',
