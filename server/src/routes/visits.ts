@@ -671,7 +671,6 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 // ─── CLONE VISIT ──────────────────────────────────────────────────
 router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
   const sourceVisitId = req.params.id as string;
-  console.log(`[clone] request: visitId=${sourceVisitId}, userId=${req.userId}, role=${req.userRole}`);
 
   // 1. Загрузить исходный визит с задачами
   const source = await prisma.visit.findUnique({
@@ -710,16 +709,13 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
     const teamIds = assignment ? await getTeamEngineerIds(assignment.tmId) : [];
     const isTeammate = source.userId ? teamIds.includes(source.userId) : false;
     const isAssigned = source.visitEngineers.some(ve => ve.engineerId === req.userId);
-    console.log(`[clone] access check: isOwner=${isOwner}, isTm=${isTm}, isAdmin=${isAdmin}, tmId=${assignment?.tmId}, teamIds=${teamIds.length}, isTeammate=${isTeammate}, isAssigned=${isAssigned}`);
     if (!isTeammate && !isAssigned) {
-      console.log(`[clone] 403: Нет доступа к визиту`);
       res.status(403).json({ error: 'Нет доступа к визиту' }); return;
     }
   }
   if (isTm && !isAdmin) {
     const tmObj = await prisma.tmObject.findFirst({ where: { tmId: req.userId, addressId: source.addressId } });
     if (!tmObj) {
-      console.log(`[clone] 403: Адрес не закреплён за вами`);
       res.status(403).json({ error: 'Адрес не закреплён за вами' }); return;
     }
   }
