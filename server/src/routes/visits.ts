@@ -705,10 +705,12 @@ router.post('/:id/clone', async (req: AuthRequest, res: Response) => {
   if (!isOwner && !isTm && !isAdmin) {
     // Проверка: инженер из команды
     const { getTeamEngineerIds } = await import('../utils/tmTeam.js');
-    const teamIds = await getTeamEngineerIds(req.userId as string);
+    // Найти ТМ текущего инженера
+    const assignment = await prisma.tmEngineer.findUnique({ where: { engineerId: req.userId as string } });
+    const teamIds = assignment ? await getTeamEngineerIds(assignment.tmId) : [];
     const isTeammate = source.userId ? teamIds.includes(source.userId) : false;
     const isAssigned = source.visitEngineers.some(ve => ve.engineerId === req.userId);
-    console.log(`[clone] access check: isOwner=${isOwner}, isTm=${isTm}, isAdmin=${isAdmin}, isTeammate=${isTeammate}, isAssigned=${isAssigned}`);
+    console.log(`[clone] access check: isOwner=${isOwner}, isTm=${isTm}, isAdmin=${isAdmin}, tmId=${assignment?.tmId}, teamIds=${teamIds.length}, isTeammate=${isTeammate}, isAssigned=${isAssigned}`);
     if (!isTeammate && !isAssigned) {
       console.log(`[clone] 403: Нет доступа к визиту`);
       res.status(403).json({ error: 'Нет доступа к визиту' }); return;
