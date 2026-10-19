@@ -34,22 +34,24 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
 
   // Загрузка данных из ObjectEquipment при монтировании
   useEffect(() => {
-    // Приоритет: objectEquipment > task
+    // Приоритет: task (данные инженера) > objectEquipment (данные из справочника)
+    // Если инженер указал brand/model/serialNumber в задаче — используем их
+    // Если нет — берём из ObjectEquipment
     const eq = task?.objectEquipment;
     const values = {
-      brand: eq?.brand || task?.brand || '',
-      model: eq?.model || task?.model || '',
-      serialNumber: eq?.serialNumber || task?.serialNumber || '',
+      brand: task?.brand || eq?.brand || '',
+      model: task?.model || eq?.model || '',
+      serialNumber: task?.serialNumber || eq?.serialNumber || '',
     };
     form.setFieldsValue(values);
     setOriginalValues(values);
-    // Отслеживаем, были ли данные заполнены из ObjectEquipment
-    setAutoFilledFromObjectEquipment(!!eq && (eq.brand || eq.model || eq.serialNumber));
+    // Отслеживаем, были ли данные заполнены из ObjectEquipment (а не из задачи)
+    setAutoFilledFromObjectEquipment(!task?.brand && !task?.model && !task?.serialNumber && !!eq && (eq.brand || eq.model || eq.serialNumber));
     
     // Если есть brand, пытаемся найти manufacturerId
     if (values.brand) {
-      api.getManufacturers({ q: values.brand, pageSize: 20 }).then(result => {
-        const manufacturer = result.data.find((m: any) => m.name === values.brand);
+      api.getManufacturersList().then(results => {
+        const manufacturer = results.find((m: any) => m.name === values.brand);
         if (manufacturer) {
           setSelectedManufacturerId(manufacturer.id);
         }
