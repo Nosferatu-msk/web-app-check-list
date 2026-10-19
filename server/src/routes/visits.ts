@@ -164,22 +164,42 @@ router.post('/', validate(createVisitSchema), async (req: AuthRequest, res: Resp
     if (!tmObject) { res.status(403).json({ error: 'Адрес не закреплён за вами' }); return; }
   }
 
-  // Проверка дубликатов: если инженер уже имеет активный визит по этому адресу — вернуть его
-  // Ищем и по userId (основной инженер), и по visitEngineers (назначенный инженер)
+  // Проверка дубликатов: если инженер уже имеет визит по этому адресу на сегодня — вернуть его
+  // Ищем визиты за сегодня (по дате dateStart) с теми же addressId и userId
+  // Включаем статусы: not_started, planned, in_progress, completed (исключаем отправленные)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
   if (req.userRole === 'engineer') {
     const existingVisit = await prisma.visit.findFirst({
       where: {
         addressId: rest.addressId,
+        userId: req.userId,
         isDeleted: false,
-        status: { in: ['not_started', 'planned', 'in_progress'] },
-        OR: [
-          { userId: req.userId },
-          { visitEngineers: { some: { engineerId: req.userId } } },
-        ],
+        dateStart: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
+        status: {
+          in: ['not_started', 'planned', 'in_progress', 'completed'],
+        },
       },
-      include: { address: true, tasks: { include: taskInclude } },
+      include: { address: true, tasks: { include: taskInclude }, visitEngineers: true },
+      orderBy: { createdAt: 'asc' }, // Возвращаем самый старый визит
     });
+    
     if (existingVisit) {
+      // Если визит завершён — переводим в in_progress (инженер продолжит работу)
+      if (existingVisit.status === 'completed') {
+        await prisma.visit.update({
+          where: { id: existingVisit.id },
+          data: { status: 'in_progress' },
+        });
+        existingVisit.status = 'in_progress';
+      }
+      
       res.status(200).json({ ...existingVisit, existingVisit: true });
       return;
     }
