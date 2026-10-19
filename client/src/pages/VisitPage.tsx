@@ -646,7 +646,17 @@ export default function VisitPage() {
     
     // Проверяем, является ли задача виртуальной (group_climate)
     if (taskId.startsWith('virtual_climate_')) {
-      message.error('Нельзя удалить виртуальную задачу. Удалите реальные задачи из группы.');
+      // Находим виртуальную задачу и удаляем все реальные задачи из группы
+      const virtualTask = displayTasks.find((t: any) => t.id === taskId);
+      if (virtualTask && virtualTask._sourceTaskIds && virtualTask._sourceTaskIds.length > 0) {
+        // Удаляем все реальные задачи из группы
+        for (const realTaskId of virtualTask._sourceTaskIds) {
+          await api.deleteTask(visit.id, realTaskId);
+        }
+        const v = await api.getVisit(visit.id);
+        setTasks(v.tasks || []);
+        message.success(`Удалено задач: ${virtualTask._sourceTaskIds.length}`);
+      }
       return;
     }
     
@@ -874,19 +884,13 @@ export default function VisitPage() {
       title: '',
       key: 'actions',
       width: 50,
-      render: (_: any, r: any) => {
-        // Для виртуальных задач не показываем кнопку удаления
-        if (r.id?.startsWith('virtual_climate_')) {
-          return null;
-        }
-        return (
-          <span onClick={(e) => e.stopPropagation()}>
-            <Popconfirm title="Удалить задачу?" onConfirm={() => handleDeleteTask(r.id)} okText="Да" cancelText="Нет">
-              <Button type="text" danger icon={<DeleteOutlined />} size="small" />
-            </Popconfirm>
-          </span>
-        );
-      },
+      render: (_: any, r: any) => (
+        <span onClick={(e) => e.stopPropagation()}>
+          <Popconfirm title="Удалить задачу?" onConfirm={() => handleDeleteTask(r.id)} okText="Да" cancelText="Нет">
+            <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+          </Popconfirm>
+        </span>
+      ),
     },
   ];
 
@@ -1132,10 +1136,7 @@ export default function VisitPage() {
                     : [task.roomType?.name, task.equipmentType?.name].filter(Boolean).join(' · ');
                   const overflowItems = [
                     { key: 'edit', label: 'Редактировать', icon: <EditOutlined /> },
-                    // Для виртуальных задач не показываем пункт "Удалить"
-                    ...(!task.id?.startsWith('virtual_climate_') ? [
-                      { key: 'delete', label: 'Удалить', icon: <DeleteOutlined />, danger: true },
-                    ] : []),
+                    { key: 'delete', label: 'Удалить', icon: <DeleteOutlined />, danger: true },
                     { key: 'photos', label: 'Перейти к фото', icon: <PictureOutlined /> },
                   ];
                   return (
