@@ -406,9 +406,11 @@ router.get('/manufacturers', async (_req: AuthRequest, res: Response) => {
 router.get('/models/search', async (req: AuthRequest, res: Response) => {
   const equipmentTypeId = req.query.equipment_type_id as string;
   const query = (req.query.query as string) || '';
+  const manufacturerId = req.query.manufacturer_id as string | undefined;
 
   const where: any = { status: 'approved' };
   if (equipmentTypeId) where.equipmentTypeId = equipmentTypeId;
+  if (manufacturerId) where.manufacturerId = manufacturerId;
   if (query) {
     where.OR = [
       { modelName: { contains: query, mode: 'insensitive' } },

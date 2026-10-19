@@ -24,8 +24,9 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
   const [form] = Form.useForm();
   const [isEditing, setIsEditing] = useState(false);
   const [originalValues, setOriginalValues] = useState<any>({});
-  const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
-  const [brandOptions, setBrandOptions] = useState<{ value: string; label: string }[]>([]);
+  const [modelOptions, setModelOptions] = useState<{ value: string; label: string; manufacturerId?: string }[]>([]);
+  const [brandOptions, setBrandOptions] = useState<{ value: string; label: string; id?: string }[]>([]);
+  const [selectedManufacturerId, setSelectedManufacturerId] = useState<string | null>(null);
   const [autoFilledFromObjectEquipment, setAutoFilledFromObjectEquipment] = useState(false);
 
   const equipmentCode = task?.equipmentType?.code || '';
@@ -44,15 +45,33 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
     setOriginalValues(values);
     // Отслеживаем, были ли данные заполнены из ObjectEquipment
     setAutoFilledFromObjectEquipment(!!eq && (eq.brand || eq.model || eq.serialNumber));
+    
+    // Если есть brand, пытаемся найти manufacturerId
+    if (values.brand) {
+      api.getManufacturers({ q: values.brand, pageSize: 20 }).then(result => {
+        const manufacturer = result.data.find((m: any) => m.name === values.brand);
+        if (manufacturer) {
+          setSelectedManufacturerId(manufacturer.id);
+        }
+      }).catch(() => {
+        // Silent error
+      });
+    }
   }, [task, form]);
 
   const handleModelSearch = async (query: string) => {
     if (!task?.equipmentType?.id) return;
     try {
-      const results = await api.searchModels({ equipment_type_id: task.equipmentType.id, query });
+      // Передаём manufacturerId для фильтрации моделей по выбранному производителю
+      const params: any = { equipment_type_id: task.equipmentType.id, query };
+      if (selectedManufacturerId) {
+        params.manufacturer_id = selectedManufacturerId;
+      }
+      const results = await api.searchModels(params);
       setModelOptions(results.map((m: any) => ({
         value: m.modelName,
         label: m.modelName,
+        manufacturerId: m.manufacturerId,
       })));
     } catch {
       setModelOptions([]);
@@ -69,9 +88,36 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
       setBrandOptions(results.data.map((m: any) => ({
         value: m.name,
         label: m.name,
+        id: m.id,
       })));
     } catch {
       setBrandOptions([]);
+    }
+  };
+
+  // Обработчик выбора марки (изготовителя)
+  const handleBrandSelect = (value: string, option: any) => {
+    // Сохраняем manufacturerId для фильтрации моделей
+    setSelectedManufacturerId(option.id || null);
+    // Очищаем модель, если она была выбрана ранее
+    form.setFieldsValue({ model: '' });
+    setModelOptions([]);
+  };
+
+  // Обработчик выбора модели
+  const handleModelSelect = (value: string, option: any) => {
+    // Сценарий 2: если выбрана модель, автоматически устанавливаем марку
+    if (option.manufacturerId && !selectedManufacturerId) {
+      // Ищем производителя по ID
+      api.getManufacturers({ pageSize: 100 }).then(result => {
+        const manufacturer = result.data.find((m: any) => m.id === option.manufacturerId);
+        if (manufacturer) {
+          form.setFieldsValue({ brand: manufacturer.name });
+          setSelectedManufacturerId(manufacturer.id);
+        }
+      }).catch(() => {
+        // Silent error
+      });
     }
   };
 
@@ -190,7 +236,8 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
           <AutoComplete
             options={brandOptions}
             onSearch={handleBrandSearch}
-            placeholder="Начните вводить для поиска..."
+            onSelect={handleBrandSelect}
+            placeholder="Начните вводить для поиска или введите вручную..."
             filterOption={false}
             allowClear
           />
@@ -205,7 +252,8 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
           <AutoComplete
             options={modelOptions}
             onSearch={handleModelSearch}
-            placeholder="Начните вводить для поиска..."
+            onSelect={handleModelSelect}
+            placeholder={selectedManufacturerId ? "Начните вводить модель..." : "Сначала выберите марку или введите модель вручную..."}
             filterOption={false}
             allowClear
           />
