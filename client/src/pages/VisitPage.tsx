@@ -643,6 +643,13 @@ export default function VisitPage() {
 
   const handleDeleteTask = async (taskId: string) => {
     if (!visit?.id) return;
+    
+    // Проверяем, является ли задача виртуальной (group_climate)
+    if (taskId.startsWith('virtual_climate_')) {
+      message.error('Нельзя удалить виртуальную задачу. Удалите реальные задачи из группы.');
+      return;
+    }
+    
     await api.deleteTask(visit.id, taskId);
     const v = await api.getVisit(visit.id);
     setTasks(v.tasks || []);
@@ -867,13 +874,19 @@ export default function VisitPage() {
       title: '',
       key: 'actions',
       width: 50,
-      render: (_: any, r: any) => (
-        <span onClick={(e) => e.stopPropagation()}>
-          <Popconfirm title="Удалить задачу?" onConfirm={() => handleDeleteTask(r.id)} okText="Да" cancelText="Нет">
-            <Button type="text" danger icon={<DeleteOutlined />} size="small" />
-          </Popconfirm>
-        </span>
-      ),
+      render: (_: any, r: any) => {
+        // Для виртуальных задач не показываем кнопку удаления
+        if (r.id?.startsWith('virtual_climate_')) {
+          return null;
+        }
+        return (
+          <span onClick={(e) => e.stopPropagation()}>
+            <Popconfirm title="Удалить задачу?" onConfirm={() => handleDeleteTask(r.id)} okText="Да" cancelText="Нет">
+              <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+            </Popconfirm>
+          </span>
+        );
+      },
     },
   ];
 
@@ -1119,7 +1132,10 @@ export default function VisitPage() {
                     : [task.roomType?.name, task.equipmentType?.name].filter(Boolean).join(' · ');
                   const overflowItems = [
                     { key: 'edit', label: 'Редактировать', icon: <EditOutlined /> },
-                    { key: 'delete', label: 'Удалить', icon: <DeleteOutlined />, danger: true },
+                    // Для виртуальных задач не показываем пункт "Удалить"
+                    ...(!task.id?.startsWith('virtual_climate_') ? [
+                      { key: 'delete', label: 'Удалить', icon: <DeleteOutlined />, danger: true },
+                    ] : []),
                     { key: 'photos', label: 'Перейти к фото', icon: <PictureOutlined /> },
                   ];
                   return (
