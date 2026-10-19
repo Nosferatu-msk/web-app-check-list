@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, AutoComplete, Card, Tag, Tooltip, Button, App } from 'antd';
-import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { Form, Input, AutoComplete, Collapse, Tag, Tooltip, Button, App, Space, Card } from 'antd';
+import { EditOutlined, CheckOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 
 interface EquipmentInfoFormProps {
@@ -25,6 +25,7 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
   const [isEditing, setIsEditing] = useState(false);
   const [originalValues, setOriginalValues] = useState<any>({});
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
+  const [autoFilledFromObjectEquipment, setAutoFilledFromObjectEquipment] = useState(false);
 
   const equipmentCode = task?.equipmentType?.code || '';
   const isMeter = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs', 'meter_gas'].includes(equipmentCode);
@@ -40,6 +41,8 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
     };
     form.setFieldsValue(values);
     setOriginalValues(values);
+    // Отслеживаем, были ли данные заполнены из ObjectEquipment
+    setAutoFilledFromObjectEquipment(!!eq && (eq.brand || eq.model || eq.serialNumber));
   }, [task, form]);
 
   const handleModelSearch = async (query: string) => {
