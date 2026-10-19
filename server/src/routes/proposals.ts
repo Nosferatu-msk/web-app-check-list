@@ -660,9 +660,12 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
     });
 
     // Привязываем задачу к equipment
+    // Сначала ищем задачу по прямому taskId (самый надёжный способ)
     let matchingTask = proposal.taskId
-      ? await prisma.task.findFirst({ where: { id: proposal.taskId, objectEquipmentId: null } })
+      ? await prisma.task.findUnique({ where: { id: proposal.taskId } })
       : null;
+    
+    // Если не нашли по taskId, ищем по другим критериям
     if (!matchingTask) {
       matchingTask = await prisma.task.findFirst({
         where: {
@@ -678,14 +681,17 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
         },
       });
     }
+    
+    // Обновляем задачу данными из proposal (отмодерированными данными)
     if (matchingTask) {
       await prisma.task.update({
         where: { id: matchingTask.id },
         data: {
           objectEquipmentId: created.id,
-          ...(proposal.brand ? { brand: proposal.brand } : {}),
-          ...(proposal.model ? { model: proposal.model } : {}),
-          ...(serialNumber ? { serialNumber } : {}),
+          // Синхронизируем brand/model/serialNumber из proposal (данные после модерации)
+          brand: proposal.brand || null,
+          model: proposal.model || null,
+          serialNumber: serialNumber || null,
         },
       });
     }
