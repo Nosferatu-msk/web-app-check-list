@@ -1292,6 +1292,42 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
     include: taskInclude,
   });
 
+  // Синхронизация roomTypeCode в ObjectEquipment при создании задачи
+  // Для group_climate задач — обновляем все единицы оборудования в группе
+  if (task.taskType === 'group_climate' && data.equipmentItemIds?.length > 0 && data.roomTypeId) {
+    try {
+      const roomType = await prisma.roomType.findUnique({ where: { id: data.roomTypeId } });
+      if (roomType) {
+        await prisma.objectEquipment.updateMany({
+          where: { id: { in: data.equipmentItemIds } },
+          data: { roomTypeCode: roomType.code },
+        });
+      }
+    } catch (syncError: any) {
+      // Игнорируем конфликт уникальности
+      if (syncError?.code !== 'P2002') {
+        console.error('[task/create] Ошибка синхронизации roomTypeCode для group_climate:', syncError);
+      }
+    }
+  }
+  // Для individual задач — обновляем само оборудование
+  else if (task.objectEquipmentId && data.roomTypeId) {
+    try {
+      const roomType = await prisma.roomType.findUnique({ where: { id: data.roomTypeId } });
+      if (roomType) {
+        await prisma.objectEquipment.update({
+          where: { id: task.objectEquipmentId },
+          data: { roomTypeCode: roomType.code },
+        });
+      }
+    } catch (syncError: any) {
+      // Игнорируем конфликт уникальности
+      if (syncError?.code !== 'P2002') {
+        console.error('[task/create] Ошибка синхронизации roomTypeCode для individual:', syncError);
+      }
+    }
+  }
+
   // Автоматически переводим визит в "В работе" при создании задачи
   // Если визит был завершён — возвращаем в работу (добавлена новая задача)
   if (['not_started', 'planned', 'awaiting_assignment', 'completed'].includes(visit.status)) {
@@ -1538,6 +1574,29 @@ router.put('/:visitId/tasks/:id', async (req: AuthRequest, res: Response) => {
         // Игнорируем конфликт уникальности — может возникнуть при дублирующихся serialNumber
         if (syncError?.code !== 'P2002') {
           throw syncError;
+        }
+      }
+    }
+  }
+  
+  // Для group_climate задач — синхронизируем roomTypeCode со всеми единицами оборудования
+  if (task.taskType === 'group_climate' && data.roomTypeId) {
+    const roomType = await prisma.roomType.findUnique({ where: { id: data.roomTypeId } });
+    if (roomType) {
+      const equipmentItems = await prisma.taskEquipmentItem.findMany({
+        where: { taskId: task.id },
+        select: { objectEquipmentId: true },
+      });
+      if (equipmentItems.length > 0) {
+        try {
+          await prisma.objectEquipment.updateMany({
+            where: { id: { in: equipmentItems.map(ei => ei.objectEquipmentId) } },
+            data: { roomTypeCode: roomType.code },
+          });
+        } catch (syncError: any) {
+          if (syncError?.code !== 'P2002') {
+            console.error('[task/update] Ошибка синхронизации roomTypeCode для group_climate:', syncError);
+          }
         }
       }
     }
