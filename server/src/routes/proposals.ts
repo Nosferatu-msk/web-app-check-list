@@ -62,6 +62,8 @@ const createProposalSchema = z.object({
   locationDescription: z.string().optional(),
   coolingCapacityKw: z.number().nullable().optional(),
   taskId: z.string().uuid().optional(),
+  requestType: z.string().optional(), // 'new_equipment', 'room_change', 'brand_change'
+  objectEquipmentId: z.string().uuid().optional(),
   newManufacturer: z.object({
     name: z.string().min(1),
     country: z.string().optional(),
@@ -73,7 +75,7 @@ const createProposalSchema = z.object({
 });
 
 router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: Response) => {
-  const { addressId, equipmentTypeCode, roomTypeCode, brand, model, serialNumber, locationDescription, coolingCapacityKw, taskId, newManufacturer, newModel } = req.body;
+  const { addressId, equipmentTypeCode, roomTypeCode, brand, model, serialNumber, locationDescription, coolingCapacityKw, taskId, requestType, objectEquipmentId, newManufacturer, newModel } = req.body;
 
   // Проверка дубликатов: если уже есть pending proposal с такими же данными, отклоняем запрос
   const existingPending = await prisma.equipmentProposal.findFirst({
@@ -156,9 +158,10 @@ router.post('/', validate(createProposalSchema), async (req: AuthRequest, res: R
       coolingCapacityKw: coolingCapacityKw ?? null,
       proposedById: req.userId!,
       status: 'pending',
-      requestType: 'new_equipment',
+      requestType: requestType || 'new_equipment',
       pendingUntil,
       taskId: taskId || null,
+      objectEquipmentId: objectEquipmentId || null,
     },
     include: {
       address: true,
@@ -562,6 +565,31 @@ router.put('/admin/:id/approve', adminOnly, async (req: AuthRequest, res: Respon
           pendingUntil: null,
           roomConfirmedAt: new Date(),
           roomConfirmedBy: req.userId,
+        },
+      });
+    }
+  } else if (proposal.requestType === 'brand_change') {
+    // Изменение brand/model/serialNumber — обновляем object_equipment и task
+    if (proposal.objectEquipmentId) {
+      await prisma.objectEquipment.update({
+        where: { id: proposal.objectEquipmentId },
+        data: {
+          brand: proposal.brand,
+          model: proposal.model,
+          serialNumber: proposal.serialNumber,
+          confirmationStatus: 'confirmed',
+          pendingUntil: null,
+        },
+      });
+    }
+    // Синхронизируем с задачей
+    if (proposal.taskId) {
+      await prisma.task.update({
+        where: { id: proposal.taskId },
+        data: {
+          brand: proposal.brand,
+          model: proposal.model,
+          serialNumber: proposal.serialNumber,
         },
       });
     }

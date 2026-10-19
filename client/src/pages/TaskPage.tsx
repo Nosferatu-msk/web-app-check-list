@@ -8,6 +8,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { REQUIRED_PARAMS_CONFIG } from '@shared/types/params';
 import VoiceInputButton from '../components/VoiceInputButton';
 import MobileHeader from '../components/MobileHeader';
+import EquipmentInfoForm from '../components/EquipmentInfoForm';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ru';
@@ -683,6 +684,9 @@ export default function TaskPage() {
 
       <Card>
         <Form form={form} key={formKey} initialValues={formInitialValues} layout="vertical" onValuesChange={markAutoSaveDirty}>
+          {/* Информация об оборудовании — для всех типов задач */}
+          <EquipmentInfoForm task={task} />
+          
           {isMobile ? (
             <Collapse defaultActiveKey={['params']} ghost>
               <Collapse.Panel header="Основные параметры" key="params">
