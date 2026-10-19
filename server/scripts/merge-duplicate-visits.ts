@@ -17,6 +17,7 @@ async function main() {
   console.log('🔍 Поиск дубликатов визитов...\n');
 
   // Находим все группы дубликатов (визиты за один день по одному адресу от одного инженера)
+  // Игнорируем визиты без user_id (импортированные через заявки)
   const duplicateGroups = await prisma.$queryRaw`
     SELECT 
       DATE(date_start) as visit_date,
@@ -25,7 +26,7 @@ async function main() {
       ARRAY_AGG(id ORDER BY created_at) as visit_ids
     FROM visits
     WHERE is_deleted = false
-      AND date_start >= '2026-10-01'
+      AND user_id IS NOT NULL
     GROUP BY DATE(date_start), address_id, user_id
     HAVING COUNT(*) > 1
     ORDER BY visit_date DESC
