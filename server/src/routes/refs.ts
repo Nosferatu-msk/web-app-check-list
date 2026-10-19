@@ -393,11 +393,19 @@ router.patch('/object-equipment/:id/room', async (req: AuthRequest, res: Respons
   res.json(item);
 });
 
-// GET /api/refs/manufacturers — список активных производителей
-router.get('/manufacturers', async (_req: AuthRequest, res: Response) => {
+// GET /api/refs/manufacturers — список активных производителей (с опциональным поиском)
+router.get('/manufacturers', async (req: AuthRequest, res: Response) => {
+  const query = (req.query.q as string) || '';
+  
+  const where: any = { isActive: true };
+  if (query) {
+    where.name = { contains: query, mode: 'insensitive' };
+  }
+  
   const data = await prisma.manufacturer.findMany({
-    where: { isActive: true },
+    where,
     orderBy: { name: 'asc' },
+    take: query ? 50 : undefined, // Ограничиваем количество только при поиске
   });
   res.json(data);
 });

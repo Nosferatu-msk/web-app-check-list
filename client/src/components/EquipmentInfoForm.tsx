@@ -84,8 +84,14 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
       return;
     }
     try {
-      const results = await api.getManufacturers({ q: query, pageSize: 20 });
-      setBrandOptions(results.data.map((m: any) => ({
+      // Используем публичный эндпоинт /refs/manufacturers вместо /admin/manufacturers
+      const results = await api.getManufacturersList();
+      const queryLower = query.toLowerCase();
+      const filtered = results.filter((m: any) => {
+        const name = String(m.name || '').toLowerCase();
+        return name.includes(queryLower);
+      }).slice(0, 20);
+      setBrandOptions(filtered.map((m: any) => ({
         value: m.name,
         label: m.name,
         id: m.id,
@@ -98,6 +104,7 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
   // Обработчик выбора марки (изготовителя)
   const handleBrandSelect = (value: string, option: any) => {
     // Сохраняем manufacturerId для фильтрации моделей
+    // option.id содержит id производителя из brandOptions
     setSelectedManufacturerId(option.id || null);
     // Очищаем модель, если она была выбрана ранее
     form.setFieldsValue({ model: '' });
@@ -107,10 +114,10 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
   // Обработчик выбора модели
   const handleModelSelect = (value: string, option: any) => {
     // Сценарий 2: если выбрана модель, автоматически устанавливаем марку
-    if (option.manufacturerId && !selectedManufacturerId) {
+    if (option.manufacturerId) {
       // Ищем производителя по ID
-      api.getManufacturers({ pageSize: 100 }).then(result => {
-        const manufacturer = result.data.find((m: any) => m.id === option.manufacturerId);
+      api.getManufacturersList().then(results => {
+        const manufacturer = results.find((m: any) => m.id === option.manufacturerId);
         if (manufacturer) {
           form.setFieldsValue({ brand: manufacturer.name });
           setSelectedManufacturerId(manufacturer.id);
