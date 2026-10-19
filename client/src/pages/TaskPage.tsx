@@ -83,8 +83,6 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
     { key: 'rcd_breakers', label: 'Исправность работы УЗО, автоматов диф.защиты', type: 'select', options: BOOL_OPTIONS, defaultValue: true },
   ],
   schetchik_electroshc: [
-    { key: 'model', label: 'Модель счётчика', type: 'text', required: true },
-    { key: 'serial_number', label: 'Номер счётчика', type: 'text', required: true },
     { key: 'current_transformer', label: 'Трансформатор тока', type: 'select', options: BOOL_OPTIONS, defaultValue: false },
     { key: 'seal_present', label: 'Наличие пломбы', type: 'select', options: BOOL_OPTIONS, defaultValue: true },
     { key: 'readings', label: 'Показания', type: 'number', required: true },
@@ -193,14 +191,10 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
     { key: 'drain_condition', label: 'Сливные воронки, желоба, выпускные воронки', type: 'select', options: [{ label: 'Чистые', value: 'clean' }, { label: 'Необходима очистка', value: 'needs_cleaning' }], defaultValue: 'clean' },
   ],
   schetchik_hvs: [
-    { key: 'model', label: 'Модель счётчика', type: 'text', required: true },
-    { key: 'serial_number', label: 'Номер счётчика', type: 'text', required: true },
     { key: 'seal_present', label: 'Наличие пломбы', type: 'select', options: BOOL_OPTIONS, defaultValue: true },
     { key: 'readings', label: 'Показания', type: 'number', required: true },
   ],
   schetchik_gvs: [
-    { key: 'model', label: 'Модель счётчика', type: 'text', required: true },
-    { key: 'serial_number', label: 'Номер счётчика', type: 'text', required: true },
     { key: 'seal_present', label: 'Наличие пломбы', type: 'select', options: BOOL_OPTIONS, defaultValue: true },
     { key: 'readings', label: 'Показания', type: 'number', required: true },
   ],
@@ -333,8 +327,6 @@ const PARAM_CONFIG: Record<string, { key: string; label: string; type: 'select' 
     { key: 'water_temperature', label: 'Температура теплоносителя, °C', type: 'number', required: true },
   ],
   meter_gas: [
-    { key: 'model', label: 'Модель счётчика', type: 'text', required: true },
-    { key: 'serial_number', label: 'Номер счётчика', type: 'text', required: true },
     { key: 'seal_present', label: 'Наличие пломбы', type: 'select', options: BOOL_OPTIONS, defaultValue: true },
     { key: 'readings', label: 'Показания', type: 'number', required: true },
     { key: 'body_integrity', label: 'Целостность корпуса', type: 'select', options: BOOL_OPTIONS, defaultValue: true },
@@ -461,8 +453,6 @@ export default function TaskPage() {
   const location = useLocation();
   const isMobile = useIsMobile();
 
-  const METER_CODES = ['schetchik_electroshc', 'schetchik_hvs', 'schetchik_gvs'];
-
   const handleAutoSave = useCallback(async () => {
     if (!visitId || !taskId || !task) return;
     const allValues = form.getFieldsValue(true);
@@ -520,19 +510,8 @@ export default function TaskPage() {
       }
       const mergedParams = { ...defaults, ...rest };
 
-      // Автозаполнение полей счётчиков из данных задачи или связанного оборудования
-      const autofilled = new Set<string>();
-      if (METER_CODES.includes(eqCode) && (t.objectEquipmentId || t.brand || t.model || t.serialNumber)) {
-        if (!mergedParams.model && (t.brand || t.model)) {
-          mergedParams.model = [t.brand, t.model].filter(Boolean).join(' ').trim();
-          autofilled.add('model');
-        }
-        if (!mergedParams.serial_number && t.serialNumber) {
-          mergedParams.serial_number = t.serialNumber;
-          autofilled.add('serial_number');
-        }
-      }
-      setAutoFilledFields(autofilled);
+      // Автозаполнение больше не нужно — brand/model/serialNumber теперь в EquipmentInfoForm
+      setAutoFilledFields(new Set());
 
       loadedParamsRef.current = mergedParams;
       const conclusionValue = c || 'ok';
