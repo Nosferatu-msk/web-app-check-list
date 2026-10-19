@@ -73,7 +73,7 @@ async function main() {
       data: {
         isDeleted: true,
         deletedAt: new Date(),
-        deletedById: '00000000-0000-0000-0000-000000000000', // Системное удаление
+        deletedById: null, // Системное удаление (без указания пользователя)
       },
     });
 
