@@ -25,6 +25,7 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
   const [isEditing, setIsEditing] = useState(false);
   const [originalValues, setOriginalValues] = useState<any>({});
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
+  const [brandOptions, setBrandOptions] = useState<{ value: string; label: string }[]>([]);
   const [autoFilledFromObjectEquipment, setAutoFilledFromObjectEquipment] = useState(false);
 
   const equipmentCode = task?.equipmentType?.code || '';
@@ -50,11 +51,27 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
     try {
       const results = await api.searchModels({ equipment_type_id: task.equipmentType.id, query });
       setModelOptions(results.map((m: any) => ({
-        value: m.fullModelName || m.modelName,
-        label: m.fullModelName || `${m.modelName} (${m.manufacturer?.name || ''})`,
+        value: m.modelName,
+        label: m.modelName,
       })));
     } catch {
       setModelOptions([]);
+    }
+  };
+
+  const handleBrandSearch = async (query: string) => {
+    if (!query || query.length < 2) {
+      setBrandOptions([]);
+      return;
+    }
+    try {
+      const results = await api.getManufacturers({ q: query, pageSize: 20 });
+      setBrandOptions(results.data.map((m: any) => ({
+        value: m.name,
+        label: m.name,
+      })));
+    } catch {
+      setBrandOptions([]);
     }
   };
 
@@ -170,7 +187,13 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
           rules={[{ validator: validateNoSpecialStart }]}
           style={{ marginBottom: 12 }}
         >
-          <Input placeholder="Например, Меркурий, AUX, Schneider Electric" />
+          <AutoComplete
+            options={brandOptions}
+            onSearch={handleBrandSearch}
+            placeholder="Начните вводить для поиска..."
+            filterOption={false}
+            allowClear
+          />
         </Form.Item>
 
         <Form.Item
