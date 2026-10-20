@@ -596,6 +596,12 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
       return formatInfo(p, m.distance, m.similarity, false);
     }).filter(Boolean);
 
+    // ЛОГИРОВАНИЕ: Диагностика проблемы дубликатов
+    console.log(`[photos/duplicates] Photo ${srcPhoto.id}: found ${allPhotos.length} photos, ${matches.length} matches, ${duplicates.length} duplicates`);
+    if (matches.length > 0) {
+      console.log(`[photos/duplicates] Top matches:`, matches.slice(0, 5).map(m => `${m.photoId}: dist=${m.distance}, sim=${m.similarity}%`));
+    }
+
     res.json({ current, duplicates });
   } catch (err) {
     console.error('[photos] getPhotoDuplicates error:', err);
