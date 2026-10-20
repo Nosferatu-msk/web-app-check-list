@@ -176,13 +176,13 @@
 | **Визиты** | | |
 | POST | `/api/visits` | Создать визит (при создании — автопривязка заявок по `object_code` через `visit_requests`) |
 | GET | `/api/visits` | Список визитов с пагинацией (параметры: `page`, `pageSize`; ответ включает `globalStats` — сводная статистика по всем визитам, включая объединённый список номеров заявок из `importedRequests` и `visitRequests → importedRequest`) |
-| GET | `/api/visits/:id` | Детали визита (со всеми задачами + объединённый список заявок `requests[]` из `importedRequests` и `visitRequests`) |
+| GET | `/api/visits/:id` | Детали визита (со всеми задачами + объединённый список заявок `requests[]` из `importedRequests` и `visitRequests`). **Автосинхронизация roomTypeCode:** при загрузке визита сервер автоматически синхронизирует `roomTypeCode` из `objectEquipment` в задачи, если задача имеет `objectEquipmentId`, но `roomTypeCode` отсутствует (для ретроактивного восстановления привязок) |
 | PUT | `/api/visits/:id` | Обновить визит (адрес, дата, ФИО) |
 | DELETE | `/api/visits/:id` | Удалить визит (любой статус, каскадно) |
 | POST | `/api/visits/:id/complete` | Завершить визит |
 | GET | `/api/visits/:id/report/download` | Повторное скачивание отчёта |
 | **Задачи** | | |
-| POST | `/api/visits/:visitId/tasks` | Добавить задачу (body: `equipmentTypeId`, `roomTypeId?`, `objectEquipmentId?`, `comment?`, `brand?`, `model?`, `serialNumber?`). **Автопривязка:** если `objectEquipmentId` не передан, сервер автоматически находит свободную единицу оборудования на адресе визита по типу оборудования |
+| POST | `/api/visits/:visitId/tasks` | Добавить задачу (body: `equipmentTypeId`, `roomTypeId?`, `objectEquipmentId?`, `comment?`, `brand?`, `model?`, `serialNumber?`). **Автопривязка:** если `objectEquipmentId` не передан, сервер автоматически находит свободную единицу оборудования на адресе визита по типу оборудования. **Автосинхронизация roomTypeCode:** при автопривязке оборудования сервер копирует `roomTypeCode` из `objectEquipment` в задачу (если он не передан явно) |
 | GET | `/api/visits/:visitId/tasks` | Список задач визита |
 | GET | `/api/visits/:visitId/tasks/:id` | Детали задачи |
 | PUT | `/api/visits/:visitId/tasks/:id` | Обновить задачу (параметры, заключение) |

@@ -75,10 +75,10 @@
 
 | Код оборудования | Обязательные поля | Тип значения |
 |------------------|-------------------|--------------|
-| `schetchik_electroshc` | `model`, `serial_number`, `readings` | текст, текст, число |
-| `schetchik_hvs` | `model`, `serial_number`, `readings` | текст, текст, число |
-| `schetchik_gvs` | `model`, `serial_number`, `readings` | текст, текст, число |
-| `meter_gas` | `model`, `serial_number`, `readings` | текст, текст, число |
+| `schetchik_electroshc` | `readings` | число |
+| `schetchik_hvs` | `readings` | число |
+| `schetchik_gvs` | `readings` | число |
+| `meter_gas` | `readings` | число |
 | `splitvn`, `mssvn`, `vrv_vn` | `room_temperature` | число (°C) |
 | `splitnar`, `mssnar`, `vrv_nar` | — (только общие обязательные) | — |
 | `teplozavesa`, `pritochnaya`, `pritochno-vytyzhnaya`, `vytyzhnaya` | `temperature_before`, `temperature_after` | число (°C) |
@@ -86,7 +86,14 @@
 | `ibp` | согласно `REQUIRED_PARAMS_CONFIG` | — |
 | `cond_mobile` | согласно `REQUIRED_PARAMS_CONFIG` | — |
 
-**Клиентская валидация (`handleComplete`):** перед вызовом API клиент проверяет **ВСЕ** required параметры из shared-конфигурации, а также проверяет задачи со статусом `not_started` — они блокируют завершение визита.
+**Важно:** Поля `brand`, `model`, `serialNumber` **НЕ входят** в `REQUIRED_PARAMS_CONFIG`, так как хранятся в отдельных полях задачи (не в JSONB `parameters`). Их обязательность проверяется:
+- **Клиентская валидация:** `VisitPage.tsx` (handleComplete) — проверяет brand/model/serialNumber для всех типов оборудования (кроме `group_climate`)
+- **Серверная валидация:** `visits.ts` (POST /:id/complete) — через `validateTaskFields` (проверка формата) + клиентская проверка обязательности
+
+**Клиентская валидация (`handleComplete`):** перед вызовом API клиент проверяет:
+1. **ВСЕ** required параметры из `REQUIRED_PARAMS_CONFIG` (readings, temperature и т.д.)
+2. **brand/model/serialNumber** для всех типов оборудования (кроме `group_climate`)
+3. Задачи со статусом `not_started` — они блокируют завершение визита
 
 **Ответ при ошибке валидации (HTTP 422):**
 ```json
