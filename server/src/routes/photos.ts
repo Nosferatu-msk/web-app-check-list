@@ -543,12 +543,11 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
     }
 
     // Поиск по всей БД — инженер мог вложить дубликат в любую задачу
-    // Окно 90 дней для обнаружения старых дубликатов
+    // Убран фильтр по дате — ищем дубликаты среди всех фото
     const allPhotos = await prisma.photo.findMany({
       where: {
         id: { not: srcPhoto.id },
         phash: { not: null },
-        createdAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
       },
       include: {
         task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } }, equipmentType: true } },
