@@ -239,7 +239,10 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
         <Form.Item
           label="Марка (изготовитель)"
           name="brand"
-          rules={[{ validator: validateNoSpecialStart }]}
+          rules={[
+            { required: true, message: 'Обязательно' },
+            { validator: validateNoSpecialStart },
+          ]}
           style={{ marginBottom: 12 }}
         >
           <AutoComplete
@@ -255,7 +258,10 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
         <Form.Item
           label="Модель"
           name="model"
-          rules={[{ validator: validateNoSpecialStart }]}
+          rules={[
+            { required: true, message: 'Обязательно' },
+            { validator: validateNoSpecialStart },
+          ]}
           style={{ marginBottom: 12 }}
         >
           <AutoComplete
@@ -269,16 +275,11 @@ export default function EquipmentInfoForm({ task, onValuesChange }: EquipmentInf
         </Form.Item>
 
         <Form.Item
-          label={
-            <span>
-              Серийный номер
-              {isMeter && <Tag color="red" style={{ marginLeft: 8 }}>Обязательно</Tag>}
-            </span>
-          }
+          label="Серийный номер"
           name="serialNumber"
           rules={[
+            { required: true, message: 'Обязательно' },
             { validator: validateNoSpecialStart },
-            ...(isMeter ? [{ required: true, message: 'Обязательно для приборов учёта' }] : []),
           ]}
           style={{ marginBottom: 0 }}
         >

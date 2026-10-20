@@ -17,22 +17,22 @@ export const REQUIRED_PARAMS_CONFIG: Record<string, RequiredParam[]> = {
   // ─── Счётчики ───────────────────────────────────────────────
   schetchik_electroshc: [
     { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
+    { key: 'serial_number', type: 'text', label: 'Серийный номер' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
   schetchik_hvs: [
     { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
+    { key: 'serial_number', type: 'text', label: 'Серийный номер' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
   schetchik_gvs: [
     { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
+    { key: 'serial_number', type: 'text', label: 'Серийный номер' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
   meter_gas: [
     { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
+    { key: 'serial_number', type: 'text', label: 'Серийный номер' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
 
