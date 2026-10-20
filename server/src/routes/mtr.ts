@@ -1061,7 +1061,7 @@ router.get('/addresses/search', engineerMtrOnly, async (req: AuthRequest, res: R
   }
 
   // 3. Фильтрация по запросу (мульти-словесный поиск)
-  const words = q.trim().split(/\s+/).filter(w => w.length >= 3);
+  const words = q.trim().split(/\s+/).filter(w => w.length >= 2);
   const searchWords = words.length > 0 ? words : [q.trim()];
   
   // Создаем условия для каждого слова (поиск в fullAddress)

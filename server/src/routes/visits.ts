@@ -439,8 +439,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     where.status = { not: 'awaiting_assignment' };
   }
   if (search) {
-    // Мульти-словесный поиск: разбиваем запрос на слова, игнорируем слова < 3 символов
-    const words = search.trim().split(/\s+/).filter(w => w.length >= 3);
+    // Мульти-словесный поиск: разбиваем запрос на слова, игнорируем слова < 2 символов
+    const words = search.trim().split(/\s+/).filter(w => w.length >= 2);
     const searchWords = words.length > 0 ? words : [search.trim()];
     
     // Создаем условия для каждого слова (ILIKE для нечувствительности к регистру)

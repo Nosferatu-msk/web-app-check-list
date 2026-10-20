@@ -33,8 +33,8 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
 
-  // Мульти-словесный поиск: разбиваем запрос на слова, игнорируем слова < 3 символов
-  const words = q.trim().split(/\s+/).filter(w => w.length >= 3);
+  // Мульти-словесный поиск: разбиваем запрос на слова, игнорируем слова < 2 символов
+  const words = q.trim().split(/\s+/).filter(w => w.length >= 2);
   
   // Если после фильтрации нет слов — используем исходный запрос (для случаев "76" и т.д.)
   const searchWords = words.length > 0 ? words : [q.trim()];
