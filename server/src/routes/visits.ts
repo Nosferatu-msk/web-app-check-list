@@ -549,6 +549,23 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   if (!visit) { res.status(404).json({ error: 'Визит не найден' }); return; }
   if (!(await canAccessVisit(visit.userId, req, visit.id))) { res.status(403).json({ error: 'Доступ запрещён' }); return; }
 
+  // Синхронизация roomTypeCode из objectEquipment в задачи (для старых визитов)
+  // Если задача имеет objectEquipmentId, но roomTypeCode отсутствует — подтягиваем из objectEquipment
+  let syncCount = 0;
+  for (const task of visit.tasks) {
+    if (task.objectEquipmentId && !task.roomTypeCode && task.objectEquipment?.roomTypeCode) {
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { roomTypeCode: task.objectEquipment.roomTypeCode },
+      });
+      task.roomTypeCode = task.objectEquipment.roomTypeCode;
+      syncCount++;
+    }
+  }
+  if (syncCount > 0) {
+    console.log(`[visit/get] Синхронизировано roomTypeCode для ${syncCount} задач визита ${visit.id.slice(0,8)}`);
+  }
+
   // Объединяем заявки из importedRequests и visitRequests
   const directRequests = visit.importedRequests.map(r => r.externalRequestId);
   const linkedRequests = visit.visitRequests.map(vr => vr.importedRequest.externalRequestId);
@@ -1265,11 +1282,15 @@ router.post('/:visitId/tasks', validate(createTaskSchema), async (req: AuthReque
           isActive: true,
           id: existingTaskEquipIds.length > 0 ? { notIn: existingTaskEquipIds } : undefined,
         },
-        select: { id: true },
+        select: { id: true, roomTypeCode: true },
       });
 
       if (freeEquipment) {
         data.objectEquipmentId = freeEquipment.id;
+        // Копируем roomTypeCode из objectEquipment, если он не передан явно
+        if (!data.roomTypeCode && freeEquipment.roomTypeCode) {
+          data.roomTypeCode = freeEquipment.roomTypeCode;
+        }
       }
     }
   }
