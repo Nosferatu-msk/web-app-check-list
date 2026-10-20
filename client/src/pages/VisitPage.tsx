@@ -686,19 +686,6 @@ export default function VisitPage() {
       const eqName = task.equipmentType?.name || 'оборудование';
       const requiredParams = REQUIRED_PARAMS_CONFIG[eqCode] || [];
 
-      // Проверка brand/model/serialNumber (обязательны для всех типов оборудования, кроме group_climate)
-      if (task.taskType !== 'group_climate') {
-        if (!task.brand || !task.brand.trim()) {
-          missingFields.push(`${eqName}: Изготовитель`);
-        }
-        if (!task.model || !task.model.trim()) {
-          missingFields.push(`${eqName}: Модель`);
-        }
-        if (!task.serialNumber || !task.serialNumber.trim()) {
-          missingFields.push(`${eqName}: Серийный номер`);
-        }
-      }
-
       for (const rp of requiredParams) {
         const val = params[rp.key];
         if (rp.type === 'number') {

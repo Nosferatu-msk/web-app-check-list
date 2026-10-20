@@ -192,7 +192,7 @@ export function validateTaskParameters(
 
 /**
  * Проверяет текстовые поля задачи (brand, model, serialNumber) на корректность.
- * Включает: проверку обязательности, проверка начала, блок-лист placeholder-значений, детектор копипаста, формат модели.
+ * Включает: проверка начала, блок-лист placeholder-значений, детектор копипаста, формат модели.
  */
 export function validateTaskFields(fields: {
   brand?: string | null;
@@ -200,17 +200,6 @@ export function validateTaskFields(fields: {
   serialNumber?: string | null;
 }): TaskValidationError[] {
   const errors: TaskValidationError[] = [];
-
-  // Проверка обязательности
-  if (!fields.brand || !fields.brand.trim()) {
-    errors.push({ field: 'brand', message: 'Изготовитель: не заполнено' });
-  }
-  if (!fields.model || !fields.model.trim()) {
-    errors.push({ field: 'model', message: 'Модель: не заполнено' });
-  }
-  if (!fields.serialNumber || !fields.serialNumber.trim()) {
-    errors.push({ field: 'serialNumber', message: 'Серийный номер: не заполнено' });
-  }
 
   // Базовая проверка: начало с допустимого символа
   if (fields.brand && !startsWithValidChar(fields.brand)) {
