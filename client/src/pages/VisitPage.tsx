@@ -686,33 +686,33 @@ export default function VisitPage() {
       const eqName = task.equipmentType?.name || 'оборудование';
       const requiredParams = REQUIRED_PARAMS_CONFIG[eqCode] || [];
 
-      // ЛОГИРОВАНИЕ: Диагностика клиентской валидации
-      console.log(`[VisitPage] Проверка задачи ${task.id?.slice(0,8)} (${eqName}):`);
-      console.log(`  - equipmentCode: ${eqCode}`);
-      console.log(`  - task.brand:`, task.brand);
-      console.log(`  - task.model:`, task.model);
-      console.log(`  - task.serialNumber:`, task.serialNumber);
-      console.log(`  - task.parameters:`, params);
-      console.log(`  - requiredParams:`, requiredParams);
+      // Проверка brand/model/serialNumber (обязательны для всех типов оборудования, кроме group_climate)
+      if (task.taskType !== 'group_climate') {
+        if (!task.brand || !task.brand.trim()) {
+          missingFields.push(`${eqName}: Изготовитель`);
+        }
+        if (!task.model || !task.model.trim()) {
+          missingFields.push(`${eqName}: Модель`);
+        }
+        if (!task.serialNumber || !task.serialNumber.trim()) {
+          missingFields.push(`${eqName}: Серийный номер`);
+        }
+      }
 
       for (const rp of requiredParams) {
         const val = params[rp.key];
-        console.log(`  - Проверка ${rp.key} (${rp.label}):`, val);
         if (rp.type === 'number') {
           if (val === undefined || val === null || val === '') {
             missingFields.push(`${eqName}: ${rp.label}`);
-            console.log(`    → ОШИБКА: поле отсутствует в parameters`);
           }
         } else {
           if (!val || !String(val).trim()) {
             missingFields.push(`${eqName}: ${rp.label}`);
-            console.log(`    → ОШИБКА: поле отсутствует или пустое в parameters`);
           }
         }
       }
     }
     if (missingFields.length > 0) {
-      console.log(`[VisitPage] Итоговые ошибки:`, missingFields);
       message.error(`Заполните обязательные поля: ${missingFields.join(', ')}`);
       return;
     }

@@ -1029,36 +1029,11 @@ router.post('/:id/complete', async (req: AuthRequest, res: Response) => {
   for (const task of existing.tasks) {
     if (task.status === 'completed' || task.status === 'in_progress') {
       const eqCode = task.equipmentType?.code || '';
-      
-      // ЛОГИРОВАНИЕ: Диагностика проблемы валидации
-      console.log(`[visit/complete] Проверка задачи ${task.id.slice(0,8)} (${task.equipmentType?.name}):`);
-      console.log(`  - equipmentCode: ${eqCode}`);
-      console.log(`  - task.brand: "${task.brand}"`);
-      console.log(`  - task.model: "${task.model}"`);
-      console.log(`  - task.serialNumber: "${task.serialNumber}"`);
-      console.log(`  - task.parameters:`, JSON.stringify(task.parameters));
-      
       const paramErrors = validateTaskParameters(task.parameters as Record<string, any> | null, eqCode);
-      
-      // ЛОГИРОВАНИЕ: Результаты проверки parameters
-      if (paramErrors.length > 0) {
-        console.log(`  - paramErrors:`, paramErrors.map(e => `${e.field}: ${e.message}`));
-      } else {
-        console.log(`  - paramErrors: нет ошибок`);
-      }
-      
       // Для group_climate задач brand/model/serial хранятся в equipmentItems, не в задаче
       const fieldErrs = task.taskType === 'group_climate'
         ? []
         : validateTaskFields({ brand: task.brand, model: task.model, serialNumber: task.serialNumber });
-      
-      // ЛОГИРОВАНИЕ: Результаты проверки полей
-      if (fieldErrs.length > 0) {
-        console.log(`  - fieldErrors:`, fieldErrs.map(e => `${e.field}: ${e.message}`));
-      } else {
-        console.log(`  - fieldErrors: нет ошибок`);
-      }
-      
       const allErrors = [...paramErrors.map(e => e.message), ...fieldErrs.map(e => e.message)];
       if (allErrors.length > 0) {
         tasksWithInvalidParams.push({

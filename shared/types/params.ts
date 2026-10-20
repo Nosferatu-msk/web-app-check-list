@@ -15,24 +15,18 @@ export interface RequiredParam {
  */
 export const REQUIRED_PARAMS_CONFIG: Record<string, RequiredParam[]> = {
   // ─── Счётчики ───────────────────────────────────────────────
+  // model и serial_number исключены — они хранятся в отдельных полях task.model и task.serialNumber
+  // и проверяются через validateTaskFields на сервере и через специальную проверку на клиенте
   schetchik_electroshc: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
   schetchik_hvs: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
   schetchik_gvs: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
   meter_gas: [
-    { key: 'model', type: 'text', label: 'Модель счётчика' },
-    { key: 'serial_number', type: 'text', label: 'Номер счётчика' },
     { key: 'readings', type: 'number', label: 'Показания' },
   ],
 
