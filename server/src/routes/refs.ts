@@ -33,7 +33,24 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
 
-  const textFilter = { AND: [{ isDeleted: false }, { OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }, { objectCode: { contains: q, mode: 'insensitive' } }] }] };
+  // Мульти-словесный поиск: разбиваем запрос на слова, игнорируем слова < 3 символов
+  const words = q.trim().split(/\s+/).filter(w => w.length >= 3);
+  
+  // Если после фильтрации нет слов — используем исходный запрос (для случаев "76" и т.д.)
+  const searchWords = words.length > 0 ? words : [q.trim()];
+  
+  // Создаем условия для каждого слова (поиск в fullAddress)
+  const wordConditions = searchWords.map(word => ({
+    fullAddress: { contains: word, mode: 'insensitive' }
+  }));
+  
+  // Объединяем через AND — адрес должен содержать ВСЕ слова
+  const textFilter = { 
+    AND: [
+      { isDeleted: false },
+      ...wordConditions
+    ] 
+  };
 
   // Role-based filtering: engineer sees only TM's addresses, tm sees own, admin sees all
   let addressIds: string[] | null = null;
@@ -53,7 +70,12 @@ router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
     ? { AND: [textFilter, { id: { in: addressIds } }] }
     : textFilter;
 
-  const data = await prisma.address.findMany({ where, take: 20 });
+  // Сортировка по алфавиту
+  const data = await prisma.address.findMany({ 
+    where, 
+    orderBy: { fullAddress: 'asc' },
+    take: 20 
+  });
   res.json(data);
 });
 

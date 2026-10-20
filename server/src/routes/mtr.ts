@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma.js';
 import { authMiddleware, AuthRequest, engineerMtrOnly, engineerMtrOrAdmin, tmMtrOrAdmin, adminOnly } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -1059,18 +1060,24 @@ router.get('/addresses/search', engineerMtrOnly, async (req: AuthRequest, res: R
     return;
   }
 
-  // 3. Фильтрация по запросу
+  // 3. Фильтрация по запросу (мульти-словесный поиск)
+  const words = q.trim().split(/\s+/).filter(w => w.length >= 3);
+  const searchWords = words.length > 0 ? words : [q.trim()];
+  
+  // Создаем условия для каждого слова (поиск в fullAddress)
+  const wordConditions: Prisma.AddressWhereInput[] = searchWords.map(word => ({
+    fullAddress: { contains: word, mode: 'insensitive' }
+  }));
+  
+  // Объединяем через AND — адрес должен содержать ВСЕ слова
   const addresses = await prisma.address.findMany({
     where: {
       id: { in: allowedAddressIds },
-      OR: [
-        { fullAddress: { contains: q, mode: 'insensitive' } },
-        { objectCode: { contains: q, mode: 'insensitive' } },
-      ],
+      AND: wordConditions,
     },
     select: { id: true, fullAddress: true, objectCode: true },
     take: 30,
-    orderBy: { objectCode: 'asc' },
+    orderBy: { fullAddress: 'asc' },
   });
 
   res.json(addresses);

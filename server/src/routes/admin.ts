@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma.js';
 import { authMiddleware, adminOnly, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -45,8 +46,23 @@ router.get('/addresses', async (req: AuthRequest, res: Response) => {
 router.get('/addresses/search', async (req: AuthRequest, res: Response) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) { res.json([]); return; }
+  
+  // Мульти-словесный поиск: разбиваем запрос на слова, игнорируем слова < 3 символов
+  const words = q.trim().split(/\s+/).filter(w => w.length >= 3);
+  const searchWords = words.length > 0 ? words : [q.trim()];
+  
+  // Создаем условия для каждого слова (поиск в fullAddress)
+  const wordConditions: Prisma.AddressWhereInput[] = searchWords.map(word => ({
+    fullAddress: { contains: word, mode: 'insensitive' }
+  }));
+  
+  // Объединяем через AND — адрес должен содержать ВСЕ слова
   const data = await prisma.address.findMany({
-    where: { isDeleted: false, OR: [{ fullAddress: { contains: q, mode: 'insensitive' } }, { street: { contains: q, mode: 'insensitive' } }, { objectCode: { contains: q, mode: 'insensitive' } }] },
+    where: { 
+      isDeleted: false,
+      AND: wordConditions
+    },
+    orderBy: { fullAddress: 'asc' },
     take: 20,
   });
   res.json(data);
