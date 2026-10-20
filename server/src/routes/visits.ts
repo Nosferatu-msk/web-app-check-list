@@ -439,10 +439,17 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     where.status = { not: 'awaiting_assignment' };
   }
   if (search) {
-    // Используем сырой SQL для поиска — Prisma contains с mode: insensitive работает некорректно
+    // Мульти-словесный поиск: разбиваем запрос на слова, игнорируем слова < 3 символов
+    const words = search.trim().split(/\s+/).filter(w => w.length >= 3);
+    const searchWords = words.length > 0 ? words : [search.trim()];
+    
+    // Создаем условия для каждого слова (ILIKE для нечувствительности к регистру)
+    const wordConditions = searchWords.map(word => `%${word}%`);
+    
+    // Используем сырой SQL для поиска — адрес должен содержать ВСЕ слова
     const matchedAddresses = await prisma.$queryRawUnsafe<{ id: string }[]>(
-      `SELECT id FROM addresses WHERE full_address ILIKE $1 OR object_code ILIKE $1`,
-      `%${search}%`
+      `SELECT id FROM addresses WHERE ${searchWords.map((_, i) => `(full_address ILIKE $${i + 1} OR object_code ILIKE $${i + 1})`).join(' AND ')}`,
+      ...wordConditions
     );
     const matchedIds = matchedAddresses.map(a => a.id);
     where.AND = [
