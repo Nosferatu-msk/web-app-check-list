@@ -544,6 +544,7 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
 
     // Поиск по всей БД — инженер мог вложить дубликат в любую задачу
     // Убран фильтр по дате — ищем дубликаты среди всех фото
+    // Увеличен лимит до 5000, чтобы охватить все фото с phash
     const allPhotos = await prisma.photo.findMany({
       where: {
         id: { not: srcPhoto.id },
@@ -554,7 +555,7 @@ router.get('/:id/duplicates', async (req: AuthRequest, res: Response) => {
         taskEquipmentItem: { include: { objectEquipment: true, task: { include: { visit: { include: { address: true, user: { select: { fullName: true } } } } } } } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 1000,
+      take: 5000,
     });
 
     const matches: Array<{ photoId: string; distance: number; similarity: number }> = [];
