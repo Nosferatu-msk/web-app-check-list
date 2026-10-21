@@ -56,7 +56,9 @@ export async function getAnalyticsVisits(params: {
   // Фильтр по отклонениям — по умолчанию только open, исключаем сиротские (без фото)
   const anomalyWhere: any = { photoId: { not: null } };
   if (type) anomalyWhere.type = type;
-  if (severity) anomalyWhere.severity = severity;
+  // Для severity=warning нужна специальная логика: визиты с предупреждениями И без критических
+  // Для severity=critical — визиты с критическими
+  if (severity && severity !== 'warning') anomalyWhere.severity = severity;
   anomalyWhere.status = status || 'open';
 
   const hasAnomalyFilter = type || severity || status;
@@ -71,7 +73,25 @@ export async function getAnalyticsVisits(params: {
     _count: { id: true },
   });
 
-  const visitIdsWithAnomalies = visitsWithAnomalies.map(v => v.visitId);
+  let visitIdsWithAnomalies = visitsWithAnomalies.map(v => v.visitId);
+
+  // Специальная обработка для severity=warning: исключаем визиты с критическими
+  if (severity === 'warning') {
+    // Находим все визиты с критическими отклонениями
+    const visitsWithCritical = await prisma.visitAnomaly.findMany({
+      where: {
+        severity: 'critical',
+        status: status || 'open',
+        photoId: { not: null },
+        visitId: { in: visitIdsWithAnomalies },
+      },
+      select: { visitId: true },
+      distinct: ['visitId'],
+    });
+    const criticalVisitIds = new Set(visitsWithCritical.map(v => v.visitId));
+    // Исключаем визиты с критическими
+    visitIdsWithAnomalies = visitIdsWithAnomalies.filter(id => !criticalVisitIds.has(id));
+  }
 
   if (visitIdsWithAnomalies.length === 0) {
     return {

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 Тестирование антифрод — фильтры и массовое подтверждение</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 24px; color: #0F766E; }
+    h2 { font-size: 18px; margin: 32px 0 16px; color: #334155; }
+    .section { background: #fff; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #0F766E; }
+    .test-case { background: #F8FAFC; border-left: 4px solid #0F766E; padding: 16px; margin-bottom: 16px; border-radius: 6px; }
+    .test-case h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1E293B; }
+    .test-case ol { margin-left: 20px; }
+    .test-case li { margin-bottom: 8px; font-size: 14px; color: #475569; }
+    .expected { background: #D1FAE5; border-left: 3px solid #10B981; padding: 12px; margin-top: 12px; border-radius: 6px; font-size: 13px; color: #065F46; }
+    .expected strong { color: #059669; }
+    .warning { background: #FEF3C7; border-left: 3px solid #F59E0B; padding: 12px; margin-top: 12px; border-radius: 6px; font-size: 13px; color: #92400E; }
+    .warning strong { color: #D97706; }
+    .status { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; margin-left: 8px; }
+    .status.pass { background: #D1FAE5; color: #065F46; }
+    .status.fail { background: #FEE2E2; color: #DC2626; }
+    .status.pending { background: #FEF3C7; color: #92400E; }
+    code { background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }
+    .deploy-info { background: #F0FDF4; border-left: 4px solid #10B981; padding: 16px; border-radius: 6px; margin-bottom: 24px; }
+    .deploy-info h3 { color: #059669; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Тестирование антифрод — фильтры и массовое подтверждение</h1>
+    
+    <div class="deploy-info">
+      <h3>✅ Готово к тестированию</h3>
+      <p><strong>Коммит:</strong> <code>16e7815</code></p>
+      <p><strong>Дата:</strong> 21.10.2026</p>
+      <p><strong>Что реализовано:</strong></p>
+      <ul style="margin-left: 20px; margin-top: 8px;">
+        <li>Фильтр по критичности на десктопе (сегментный контрол)</li>
+        <li>Массовое подтверждение предупреждений (кнопка + модальное окно)</li>
+      </ul>
+    </div>
+    
+    <h2>📋 Тест-кейс 1: Фильтр по критичности (десктоп)</h2>
+    
+    <div class="test-case">
+      <h3>Шаги:</h3>
+      <ol>
+        <li>Открыть страницу аналитики на десктопе</li>
+        <li>Найти сегментный контрол в блоке фильтров</li>
+        <li>Нажать кнопку <strong>«Критические»</strong></li>
+        <li>Проверить, что показываются только визиты с критическими отклонениями</li>
+        <li>Нажать кнопку <strong>«Предупреждения»</strong></li>
+        <li>Проверить, что показываются только визиты с предупреждениями <strong>без критических</strong></li>
+        <li>Нажать кнопку <strong>«Все»</strong></li>
+        <li>Проверить, что показываются все визиты с отклонениями</li>
+      </ol>
+      <div class="expected">
+        <strong>✅ Ожидаемый результат:</strong><br>
+        Фильтр работает корректно, пагинация сбрасывается на страницу 1 при переключении фильтра.
+      </div>
+    </div>
+    
+    <h2>📋 Тест-кейс 2: Массовое подтверждение предупреждений</h2>
+    
+    <div class="test-case">
+      <h3>Шаги:</h3>
+      <ol>
+        <li>Открыть страницу аналитики</li>
+        <li>Нажать кнопку <strong>«Предупреждения»</strong> в сегментном контроле</li>
+        <li>Убедиться, что есть визиты с предупреждениями (без критических)</li>
+        <li>Найти кнопку <strong>«Подтвердить все предупреждения (N)»</strong> в шапке страницы</li>
+        <li>Нажать на кнопку</li>
+        <li>Проверить, что открылось модальное окно со статистикой</li>
+        <li>Проверить данные в модальном окне:
+          <ul style="margin-left: 20px; margin-top: 8px;">
+            <li>Визитов: N</li>
+            <li>Отклонений: M</li>
+            <li>Критические: 0 (не будут затронуты)</li>
+          </ul>
+        </li>
+        <li>Нажать кнопку <strong>«Подтвердить»</strong></li>
+        <li>Проверить, что все предупреждения подтверждены</li>
+        <li>Проверить, что критические отклонения не затронуты</li>
+      </ol>
+      <div class="expected">
+        <strong>✅ Ожидаемый результат:</strong><br>
+        Все предупреждения подтверждены, критические не затронуты. Появляется сообщение об успехе.
+      </div>
+    </div>
+    
+    <h2>📋 Тест-кейс 3: Кнопка не показывается</h2>
+    
+    <div class="test-case">
+      <h3>Шаги:</h3>
+      <ol>
+        <li>Открыть страницу аналитики</li>
+        <li>Нажать кнопку <strong>«Критические»</strong> в сегментном контроле</li>
+        <li>Проверить, что кнопка <strong>«Подтвердить все предупреждения»</strong> НЕ показывается</li>
+        <li>Нажать кнопку <strong>«Все»</strong></li>
+        <li>Проверить, что кнопка <strong>«Подтвердить все предупреждения»</strong> НЕ показывается</li>
+      </ol>
+      <div class="expected">
+        <strong>✅ Ожидаемый результат:</strong><br>
+        Кнопка скрыта, если фильтр не равен <code>warning</code> или если нет визитов с предупреждениями.
+      </div>
+    </div>
+    
+    <h2>📋 Тест-кейс 4: Мобильная версия</h2>
+    
+    <div class="test-case">
+      <h3>Шаги:</h3>
+      <ol>
+        <li>Открыть страницу аналитики на мобильном устройстве</li>
+        <li>Проверить, что табы «Все | Критические | Предупреждения» работают</li>
+        <li>Проверить, что кнопка массового подтверждения НЕ показывается на мобильном</li>
+      </ol>
+      <div class="expected">
+        <strong>✅ Ожидаемый результат:</strong><br>
+        Мобильная версия работает корректно, табы переключаются, кнопка массового подтверждения скрыта (реализована только для десктопа).
+      </div>
+    </div>
+    
+    <h2>📊 Критерии приемки</h2>
+    
+    <div class="section">
+      <ul style="list-style: none; padding: 0;">
+        <li style="padding: 8px; border-bottom: 1px solid #E2E8F0;">☐ Фильтр по критичности работает на десктопе</li>
+        <li style="padding: 8px; border-bottom: 1px solid #E2E8F0;">☐ Фильтр консистентен с мобильным интерфейсом</li>
+        <li style="padding: 8px; border-bottom: 1px solid #E2E8F0;">☐ Кнопка массового подтверждения показывается только при фильтре "Предупреждения"</li>
+        <li style="padding: 8px; border-bottom: 1px solid #E2E8F0;">☐ Модальное окно показывает корректную статистику</li>
+        <li style="padding: 8px; border-bottom: 1px solid #E2E8F0;">☐ Массовое подтверждение обрабатывает только предупреждения (не критические)</li>
+        <li style="padding: 8px; border-bottom: 1px solid #E2E8F0;">☐ Действие записывается в audit_log</li>
+        <li style="padding: 8px; border-bottom: 1px solid #E2E8F0;">☐ UI соответствует дизайн-системе (trust teal, Ant Design токены)</li>
+        <li style="padding: 8px;">☐ Мобильная адаптация работает корректно</li>
+      </ul>
+    </div>
+    
+    <div class="warning">
+      <strong>⚠️ Важно:</strong> Перед тестированием убедитесь, что на production есть визиты с предупреждениями для тестирования. Если таких визитов нет, создайте тестовые данные.
+    </div>
+  </div>
+</body>
+</html>
