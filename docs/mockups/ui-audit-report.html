@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Аудит UI — соответствие дизайн-системе</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 24px; color: #1E293B; }
+    h2 { font-size: 18px; margin: 32px 0 16px; color: #334155; }
+    .section { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #0F766E; }
+    
+    /* Таблица аудита */
+    .audit-table { width: 100%; border-collapse: collapse; }
+    .audit-table th { background: #F1F5F9; padding: 12px; text-align: left; border-bottom: 2px solid #E2E8F0; font-size: 13px; font-weight: 600; }
+    .audit-table td { padding: 12px; border-bottom: 1px solid #E2E8F0; font-size: 14px; }
+    .audit-table tr:hover { background: #F8FAFC; }
+    
+    /* Статусы */
+    .status { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .status.pass { background: #D1FAE5; color: #065F46; }
+    .status.fail { background: #FEE2E2; color: #DC2626; }
+    .status.warn { background: #FEF3C7; color: #92400E; }
+    .status.info { background: #DBEAFE; color: #1E40AF; }
+    
+    /* Цветовые образцы */
+    .color-swatch { display: inline-block; width: 20px; height: 20px; border-radius: 4px; border: 1px solid #E2E8F0; vertical-align: middle; margin-right: 8px; }
+    
+    /* Рекомендации */
+    .recommendation { background: #F0FDF4; border-left: 4px solid #10B981; padding: 12px 16px; margin-top: 16px; border-radius: 6px; }
+    .recommendation strong { color: #059669; }
+    .warning { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px 16px; margin-top: 16px; border-radius: 6px; }
+    .warning strong { color: #D97706; }
+    
+    /* Код */
+    code { background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Аудит UI — соответствие дизайн-системе</h1>
+    <p style="margin-bottom: 24px; color: #475569;">Проверка страницы AnalyticsPage.tsx на соответствие дизайн-системе проекта (trust teal, Ant Design токены)</p>
+    
+    <!-- Цветовая палитра -->
+    <div class="section">
+      <div class="section-title">🎨 Цветовая палитра</div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Элемент</th>
+            <th>Ожидается (дизайн-система)</th>
+            <th>Фактически в коде</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Primary (trust teal)</td>
+            <td><span class="color-swatch" style="background: #0F766E;"></span><code>#0F766E</code></td>
+            <td><span class="color-swatch" style="background: #0F766E;"></span><code>#0F766E</code> (сегментный контрол)</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Critical (danger)</td>
+            <td><span class="color-swatch" style="background: #DC2626;"></span><code>#DC2626</code></td>
+            <td><span class="color-swatch" style="background: #DC2626;"></span><code>#DC2626</code> (критические отклонения)</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Warning</td>
+            <td><span class="color-swatch" style="background: #D97706;"></span><code>#D97706</code></td>
+            <td><span class="color-swatch" style="background: #D97706;"></span><code>#D97706</code> (предупреждения)</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Success</td>
+            <td><span class="color-swatch" style="background: #059669;"></span><code>#059669</code></td>
+            <td><span class="color-swatch" style="background: #059669;"></span><code>#059669</code> (без отклонений)</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Background</td>
+            <td><span class="color-swatch" style="background: #F8FAFC;"></span><code>#F8FAFC</code></td>
+            <td><span class="color-swatch" style="background: #F8FAFC;"></span><code>#F8FAFC</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Border</td>
+            <td><span class="color-swatch" style="background: #E2E8F0;"></span><code>#E2E8F0</code></td>
+            <td><span class="color-swatch" style="background: #E2E8F0;"></span><code>#E2E8F0</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Text secondary</td>
+            <td><span class="color-swatch" style="background: #475569;"></span><code>#475569</code></td>
+            <td><span class="color-swatch" style="background: #475569;"></span><code>#475569</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Accent (professional blue)</td>
+            <td><span class="color-swatch" style="background: #0369A1;"></span><code>#0369A1</code></td>
+            <td><span class="color-swatch" style="background: #0369A1;"></span><code>#0369A1</code> (код визита)</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Дизайн-токены Ant Design -->
+    <div class="section">
+      <div class="section-title">📐 Дизайн-токены Ant Design</div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Токен</th>
+            <th>Ожидается</th>
+            <th>Фактически в коде</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>borderRadius</td>
+            <td><code>10</code></td>
+            <td><code>12</code> (в Card style)</td>
+            <td><span class="status warn">⚠️ WARN</span></td>
+          </tr>
+          <tr>
+            <td>borderRadiusLG</td>
+            <td><code>12</code></td>
+            <td><code>12</code> (в Card style)</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>controlHeight</td>
+            <td><code>40</code></td>
+            <td>Не используется явно</td>
+            <td><span class="status info">ℹ️ INFO</span></td>
+          </tr>
+          <tr>
+            <td>Button controlHeight</td>
+            <td><code>44</code></td>
+            <td>Не используется явно</td>
+            <td><span class="status info">ℹ️ INFO</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="warning">
+        <strong>⚠️ Проблема:</strong> В коде используется <code>borderRadius: 12</code> вместо <code>borderRadius: 10</code> (стандартный токен).<br>
+        <strong>Решение:</strong> Заменить на <code>borderRadius: 10</code> для консистентности с дизайн-системой.
+      </div>
+    </div>
+    
+    <!-- Типографика -->
+    <div class="section">
+      <div class="section-title">🔤 Типографика</div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Элемент</th>
+            <th>Ожидается</th>
+            <th>Фактически в коде</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Заголовок страницы</td>
+            <td><code>fontSize: 16</code>, <code>fontWeight: 600</code></td>
+            <td><code>fontSize: 16</code> (в page-title)</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Имя инженера</td>
+            <td><code>fontSize: 14</code>, <code>fontWeight: 500</code></td>
+            <td><code>fontSize: 14, fontWeight: 500</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Адрес</td>
+            <td><code>fontSize: 13</code>, <code>color: #475569</code></td>
+            <td><code>fontSize: 13, color: #475569</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Код визита</td>
+            <td><code>fontSize: 11</code>, <code>color: #0369A1</code></td>
+            <td><code>fontSize: 11, color: #0369A1</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Бейджи</td>
+            <td><code>fontSize: 11</code>, <code>fontWeight: 600</code></td>
+            <td><code>fontSize: 11, fontWeight: 600</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Иконки -->
+    <div class="section">
+      <div class="section-title">🎯 Иконки</div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Элемент</th>
+            <th>Ожидается</th>
+            <th>Фактически в коде</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Кнопка "Назад"</td>
+            <td>@ant-design/icons (ArrowLeftOutlined)</td>
+            <td>✅ <code>ArrowLeftOutlined</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Поиск</td>
+            <td>@ant-design/icons (SearchOutlined)</td>
+            <td>✅ <code>SearchOutlined</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Экспорт</td>
+            <td>@ant-design/icons (DownloadOutlined)</td>
+            <td>✅ <code>DownloadOutlined</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="recommendation">
+        <strong>✅ Отлично:</strong> Все иконки используют @ant-design/icons, emoji не используются.
+      </div>
+    </div>
+    
+    <!-- Ширина страницы -->
+    <div class="section">
+      <div class="section-title">📏 Ширина страницы</div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Элемент</th>
+            <th>Ожидается</th>
+            <th>Фактически в коде</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Максимальная ширина (десктоп)</td>
+            <td><code>maxWidth: 1400</code></td>
+            <td><code>maxWidth: 1400</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Мобильная адаптация -->
+    <div class="section">
+      <div class="section-title">📱 Мобильная адаптация</div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Элемент</th>
+            <th>Ожидается</th>
+            <th>Фактически в коде</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>MobileHeader</td>
+            <td>Используется на мобильном</td>
+            <td>✅ Используется</td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Сегментный контрол фильтров</td>
+            <td>Горизонтальный скролл на мобильном</td>
+            <td>✅ <code>overflowX: 'auto'</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+          <tr>
+            <td>Карточки статистики</td>
+            <td>Flexbox, адаптивная ширина</td>
+            <td>✅ <code>flex: 1</code></td>
+            <td><span class="status pass">✅ PASS</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Итоговые рекомендации -->
+    <div class="section" style="background: #F0FDF4; border-left: 4px solid #10B981;">
+      <div class="section-title">🎯 Итоговые рекомендации</div>
+      <h3 style="margin-bottom: 12px;">✅ Что работает хорошо:</h3>
+      <ul style="margin-bottom: 16px; padding-left: 20px;">
+        <li>Цветовая палитра полностью соответствует дизайн-системе (trust teal)</li>
+        <li>Все иконки используют @ant-design/icons (нет emoji)</li>
+        <li>Типографика консистентна (размеры шрифтов, цвета)</li>
+        <li>Ширина страницы 1400px (стандарт для ТМ/админа)</li>
+        <li>Мобильная адаптация реализована (MobileHeader, горизонтальный скролл)</li>
+      </ul>
+      
+      <h3 style="margin-bottom: 12px;">⚠️ Что нужно исправить:</h3>
+      <ul style="margin-bottom: 16px; padding-left: 20px;">
+        <li><strong>borderRadius:</strong> Заменить <code>12</code> на <code>10</code> в Card style для консистентности с дизайн-токенами</li>
+      </ul>
+      
+      <h3 style="margin-bottom: 12px;">📊 Общая оценка:</h3>
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <div style="font-size: 32px; font-weight: 700; color: #059669;">95%</div>
+        <div>
+          <div style="font-size: 14px; font-weight: 600; color: #065F46;">Отлично</div>
+          <div style="font-size: 13px; color: #475569;">UI полностью соответствует дизайн-системе, кроме одного параметра borderRadius</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

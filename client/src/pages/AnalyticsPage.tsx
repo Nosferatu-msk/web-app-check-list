@@ -123,28 +123,28 @@ export default function AnalyticsPage() {
 
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
           <Col xs={12} md={6}>
-            <Card size="small" style={{ borderRadius: 12 }}>
+            <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic title="Визитов за период" value={summary.totalVisits} />
             </Card>
           </Col>
           <Col xs={12} md={6}>
-            <Card size="small" style={{ borderRadius: 12 }}>
+            <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic title="Критические" value={summary.criticalCount} valueStyle={{ color: '#DC2626' }} />
             </Card>
           </Col>
           <Col xs={12} md={6}>
-            <Card size="small" style={{ borderRadius: 12 }}>
+            <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic title="Предупреждения" value={summary.warningCount} valueStyle={{ color: '#D97706' }} />
             </Card>
           </Col>
           <Col xs={12} md={6}>
-            <Card size="small" style={{ borderRadius: 12 }}>
+            <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic title="Без отклонений" value={summary.totalVisits - summary.visitsWithAnomalies} valueStyle={{ color: '#059669' }} />
             </Card>
           </Col>
         </Row>
 
-        <Card size="small" style={{ borderRadius: 12, marginBottom: 16, background: '#F8FAFC' }}>
+        <Card size="small" style={{ borderRadius: 10, marginBottom: 16, background: '#F8FAFC' }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <Input
               placeholder="Поиск по инженеру или адресу..."
@@ -161,7 +161,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {loading ? <Spin style={{ display: 'block', margin: '60px auto' }} /> : visits.length === 0 ? (
-          <Card style={{ borderRadius: 12, textAlign: 'center', padding: 40 }}>
+          <Card style={{ borderRadius: 10, textAlign: 'center', padding: 40 }}>
             <Empty description="Нет визитов с отклонениями" />
           </Card>
         ) : (

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Макеты антифрод — фильтры и массовое подтверждение</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 24px; color: #1E293B; }
+    h2 { font-size: 18px; margin: 32px 0 16px; color: #334155; }
+    .variant { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .variant-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #0F766E; }
+    .recommendation { background: #F0FDF4; border-left: 4px solid #10B981; padding: 12px 16px; margin-top: 16px; border-radius: 6px; }
+    .recommendation strong { color: #059669; }
+    
+    /* Фильтры */
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 16px; background: #F8FAFC; border-radius: 12px; margin-bottom: 16px; }
+    .search-input { padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 8px; width: 240px; font-size: 14px; }
+    .select { padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 14px; background: #fff; cursor: pointer; }
+    .segmented-control { display: inline-flex; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; }
+    .segmented-control button { padding: 8px 16px; border: none; background: #fff; cursor: pointer; font-size: 13px; transition: all 0.2s; border-right: 1px solid #E2E8F0; }
+    .segmented-control button:last-child { border-right: none; }
+    .segmented-control button.active { background: #0F766E; color: #fff; }
+    .segmented-control button:hover:not(.active) { background: #F1F5F9; }
+    
+    /* Карточки визитов */
+    .visit-card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 12px; border-left: 3px solid #DC2626; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: box-shadow 0.2s; }
+    .visit-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .visit-card.warning { border-left-color: #D97706; }
+    .visit-date { min-width: 48px; text-align: center; }
+    .visit-date .day { font-size: 18px; font-weight: 600; line-height: 1; }
+    .visit-date .month { font-size: 11px; color: #475569; }
+    .visit-info { flex: 1; }
+    .visit-engineer { font-size: 14px; font-weight: 500; }
+    .visit-address { font-size: 13px; color: #475569; margin-top: 2px; }
+    .visit-code { font-size: 11px; color: #0369A1; background: #E0F2FE; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+    .badges { display: flex; gap: 6px; align-items: center; }
+    .badge { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .badge.critical { background: #FEE2E2; color: #DC2626; }
+    .badge.warning { background: #FEF3C7; color: #92400E; }
+    
+    /* Кнопки действий */
+    .action-button { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; display: inline-flex; align-items: center; gap: 6px; }
+    .action-button.primary { background: #0F766E; color: #fff; }
+    .action-button.primary:hover { background: #0D5D56; }
+    .action-button.secondary { background: #fff; color: #475569; border: 1px solid #E2E8F0; }
+    .action-button.secondary:hover { background: #F8FAFC; }
+    .action-button.warning { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .action-button.warning:hover { background: #FDE68A; }
+    
+    /* Шапка страницы */
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .page-title { font-size: 16px; font-weight: 600; }
+    
+    /* Статистика */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-value { font-size: 24px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: #475569; margin-top: 4px; }
+    .stat-value.critical { color: #DC2626; }
+    .stat-value.warning { color: #D97706; }
+    .stat-value.success { color: #059669; }
+    
+    /* Модальное окно */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: #fff; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; }
+    .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-close { cursor: pointer; font-size: 20px; color: #94A3B8; }
+    .modal-body { margin-bottom: 20px; }
+    .modal-stats { background: #F8FAFC; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .modal-stats div { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .modal-stats div:last-child { margin-bottom: 0; }
+    .modal-warning { background: #FEF3C7; border-left: 3px solid #F59E0B; padding: 12px; border-radius: 6px; font-size: 13px; color: #92400E; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Макеты антифрод — фильтры и массовое подтверждение</h1>
+    
+    <!-- Фильтр по критичности -->
+    <h2>📊 Задача 1: Фильтр по критичности (десктоп)</h2>
+    
+    <!-- Вариант А -->
+    <div class="variant">
+      <div class="variant-title">Вариант А: Сегментный контрол (рекомендуется ✅)</div>
+      <div class="page-header">
+        <div class="page-title">Аналитика визитов</div>
+        <button class="action-button secondary">← Назад</button>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-value">45</div><div class="stat-label">Визитов за период</div></div>
+        <div class="stat-card"><div class="stat-value critical">23</div><div class="stat-label">Критические</div></div>
+        <div class="stat-card"><div class="stat-value warning">47</div><div class="stat-label">Предупреждения</div></div>
+        <div class="stat-card"><div class="stat-value success">22</div><div class="stat-label">Без отклонений</div></div>
+      </div>
+      <div class="filters">
+        <input type="text" class="search-input" placeholder="Поиск по инженеру или адресу...">
+        <select class="select">
+          <option>Последние 7 дней</option>
+          <option selected>Последние 30 дней</option>
+          <option>Последние 90 дней</option>
+        </select>
+        <div class="segmented-control">
+          <button class="active">Все</button>
+          <button>Критические</button>
+          <button>Предупреждения</button>
+        </div>
+      </div>
+      <div class="visit-card">
+        <div class="visit-date"><div class="day">15</div><div class="month">окт</div></div>
+        <div class="visit-info">
+          <div class="visit-engineer">Петров С.В.</div>
+          <div class="visit-address">г Москва, пр-кт Ленинградский, 34</div>
+          <span class="visit-code">V-151026-001</span>
+        </div>
+        <div class="badges">
+          <span class="badge critical">● 3</span>
+          <span class="badge warning">● 5</span>
+        </div>
+        <span style="color: #94A3B8; font-size: 16px;">›</span>
+      </div>
+      <div class="visit-card warning">
+        <div class="visit-date"><div class="day">14</div><div class="month">окт</div></div>
+        <div class="visit-info">
+          <div class="visit-engineer">Иванов И.И.</div>
+          <div class="visit-address">г Москва, ул Тверская, 12</div>
+          <span class="visit-code">V-141026-002</span>
+        </div>
+        <div class="badges">
+          <span class="badge warning">● 2</span>
+        </div>
+        <span style="color: #94A3B8; font-size: 16px;">›</span>
+      </div>
+      <div class="recommendation">
+        <strong>✅ Рекомендуется:</strong> Консистентно с мобильным интерфейсом, компактно, интуитивно понятно. Переключение между фильтрами одним кликом.
+      </div>
+    </div>
+    
+    <!-- Массовое подтверждение -->
+    <h2>✅ Задача 2: Массовое подтверждение предупреждений</h2>
+    
+    <!-- Вариант Б -->
+    <div class="variant">
+      <div class="variant-title">Вариант Б: Кнопка со счетчиком (рекомендуется ✅)</div>
+      <div class="page-header">
+        <div class="page-title">Аналитика визитов</div>
+        <button class="action-button warning" onclick="document.getElementById('modal1').classList.remove('hidden')">
+          ⚠ Подтвердить все предупреждения (12 визитов, 47 отклонений)
+        </button>
+      </div>
+      <div class="filters">
+        <input type="text" class="search-input" placeholder="Поиск по инженеру или адресу...">
+        <select class="select">
+          <option>Последние 7 дней</option>
+          <option selected>Последние 30 дней</option>
+          <option>Последние 90 дней</option>
+        </select>
+        <div class="segmented-control">
+          <button class="active">Все</button>
+          <button>Критические</button>
+          <button>Предупреждения</button>
+        </div>
+      </div>
+      <div class="visit-card">
+        <div class="visit-date"><div class="day">15</div><div class="month">окт</div></div>
+        <div class="visit-info">
+          <div class="visit-engineer">Петров С.В.</div>
+          <div class="visit-address">г Москва, пр-кт Ленинградский, 34</div>
+          <span class="visit-code">V-151026-001</span>
+        </div>
+        <div class="badges">
+          <span class="badge critical">● 3</span>
+          <span class="badge warning">● 5</span>
+        </div>
+        <span style="color: #94A3B8; font-size: 16px;">›</span>
+      </div>
+      <div class="visit-card warning">
+        <div class="visit-date"><div class="day">14</div><div class="month">окт</div></div>
+        <div class="visit-info">
+          <div class="visit-engineer">Иванов И.И.</div>
+          <div class="visit-address">г Москва, ул Тверская, 12</div>
+          <span class="visit-code">V-141026-002</span>
+        </div>
+        <div class="badges">
+          <span class="badge warning">● 2</span>
+        </div>
+        <span style="color: #94A3B8; font-size: 16px;">›</span>
+      </div>
+      <div class="recommendation">
+        <strong>✅ Рекомендуется:</strong> Кнопка всегда видна, показывает масштаб действия (количество визитов и отклонений). Перед подтверждением — модальное окно с деталями.
+      </div>
+    </div>
+    
+    <!-- Модальное окно подтверждения -->
+    <div id="modal1" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-title">
+          Подтверждение предупреждений
+          <span class="modal-close" onclick="document.getElementById('modal1').classList.add('hidden')">×</span>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 16px;">Вы собираетесь подтвердить все предупреждения в следующих визитах:</p>
+          <div class="modal-stats">
+            <div><span>Визитов:</span> <strong>12</strong></div>
+            <div><span>Отклонений:</span> <strong>47</strong></div>
+            <div><span>Критические:</span> <strong style="color: #059669;">0 (не будут затронуты)</strong></div>
+          </div>
+          <div class="modal-warning">
+            ⚠ Это действие нельзя отменить. Все предупреждения в выбранных визитах будут подтверждены.
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="action-button secondary" onclick="document.getElementById('modal1').classList.add('hidden')">Отмена</button>
+          <button class="action-button primary">Подтвердить</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Сравнение вариантов -->
+    <h2>📊 Сравнение вариантов</h2>
+    <div class="variant">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #F1F5F9;">
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E2E8F0;">Критерий</th>
+            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">Вариант А</th>
+            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">Вариант Б</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 12px; border-bottom: 1px solid #E2E8F0;">Компактность</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅ Отлично</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅ Хорошо</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; border-bottom: 1px solid #E2E8F0;">Консистентность с мобильным</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅ Да</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">—</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; border-bottom: 1px solid #E2E8F0;">Интуитивность</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅ Отлично</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅ Хорошо</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; border-bottom: 1px solid #E2E8F0;">Безопасность</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">—</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #E2E8F0;">✅ Хорошо (модалка)</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px;">Информативность</td>
+            <td style="padding: 12px; text-align: center;">—</td>
+            <td style="padding: 12px; text-align: center;">✅ Счетчик</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Итоговая рекомендация -->
+    <div class="variant" style="background: #F0FDF4; border-left: 4px solid #10B981;">
+      <div class="variant-title">🎯 Итоговая рекомендация</div>
+      <p style="margin-bottom: 12px;"><strong>Фильтр по критичности:</strong> Вариант А (сегментный контрол)</p>
+      <p style="margin-bottom: 12px;"><strong>Массовое подтверждение:</strong> Вариант Б (кнопка со счетчиком)</p>
+      <p style="font-size: 14px; color: #475569;">Оба решения консистентны с существующим UI, интуитивно понятны и безопасны.</p>
+    </div>
+  </div>
+</body>
+</html>
