@@ -157,6 +157,27 @@ export default function AnalyticsPage() {
             <Select value={period} onChange={v => { setPeriod(v); setPage(1); }} style={{ width: 180 }}
               options={[{ value: '7d', label: 'Последние 7 дней' }, { value: '30d', label: 'Последние 30 дней' }, { value: '90d', label: 'Последние 90 дней' }]}
             />
+            <div style={{ display: 'inline-flex', border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden' }}>
+              {[{ l: 'Все', v: '' }, { l: 'Критические', v: 'critical' }, { l: 'Предупреждения', v: 'warning' }].map(f => (
+                <button
+                  key={f.v}
+                  onClick={() => { setSeverityFilter(f.v); setPage(1); }}
+                  style={{
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRight: '1px solid #E2E8F0',
+                    background: severityFilter === f.v ? '#0F766E' : '#fff',
+                    color: severityFilter === f.v ? '#fff' : '#475569',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {f.l}
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
 
