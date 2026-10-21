@@ -1,14 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Input, Select, Pagination, Spin, Empty, Button } from 'antd';
+import { Card, Row, Col, Statistic, Input, Select, Pagination, Spin, Empty, Button, App } from 'antd';
 import { BarChartOutlined, WarningOutlined, CheckCircleOutlined, SearchOutlined, DownloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileHeader from '../components/MobileHeader';
+import ConfirmWarningsModal from '../components/ConfirmWarningsModal';
 import type { AnalyticsVisitSummary, AnalyticsSummary } from '@shared/types';
 
 export default function AnalyticsPage() {
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [visits, setVisits] = useState<AnalyticsVisitSummary[]>([]);
@@ -18,6 +20,8 @@ export default function AnalyticsPage() {
   const [search, setSearch] = useState('');
   const [period, setPeriod] = useState('30d');
   const [severityFilter, setSeverityFilter] = useState('');
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -53,6 +57,55 @@ export default function AnalyticsPage() {
     const a = document.createElement('a');
     a.href = url; a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`;
     a.click(); URL.revokeObjectURL(url);
+  };
+
+  const handleConfirmWarnings = async () => {
+    setConfirmLoading(true);
+    try {
+      // Загружаем все визиты с предупреждениями (без критических) за период
+      const params = new URLSearchParams({ page: '1', pageSize: '1000', period, severity: 'warning' });
+      const res = await api.getAnalyticsVisits(params.toString());
+      const warningVisits = res.data || [];
+      
+      // Фильтруем только визиты без критических
+      const visitsWithoutCritical = warningVisits.filter((v: AnalyticsVisitSummary) => v.anomalyCount.critical === 0);
+      
+      if (visitsWithoutCritical.length === 0) {
+        message.info('Нет визитов для подтверждения');
+        setConfirmModalOpen(false);
+        return;
+      }
+      
+      // Собираем ID всех предупреждений из этих визитов
+      const anomalyIds: string[] = [];
+      for (const visit of visitsWithoutCritical) {
+        // Загружаем детали визита для получения ID аномалий
+        const details = await api.getAnalyticsVisit(visit.visitId);
+        for (const anomaly of details.anomalies) {
+          if (anomaly.severity === 'warning' && anomaly.status === 'open' && anomaly.photo) {
+            anomalyIds.push(anomaly.id);
+          }
+        }
+      }
+      
+      if (anomalyIds.length === 0) {
+        message.info('Нет предупреждений для подтверждения');
+        setConfirmModalOpen(false);
+        return;
+      }
+      
+      // Массовое подтверждение через batch endpoint
+      await api.batchUpdateAnomalies(anomalyIds, 'confirmed');
+      
+      message.success(`Подтверждено ${anomalyIds.length} предупреждений в ${visitsWithoutCritical.length} визитах`);
+      setConfirmModalOpen(false);
+      loadData(); // Перезагружаем данные
+    } catch (err) {
+      console.error(err);
+      message.error('Ошибка при подтверждении');
+    } finally {
+      setConfirmLoading(false);
+    }
   };
 
   if (isMobile) {
@@ -118,7 +171,23 @@ export default function AnalyticsPage() {
     <div className="page-container" style={{ maxWidth: 1400, background: '#F8FAFC', minHeight: '100vh' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div className="page-title" style={{ margin: 0, fontSize: 16 }}>Аналитика визитов</div>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {severityFilter === 'warning' && summary.warningCount > 0 && (
+              <Button
+                icon={<WarningOutlined />}
+                onClick={() => setConfirmModalOpen(true)}
+                style={{
+                  background: '#FEF3C7',
+                  color: '#92400E',
+                  border: '1px solid #FDE68A',
+                  borderRadius: 10,
+                }}
+              >
+                Подтвердить все предупреждения ({summary.warningCount})
+              </Button>
+            )}
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Назад</Button>
+          </div>
         </div>
 
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
@@ -223,6 +292,15 @@ export default function AnalyticsPage() {
         <Button icon={<DownloadOutlined />} onClick={handleExport} style={{ marginBottom: 24 }}>
           Экспорт в CSV
         </Button>
+        
+        <ConfirmWarningsModal
+          open={confirmModalOpen}
+          visitsCount={visits.filter(v => v.anomalyCount.critical === 0 && v.anomalyCount.warning > 0).length}
+          anomaliesCount={summary.warningCount}
+          onConfirm={handleConfirmWarnings}
+          onCancel={() => setConfirmModalOpen(false)}
+          loading={confirmLoading}
+        />
     </div>
   );
 }
