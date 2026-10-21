@@ -75,20 +75,19 @@ export async function getAnalyticsVisits(params: {
 
   let visitIdsWithAnomalies = visitsWithAnomalies.map(v => v.visitId);
 
-  // Специальная обработка для severity=warning: исключаем визиты с открытыми критическими
+  // Специальная обработка для severity=warning: исключаем визиты с любыми критическими
   if (severity === 'warning') {
-    // Находим все визиты с открытыми критическими отклонениями
-    const visitsWithOpenCritical = await prisma.visitAnomaly.groupBy({
+    // Находим все визиты с критическими отклонениями (любой статус)
+    const visitsWithCritical = await prisma.visitAnomaly.groupBy({
       by: ['visitId'],
       where: {
         severity: 'critical',
-        status: 'open',
         photoId: { not: null },
         visitId: { in: visitIdsWithAnomalies },
       },
     });
-    const criticalVisitIds = new Set(visitsWithOpenCritical.map(v => v.visitId));
-    // Исключаем визиты с открытыми критическими
+    const criticalVisitIds = new Set(visitsWithCritical.map(v => v.visitId));
+    // Исключаем визиты с любыми критическими
     visitIdsWithAnomalies = visitIdsWithAnomalies.filter(id => !criticalVisitIds.has(id));
   }
 
