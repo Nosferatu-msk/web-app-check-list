@@ -67,8 +67,17 @@ export default function AnalyticsPage() {
       const res = await api.getAnalyticsVisits(params.toString());
       const warningVisits = res.data || [];
       
+      console.log('[Analytics] Загружено визитов с warning:', warningVisits.length);
+      console.log('[Analytics] Примеры визитов:', warningVisits.slice(0, 3).map((v: AnalyticsVisitSummary) => ({
+        id: v.visitId,
+        critical: v.anomalyCount.critical,
+        warning: v.anomalyCount.warning,
+      })));
+
       // Фильтруем только визиты без критических
       const visitsWithoutCritical = warningVisits.filter((v: AnalyticsVisitSummary) => v.anomalyCount.critical === 0);
+      
+      console.log('[Analytics] Визитов без критических:', visitsWithoutCritical.length);
       
       if (visitsWithoutCritical.length === 0) {
         message.info('Нет визитов для подтверждения');
