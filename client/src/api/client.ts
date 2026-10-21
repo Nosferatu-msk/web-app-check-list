@@ -222,6 +222,8 @@ export const api = {
     request<any>(`/analytics/anomalies/${anomalyId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   batchUpdateAnomalies: (anomalyIds: string[], status: string) =>
     request<any>('/analytics/anomalies/batch', { method: 'PATCH', body: JSON.stringify({ anomalyIds, status }) }),
+  confirmWarningsBatch: (period?: string) =>
+    request<any>('/analytics/confirm-warnings', { method: 'POST', body: JSON.stringify({ period }) }),
   getPhotoDetail: (photoId: string) =>
     request<any>(`/photos/${photoId}/detail`),
   getPhotoDuplicates: (photoId: string) =>

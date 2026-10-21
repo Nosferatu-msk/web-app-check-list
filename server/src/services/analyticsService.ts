@@ -4,6 +4,94 @@ import path from 'path';
 import { getTeamEngineerIds } from '../utils/tmTeam.js';
 
 /**
+ * Массовое подтверждение всех предупреждений в визитах без критических отклонений.
+ * Возвращает статистику: количество подтвержденных отклонений и визитов.
+ */
+export async function confirmWarningsBatch(params: {
+  userId: string;
+  role: string;
+  period?: string;
+}) {
+  const { userId, role, period } = params;
+
+  // Определяем список engineerId для ТМ
+  let allowedEngineerIds: string[] | null = null;
+  if (role === 'tm') {
+    allowedEngineerIds = await getTeamEngineerIds(userId);
+  }
+
+  // Период
+  let dateFrom: Date | null = null;
+  if (period) {
+    const now = new Date();
+    if (period === '7d') dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    else if (period === '30d') dateFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    else if (period === '90d') dateFrom = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  }
+
+  // Базовый фильтр для визитов
+  const visitWhere: any = {
+    isDeleted: false,
+    ...(dateFrom ? { dateStart: { gte: dateFrom } } : {}),
+    ...(allowedEngineerIds ? { userId: { in: allowedEngineerIds } } : {}),
+  };
+
+  // Находим все визиты с warning отклонениями
+  const visitsWithWarnings = await prisma.visitAnomaly.groupBy({
+    by: ['visitId'],
+    where: {
+      severity: 'warning',
+      status: 'open',
+      photoId: { not: null },
+      visit: visitWhere,
+    },
+  });
+
+  let visitIds = visitsWithWarnings.map(v => v.visitId);
+
+  // Исключаем визиты с любыми critical отклонениями
+  const visitsWithCritical = await prisma.visitAnomaly.groupBy({
+    by: ['visitId'],
+    where: {
+      severity: 'critical',
+      photoId: { not: null },
+      visitId: { in: visitIds },
+    },
+  });
+  const criticalVisitIds = new Set(visitsWithCritical.map(v => v.visitId));
+  visitIds = visitIds.filter(id => !criticalVisitIds.has(id));
+
+  if (visitIds.length === 0) {
+    return { confirmed: 0, visitsAffected: 0 };
+  }
+
+  // Находим все open warning отклонения в этих визитах
+  const warningsToConfirm = await prisma.visitAnomaly.findMany({
+    where: {
+      visitId: { in: visitIds },
+      severity: 'warning',
+      status: 'open',
+      photoId: { not: null },
+    },
+    select: { id: true },
+  });
+
+  const anomalyIds = warningsToConfirm.map(a => a.id);
+
+  if (anomalyIds.length === 0) {
+    return { confirmed: 0, visitsAffected: 0 };
+  }
+
+  // Массовое подтверждение
+  const result = await prisma.visitAnomaly.updateMany({
+    where: { id: { in: anomalyIds } },
+    data: { status: 'confirmed', reviewedBy: userId, reviewedAt: new Date() },
+  });
+
+  return { confirmed: result.count, visitsAffected: visitIds.length };
+}
+
+/**
  * Получить список визитов с отклонениями.
  * ТМ видит только своих инженеров, админ — все.
  */

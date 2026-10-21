@@ -62,51 +62,15 @@ export default function AnalyticsPage() {
   const handleConfirmWarnings = async () => {
     setConfirmLoading(true);
     try {
-      // Загружаем все визиты с предупреждениями (без критических) за период
-      const params = new URLSearchParams({ page: '1', pageSize: '1000', period, severity: 'warning' });
-      const res = await api.getAnalyticsVisits(params.toString());
-      const warningVisits = res.data || [];
+      // Массовое подтверждение через серверный endpoint
+      const result = await api.confirmWarningsBatch(period);
       
-      console.log('[Analytics] Загружено визитов с warning:', warningVisits.length);
-      console.log('[Analytics] Примеры визитов:', warningVisits.slice(0, 3).map((v: AnalyticsVisitSummary) => ({
-        id: v.visitId,
-        critical: v.anomalyCount.critical,
-        warning: v.anomalyCount.warning,
-      })));
-
-      // Фильтруем только визиты без критических
-      const visitsWithoutCritical = warningVisits.filter((v: AnalyticsVisitSummary) => v.anomalyCount.critical === 0);
-      
-      console.log('[Analytics] Визитов без критических:', visitsWithoutCritical.length);
-      
-      if (visitsWithoutCritical.length === 0) {
-        message.info('Нет визитов для подтверждения');
-        setConfirmModalOpen(false);
-        return;
-      }
-      
-      // Собираем ID всех предупреждений из этих визитов
-      const anomalyIds: string[] = [];
-      for (const visit of visitsWithoutCritical) {
-        // Загружаем детали визита для получения ID аномалий
-        const details = await api.getAnalyticsVisit(visit.visitId);
-        for (const anomaly of details.anomalies) {
-          if (anomaly.severity === 'warning' && anomaly.status === 'open' && anomaly.photo) {
-            anomalyIds.push(anomaly.id);
-          }
-        }
-      }
-      
-      if (anomalyIds.length === 0) {
+      if (result.confirmed === 0) {
         message.info('Нет предупреждений для подтверждения');
-        setConfirmModalOpen(false);
-        return;
+      } else {
+        message.success(`Подтверждено ${result.confirmed} предупреждений в ${result.visitsAffected} визитах`);
       }
       
-      // Массовое подтверждение через batch endpoint
-      await api.batchUpdateAnomalies(anomalyIds, 'confirmed');
-      
-      message.success(`Подтверждено ${anomalyIds.length} предупреждений в ${visitsWithoutCritical.length} визитах`);
       setConfirmModalOpen(false);
       loadData(); // Перезагружаем данные
     } catch (err) {

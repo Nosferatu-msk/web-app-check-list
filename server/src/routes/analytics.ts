@@ -8,6 +8,7 @@ import {
   reshootVisit,
   confirmVisit,
   updateAnomalyStatus,
+  confirmWarningsBatch,
 } from '../services/analyticsService.js';
 
 const router = Router();
@@ -116,6 +117,34 @@ router.patch('/anomalies/batch', async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error('[analytics] batch update error:', err);
     res.status(500).json({ error: 'Ошибка обновления' });
+  }
+});
+
+// POST /api/analytics/confirm-warnings — массовое подтверждение всех предупреждений без критических
+router.post('/confirm-warnings', async (req: AuthRequest, res: Response) => {
+  try {
+    const { period } = req.body;
+    
+    const result = await confirmWarningsBatch({
+      userId: req.userId!,
+      role: req.userRole!,
+      period: period as string,
+    });
+
+    await logAudit({
+      userId: req.userId || null,
+      action: 'batch_confirm_warnings',
+      entityType: 'visit_anomaly',
+      entityId: 'batch',
+      newValue: { confirmed: result.confirmed, visitsAffected: result.visitsAffected, period },
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('[analytics] confirm warnings error:', err);
+    res.status(500).json({ error: 'Ошибка подтверждения' });
   }
 });
 
