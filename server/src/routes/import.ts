@@ -13,6 +13,12 @@ import { generateSerialNumber, isMeterEquipment } from '../utils/serialNumber.js
 const router = Router();
 router.use(authMiddleware, adminOnly);
 
+// Логирование всех запросов к import API
+router.use((req, res, next) => {
+  console.log(`[import] ${req.method} ${req.path}`, req.query);
+  next();
+});
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
