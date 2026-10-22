@@ -545,6 +545,10 @@ router.post('/tm-engineers', upload.single('file'), async (req: AuthRequest, res
 
 // ─── OBJECT EQUIPMENT ────────────────────────────────────────
 router.post('/object-equipment', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  console.log(`[import/object-equipment] === ПОЛУЧЕН ЗАПРОС ===`);
+  console.log(`  Query:`, req.query);
+  console.log(`  File:`, req.file?.originalname, `(${req.file?.size} bytes)`);
+  
   try {
     const { rows, fileName } = await parseUploadedFile(req);
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
