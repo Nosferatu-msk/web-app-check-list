@@ -75,6 +75,7 @@ async function parseExcel(buffer: Buffer): Promise<CsvRow[]> {
     const cells = row.values as any[];
     if (rowNumber === 1) {
       headers = cells.slice(1).map((v: any) => String(v || '').trim());
+      console.log(`[parseExcel] Заголовки колонок:`, headers);
       return;
     }
     const values = cells.slice(1);
@@ -91,7 +92,12 @@ async function parseExcel(buffer: Buffer): Promise<CsvRow[]> {
       obj[h] = val;
       if (val) hasData = true;
     });
-    if (hasData) rows.push(obj);
+    if (hasData) {
+      if (rows.length === 0) {
+        console.log(`[parseExcel] Первая строка данных:`, obj);
+      }
+      rows.push(obj);
+    }
   });
 
   return rows;
@@ -544,6 +550,10 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
     const result: ImportResult = { total: rows.length, success: 0, duplicates: 0, errors: [] };
     const dupRows: number[] = [];
 
+    console.log(`[import/object-equipment] === НАЧАЛО ИМПОРТА ===`);
+    console.log(`[import/object-equipment] Файл: ${fileName}`);
+    console.log(`[import/object-equipment] Всего строк: ${rows.length}`);
+
     // Предзагрузка справочников для оптимизации
     const [addresses, equipmentTypes, roomTypes, existingEquipment] = await Promise.all([
       prisma.address.findMany({ select: { id: true, objectCode: true } }),
@@ -553,6 +563,12 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         select: { addressId: true, equipmentTypeCode: true, serialNumber: true, locationDescription: true },
       }),
     ]);
+
+    console.log(`[import/object-equipment] Загружено справочников:`);
+    console.log(`  - Адресов: ${addresses.length}`);
+    console.log(`  - Типов оборудования: ${equipmentTypes.length}`);
+    console.log(`  - Типов помещений: ${roomTypes.length}`);
+    console.log(`  - Существующего оборудования: ${existingEquipment.length}`);
 
     // Создаём Map для быстрого поиска
     const addressByCode = new Map(addresses.map(a => [a.objectCode, a.id]));
@@ -583,24 +599,44 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
+      
+      // Логирование всех доступных ключей в строке
+      if (i === 0) {
+        console.log(`\n[import/object-equipment] Ключи в первой строке:`, Object.keys(r));
+        console.log(`  Значения:`, r);
+      }
+      
       const objectCode = r.object_code || r.objectCode || r['код объекта'];
       const equipmentType = r.equipment_type || r.equipmentType || r['тип оборудования'];
       const roomType = (r.room_type || r.roomType || r['тип помещения'] || '').trim() || null;
 
+      // Логирование каждой строки для диагностики
+      console.log(`\n[import/object-equipment] Строка ${i + 2}:`);
+      console.log(`  Распознано: objectCode="${objectCode}", equipmentType="${equipmentType}", roomType="${roomType}"`);
+
       if (!objectCode || !equipmentType) {
-        result.errors.push({ row: i + 2, message: 'Не заполнены object_code или equipment_type' });
+        const errorMsg = 'Не заполнены object_code или equipment_type';
+        console.log(`  ❌ ОШИБКА: ${errorMsg}`);
+        console.log(`  objectCode: "${objectCode}" (${!objectCode ? 'ПУСТО' : 'есть'})`);
+        console.log(`  equipmentType: "${equipmentType}" (${!equipmentType ? 'ПУСТО' : 'есть'})`);
+        result.errors.push({ row: i + 2, message: errorMsg });
         continue;
       }
 
       const addressId = addressByCode.get(objectCode);
       if (!addressId) {
-        result.errors.push({ row: i + 2, message: `Адрес с object_code "${objectCode}" не найден` });
+        const errorMsg = `Адрес с object_code "${objectCode}" не найден`;
+        console.log(`  ❌ ОШИБКА: ${errorMsg}`);
+        result.errors.push({ row: i + 2, message: errorMsg });
         continue;
       }
 
       const eqTypeCode = eqTypeByCodeOrName.get(equipmentType.toUpperCase());
       if (!eqTypeCode) {
-        result.errors.push({ row: i + 2, message: `Тип оборудования "${equipmentType}" не найден` });
+        const errorMsg = `Тип оборудования "${equipmentType}" не найден`;
+        console.log(`  ❌ ОШИБКА: ${errorMsg}`);
+        console.log(`  Доступные типы:`, Array.from(eqTypeByCodeOrName.keys()).slice(0, 10).join(', '), '...');
+        result.errors.push({ row: i + 2, message: errorMsg });
         continue;
       }
 
@@ -608,7 +644,10 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       if (roomType && roomType.toUpperCase() !== 'ОБЪЕКТ') {
         const rtCode = roomTypeByCodeOrName.get(roomType.toUpperCase());
         if (!rtCode) {
-          result.errors.push({ row: i + 2, message: `Тип помещения "${roomType}" не найден` });
+          const errorMsg = `Тип помещения "${roomType}" не найден`;
+          console.log(`  ❌ ОШИБКА: ${errorMsg}`);
+          console.log(`  Доступные типы помещений:`, Array.from(roomTypeByCodeOrName.keys()).slice(0, 10).join(', '), '...');
+          result.errors.push({ row: i + 2, message: errorMsg });
           continue;
         }
         roomTypeCode = rtCode;
@@ -617,10 +656,14 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       let serialNumber = r.serial_number || r.serialNumber || r['серийный номер'] || null;
       const locationDescription = r.location_description || r.locationDescription || r['местоположение'] || null;
 
+      console.log(`  serialNumber: "${serialNumber}", locationDescription: "${locationDescription}"`);
+
       // Валидация serialNumber для счётчиков
       if (isMeterEquipment(eqTypeCode)) {
         if (!serialNumber || serialNumber.trim() === '') {
-          result.errors.push({ row: i + 2, message: 'Серийный номер обязателен для приборов учёта' });
+          const errorMsg = 'Серийный номер обязателен для приборов учёта';
+          console.log(`  ❌ ОШИБКА: ${errorMsg} (тип: ${eqTypeCode})`);
+          result.errors.push({ row: i + 2, message: errorMsg });
           continue;
         }
       } else if (!serialNumber || serialNumber.trim() === '') {
@@ -628,6 +671,7 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         const generatedSN = await generateSerialNumber(addressId, eqTypeCode);
         if (generatedSN) {
           serialNumber = generatedSN;
+          console.log(`  ℹ️ Автогенерация serialNumber: ${generatedSN}`);
         }
       }
 
@@ -641,6 +685,7 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       const isDuplicateBySerial = keyBySerial && existingKeys.has(`SN|${keyBySerial}`);
 
       if (isDuplicateBySerial) {
+        console.log(`  ⚠️ ДУБЛИКАТ: оборудование с типом "${eqTypeCode}" и серией "${serialNumber}" уже существует`);
         result.duplicates++;
         dupRows.push(i + 2);
         continue;
@@ -661,9 +706,11 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
           },
         });
 
+        console.log(`  ✅ УСПЕХ: создано оборудование ${eqTypeCode} (SN: ${serialNumber}) для ${objectCode}`);
+
         // Добавляем в Set для проверки дубликатов внутри файла
         if (keyBySerial) existingKeys.add(`SN|${keyBySerial}`);
-        
+
         // Также добавляем в Map для отслеживания серийных номеров по типу оборудования
         if (serialNumber) {
           if (!existingSerialsByType.has(eqTypeCode)) {
@@ -676,9 +723,11 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
       } catch (err: any) {
         // Если всё же дубликат (unique constraint) — пропускаем
         if (err.code === 'P2002') {
+          console.log(`  ⚠️ ДУБЛИКАТ (P2002): оборудование с типом "${eqTypeCode}" и серией "${serialNumber}" уже существует в БД`);
           result.duplicates++;
           dupRows.push(i + 2);
         } else {
+          console.error(`  ❌ ОШИБКА БД:`, err.message);
           throw err;
         }
       }
@@ -693,12 +742,30 @@ router.post('/object-equipment', upload.single('file'), async (req: AuthRequest,
         duplicates: dupRows.map(row => ({ row, value: `${rows[row - 2]?.object_code || rows[row - 2]?.objectCode || ''} / ${rows[row - 2]?.equipment_type || rows[row - 2]?.equipmentType || ''}` })),
         errors: result.errors,
       };
+      console.log(`\n[import/object-equipment] === РЕЗУЛЬТАТ ВАЛИДАЦИИ ===`);
+      console.log(`  Всего строк: ${vr.totalRows}`);
+      console.log(`  Валидных: ${vr.validRows}`);
+      console.log(`  Дубликатов: ${vr.duplicateRows}`);
+      console.log(`  Ошибок: ${vr.errorRows}`);
+      if (vr.errors.length > 0) {
+        console.log(`  Список ошибок:`, JSON.stringify(vr.errors, null, 2));
+      }
       return res.json(vr);
     }
 
     await prisma.importLog.create({
       data: { userId: req.userId!, entityType: 'object_equipment', fileName, totalRows: result.total, successRows: result.success, duplicateRows: result.duplicates, errorRows: result.errors.length, errors: result.errors.length ? result.errors : undefined },
     });
+    
+    console.log(`\n[import/object-equipment] === ИМПОРТ ЗАВЕРШЁН ===`);
+    console.log(`  Всего строк: ${result.total}`);
+    console.log(`  Успешно: ${result.success}`);
+    console.log(`  Дубликатов: ${result.duplicates}`);
+    console.log(`  Ошибок: ${result.errors.length}`);
+    if (result.errors.length > 0) {
+      console.log(`  Список ошибок:`, JSON.stringify(result.errors, null, 2));
+    }
+    
     res.json(result);
   } catch (err: any) {
     console.error('[import/object-equipment] Error:', err.message, err.stack);
