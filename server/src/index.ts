@@ -22,6 +22,7 @@ import syncRoutes from './routes/sync.js';
 import analyticsRoutes from './routes/analytics.js';
 import { startCronJobs } from './services/cron.js';
 import { apiVersionMiddleware, getApiVersion } from './middleware/apiVersion.js';
+import { maintenanceMiddleware } from './middleware/maintenance.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -33,6 +34,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // API versioning middleware
 app.use(apiVersionMiddleware);
+
+// Maintenance mode middleware (blocks non-admin users when MAINTENANCE_MODE=true)
+app.use(maintenanceMiddleware);
 
 // Static files for uploads
 app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_DIR || './uploads')));
