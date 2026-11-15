@@ -57,6 +57,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   checkAuth: async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
+      // Проверяем, не в режиме ли обслуживания (даже для неавторизованных)
+      try {
+        await fetch('/api/health');
+      } catch {
+        // Сетевая ошибка — не maintenance
+      }
       set({ isLoading: false, isAuthenticated: false });
       return;
     }
@@ -65,7 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user, isAuthenticated: true, isLoading: false, isMaintenance: false });
     } catch (error: any) {
       // Проверяем, что это ошибка 503 (maintenance mode)
-      if (error?.status === 503 || error?.message?.includes('503')) {
+      if (error?.status === 503 || error?.message?.includes('503') || error?.message?.includes('обслуживание')) {
         set({ isMaintenance: true, isLoading: false, isAuthenticated: false });
         return;
       }

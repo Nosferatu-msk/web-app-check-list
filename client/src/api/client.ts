@@ -72,10 +72,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (!res.ok) {
     let errorMessage: string;
-    
+
     // Пытаемся получить сообщение из JSON-ответа
     const body = await res.json().catch(() => null);
-    
+
     if (body && typeof body === 'object' && body.error) {
       // Сервер вернул JSON с сообщением об ошибке
       errorMessage = typeof body.error === 'string' ? body.error : JSON.stringify(body.error);
@@ -89,11 +89,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         404: 'Ресурс не найден',
         500: 'Внутренняя ошибка сервера',
         502: 'Проблема с сервером',
-        503: 'Сервер временно недоступен',
+        503: 'Техническое обслуживание',
       };
       errorMessage = statusMessages[res.status] || `Ошибка ${res.status}`;
     }
-    
+
+    // При 503 ошибке устанавливаем флаг обслуживания
+    if (res.status === 503) {
+      localStorage.setItem('maintenanceMode', 'true');
+    }
+
     throw new ApiError(errorMessage, res.status);
   }
   return res.json();

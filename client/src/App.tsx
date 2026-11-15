@@ -122,8 +122,11 @@ export default function App() {
 
   useEffect(() => { checkAuth(); }, []);
 
+  // Проверяем флаг обслуживания из localStorage (устанавливается при 503 ошибке)
+  const isMaintenanceFromStorage = localStorage.getItem('maintenanceMode') === 'true';
+
   // Показываем страницу обслуживания для не-админов
-  if (isMaintenance) {
+  if (isMaintenance || isMaintenanceFromStorage) {
     return <MaintenancePage />;
   }
 
