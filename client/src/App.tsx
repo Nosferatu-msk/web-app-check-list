@@ -46,6 +46,7 @@ import MtrAdminWorkTypes from './pages/mtr/MtrAdminWorkTypes';
 import MtrAdminAssignments from './pages/mtr/MtrAdminAssignments';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AnalyticsDetailPage from './pages/AnalyticsDetailPage';
+import MaintenancePage from './components/MaintenancePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -117,9 +118,18 @@ function SmartRedirect() {
 }
 
 export default function App() {
-  const { checkAuth } = useAuthStore();
+  const { checkAuth, isMaintenance, isLoading } = useAuthStore();
 
   useEffect(() => { checkAuth(); }, []);
+
+  // Показываем страницу обслуживания для не-админов
+  if (isMaintenance) {
+    return <MaintenancePage />;
+  }
+
+  if (isLoading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  }
 
   return (
     <Routes>

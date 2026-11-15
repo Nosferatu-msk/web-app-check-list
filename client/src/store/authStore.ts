@@ -18,6 +18,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isMaintenance: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
@@ -28,13 +29,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  isMaintenance: false,
 
   login: async (email: string, password: string) => {
     const normalizedEmail = email.trim().toLowerCase();
-    const data = await api.login(normalizedEmail, password);
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    set({ user: data.user, isAuthenticated: true, isLoading: false });
+    try {
+      const data = await api.login(normalizedEmail, password);
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      set({ user: data.user, isAuthenticated: true, isLoading: false, isMaintenance: false });
+    } catch (error: any) {
+      // Проверяем, что это ошибка 503 (maintenance mode)
+      if (error?.status === 503 || error?.message?.includes('503')) {
+        set({ isMaintenance: true, isLoading: false });
+      }
+      throw error;
+    }
   },
 
   logout: () => {
@@ -52,8 +62,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     try {
       const user = await api.me();
-      set({ user, isAuthenticated: true, isLoading: false });
-    } catch {
+      set({ user, isAuthenticated: true, isLoading: false, isMaintenance: false });
+    } catch (error: any) {
+      // Проверяем, что это ошибка 503 (maintenance mode)
+      if (error?.status === 503 || error?.message?.includes('503')) {
+        set({ isMaintenance: true, isLoading: false, isAuthenticated: false });
+        return;
+      }
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       set({ isLoading: false, isAuthenticated: false });
