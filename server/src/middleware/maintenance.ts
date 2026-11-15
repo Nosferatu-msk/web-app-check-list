@@ -3,9 +3,6 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
-// Режим обслуживания: true = только админ может работать
-const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true';
-
 const MAINTENANCE_HTML = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -80,6 +77,9 @@ const MAINTENANCE_HTML = `
 `;
 
 export function maintenanceMiddleware(req: Request, res: Response, next: NextFunction) {
+  // Читаем переменную при каждом запросе
+  const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true';
+  
   // Если режим обслуживания выключен — пропускаем
   if (!MAINTENANCE_MODE) {
     return next();
