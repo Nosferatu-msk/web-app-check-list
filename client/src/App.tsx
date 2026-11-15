@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Spin } from 'antd';
@@ -118,9 +118,26 @@ function SmartRedirect() {
 }
 
 export default function App() {
-  const { checkAuth, isMaintenance, isLoading } = useAuthStore();
+  const { checkAuth, isMaintenance, isLoading, setIsMaintenance } = useAuthStore();
+  const [checkingMaintenance, setCheckingMaintenance] = useState(true);
 
-  useEffect(() => { checkAuth(); }, []);
+  useEffect(() => {
+    // Проверяем режим обслуживания при загрузке
+    const checkMaintenance = async () => {
+      try {
+        const response = await fetch('/api/refs/equipment-types');
+        if (response.status === 503) {
+          localStorage.setItem('maintenanceMode', 'true');
+          setIsMaintenance(true);
+        }
+      } catch {
+        // Сетевая ошибка — не maintenance
+      }
+      setCheckingMaintenance(false);
+      checkAuth();
+    };
+    checkMaintenance();
+  }, []);
 
   // Проверяем флаг обслуживания из localStorage (устанавливается при 503 ошибке)
   const isMaintenanceFromStorage = localStorage.getItem('maintenanceMode') === 'true';
@@ -130,7 +147,7 @@ export default function App() {
     return <MaintenancePage />;
   }
 
-  if (isLoading) {
+  if (isLoading || checkingMaintenance) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
   }
 

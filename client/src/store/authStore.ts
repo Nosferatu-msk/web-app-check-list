@@ -23,6 +23,7 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
   updateSpecialization: (data: { specializationVik: boolean; specializationIszh: boolean; specializationGpm: boolean; specializationDgu: boolean; specializationIbp: boolean }) => Promise<void>;
+  setIsMaintenance: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -86,6 +87,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const currentUser = get().user;
     if (currentUser) {
       set({ user: { ...currentUser, specializationVik: data.specializationVik, specializationIszh: data.specializationIszh, specializationGpm: data.specializationGpm, specializationDgu: data.specializationDgu, specializationIbp: data.specializationIbp } });
+    }
+  },
+
+  setIsMaintenance: (value: boolean) => {
+    set({ isMaintenance: value });
+    if (value) {
+      localStorage.setItem('maintenanceMode', 'true');
+    } else {
+      localStorage.removeItem('maintenanceMode');
     }
   },
 }));
