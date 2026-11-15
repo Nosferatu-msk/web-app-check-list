@@ -38,6 +38,7 @@ services:
       PORT: "3001"
       NODE_ENV: production
       CLIENT_URL: ${CLIENT_URL:-https://your-domain.com}
+      MAINTENANCE_MODE: ${MAINTENANCE_MODE:-false}
     volumes:
       - uploads:/app/uploads
       - reports:/app/reports
