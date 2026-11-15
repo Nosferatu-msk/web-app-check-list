@@ -80,6 +80,11 @@ export function maintenanceMiddleware(req: Request, res: Response, next: NextFun
   // Читаем переменную при каждом запросе
   const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true';
   
+  // Логирование для отладки
+  if (MAINTENANCE_MODE && req.path.startsWith('/api/') && !req.path.startsWith('/api/auth') && req.path !== '/api/health') {
+    console.log(`[MAINTENANCE] ${req.method} ${req.path} - role: ${req.headers.authorization ? 'has token' : 'no token'}`);
+  }
+
   // Если режим обслуживания выключен — пропускаем
   if (!MAINTENANCE_MODE) {
     return next();
