@@ -5,13 +5,30 @@ import { generateSerialNumber, isMeterEquipment } from '../utils/serialNumber.js
 import { getTeamEngineerIds } from '../utils/tmTeam.js';
 
 const router = Router();
-router.use(authMiddleware);
 
-// GET /api/refs/equipment-types
+// GET /api/refs/equipment-types — публичный (используется для проверки maintenance mode)
 router.get('/equipment-types', async (_req: AuthRequest, res: Response) => {
   const data = await prisma.equipmentType.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
   res.json(data);
 });
+
+// GET /api/refs/manufacturers — публичный (используется для автодополнения)
+router.get('/manufacturers', async (req: AuthRequest, res: Response) => {
+  const query = (req.query.q as string) || '';
+  const where: any = { isActive: true };
+  if (query) {
+    where.name = { contains: query, mode: 'insensitive' };
+  }
+  const data = await prisma.manufacturer.findMany({
+    where,
+    orderBy: { name: 'asc' },
+    take: query ? 50 : undefined,
+  });
+  res.json(data);
+});
+
+// Остальные эндпоинты требуют авторизации
+router.use(authMiddleware);
 
 // GET /api/refs/room-types
 router.get('/room-types', async (_req: AuthRequest, res: Response) => {
@@ -413,23 +430,6 @@ router.patch('/object-equipment/:id/room', async (req: AuthRequest, res: Respons
     },
   });
   res.json(item);
-});
-
-// GET /api/refs/manufacturers — список активных производителей (с опциональным поиском)
-router.get('/manufacturers', async (req: AuthRequest, res: Response) => {
-  const query = (req.query.q as string) || '';
-  
-  const where: any = { isActive: true };
-  if (query) {
-    where.name = { contains: query, mode: 'insensitive' };
-  }
-  
-  const data = await prisma.manufacturer.findMany({
-    where,
-    orderBy: { name: 'asc' },
-    take: query ? 50 : undefined, // Ограничиваем количество только при поиске
-  });
-  res.json(data);
 });
 
 // GET /api/refs/models/search?equipment_type_id=...&query=... — поиск моделей с автодополнением
