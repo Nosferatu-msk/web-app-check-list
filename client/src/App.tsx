@@ -129,9 +129,13 @@ export default function App() {
         if (response.status === 503) {
           localStorage.setItem('maintenanceMode', 'true');
           setIsMaintenance(true);
+        } else {
+          // Сервер доступен — очищаем флаг maintenance mode
+          localStorage.removeItem('maintenanceMode');
+          setIsMaintenance(false);
         }
       } catch {
-        // Сетевая ошибка — не maintenance
+        // Сетевая ошибка — не меняем состояние
       }
       setCheckingMaintenance(false);
       checkAuth();
