@@ -93,6 +93,9 @@ uploads/
 upload/
 reports/
 
+# Бэкапы баз данных
+backups/
+
 # Мобильное приложение
 mobile/.expo/
 mobile/android/
